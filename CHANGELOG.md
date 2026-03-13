@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [0.3.0] - 2026-03-13
+### Agregado
+- **Panel Administrativo (PMS):** Dashboard central para gestión de la propiedad.
+- **Autenticación Segura:** Sistema de login protegido con Supabase Auth y Middleware de Next.js.
+- **Gestión de Reservas:** Tabla interactiva capaz de cambiar estados (Pendiente, Confirmada, Cancelada).
+- **Gestión de Cabañas:** Interfaz para editar precios, nombres y activar/desactivar alojamientos.
+- **Seguridad:** Migración a `@supabase/ssr` para manejo avanzado de sesiones por cookies.
+
 ## [0.2.1] - 2026-03-13
 ### Agregado
 - Integración completa con **Resend** para notificaciones por correo electrónico.
