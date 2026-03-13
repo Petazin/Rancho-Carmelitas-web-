@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rancho Carmelitas Web (Client & PMS)
 
-## Getting Started
+Bienvenido al repositorio principal de la página web interactiva y el Sistema de Gestión de Propiedades (PMS) del Rancho Carmelitas.
 
-First, run the development server:
+## Descripción del Proyecto
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Este proyecto es una plataforma integral desarrollada con las últimas tecnologías web para permitir que los usuarios exploren y reserven cabañas en Rancho Carmelitas con un diseño premium y responsive, y que al mismo tiempo, los administradores cuenten con un "Panel Mágico" (PMS) seguro para gestionar el check-in rápido, validación de reservas y reagendamientos.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS (Vanilla) y animaciones fluidas (Tipografía: Inter, Acentos: #11d442).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Características Principales
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+*   **Página de Inicio y Reservas (Cliente):** Experiencia de usuario inmersiva con vista detallada de cabañas y un formulario de reserva rápido.
+*   **PMS / Panel de Administración:**
+    *   Gestión centralizada de múltiples reservas en calendario.
+    *   Módulo de Check-in Rápido para validación en recepción.
+    *   Gestión y publicación de nuevas fotos / cabañas.
+    *   Control de roles (Admin/Guest).
+*   **Correos de Confirmación:** Envíos automatizados al huésped tras la reserva (integrable con SMTP/Resend).
 
-## Learn More
+## Stack Tecnológico
 
-To learn more about Next.js, take a look at the following resources:
+Este repositorio está construido sobre estas bases:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+*   **Frontend:** [Next.js](https://nextjs.org/) (App Router), React, TypeScript.
+*   **Estilos:** Tailwind CSS y CSS Nativo (Vanilla CSS) arquitecturado para micro-interacciones.
+*   **Base de Datos / Backend / Auth:** [Supabase](https://supabase.com/).
+*   **Despliegue:** [Vercel](https://vercel.com).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Instrucciones para el Desarrollo Local
 
-## Deploy on Vercel
+Sigue estos pasos para arrancar el entorno en tu computadora:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  Asegúrate de tener instalado [Node.js](https://nodejs.org/) (versión 18+).
+2.  Instala las dependencias del proyecto:
+    ```bash
+    npm install
+    ```
+3.  Crea un archivo `.env.local` en la raíz del proyecto (Aquí irán tus claves de Supabase).
+4.  Inicia el servidor local de desarrollo:
+    ```bash
+    npm run dev
+    ```
+5.  Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la página de inicio. El código maestro de la landing page se encuentra en `src/app/page.tsx`.
