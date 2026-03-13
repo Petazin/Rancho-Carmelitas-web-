@@ -9,8 +9,8 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Estilos:** Tailwind CSS y CSS Nativo (Vanilla CSS) enfocado en animaciones y UI premium.
 - **Base de Datos & Backend:** Supabase (PostgreSQL)
 - **Autenticación:** Supabase Auth
-- **Emails Transaccionales:** Resend (o SMTP configurado en entorno local)
-- **Despliegue:** Vercel (Producción)
+- **Emails Transaccionales:** [Resend](https://resend.com/) con plantillas de React Email.
+- **Despliegue:** [Vercel](https://vercel.com).
 
 ## 2. Decisiones de Diseño (Stitch UI)
 
@@ -35,4 +35,4 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 
 ## 4. Estado Actual
 
-Se ha completado la **Fase 1** (UI Base) y la **Fase 2** (Integración de Supabase). El proyecto ya consume datos reales de cabañas y guarda reservaciones en la nube. Actualmente iniciando **Fase 3/4** (Correos y Admin Panel).
+Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase) y la **Fase 3** (Lógica de Reservas y Correos). El proyecto ya es funcional de punta a punta para el cliente. Iniciando **Fase 4** (Panel Mágico / PMS para administración).

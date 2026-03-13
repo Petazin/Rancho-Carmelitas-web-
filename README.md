@@ -25,6 +25,7 @@ Este repositorio está construido sobre estas bases:
 *   **Frontend:** [Next.js](https://nextjs.org/) (App Router), React, TypeScript.
 *   **Estilos:** Tailwind CSS y CSS Nativo (Vanilla CSS) arquitecturado para micro-interacciones.
 *   **Base de Datos / Backend / Auth:** [Supabase](https://supabase.com/).
+*   **Emails:** [Resend](https://resend.com/) con @react-email.
 *   **Despliegue:** [Vercel](https://vercel.com).
 
 ## Instrucciones para el Desarrollo Local

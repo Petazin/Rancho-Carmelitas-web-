@@ -76,6 +76,26 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
 
       if (error) throw error;
 
+      // 2. Enviar correos de confirmación (Cliente y Dueño)
+      try {
+        await fetch('/api/send-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestName,
+            guestEmail,
+            cabinName: cabin.name,
+            checkIn: formatearFecha(checkIn),
+            checkOut: formatearFecha(checkOut),
+            totalPrice: totalConImpuestos,
+            bookingId: data[0].id
+          })
+        });
+      } catch (emailErr) {
+        console.error('Error al intentar enviar los correos:', emailErr);
+        // No bloqueamos al usuario si falla el mail, ya que la reserva está en DB.
+      }
+
       // Éxito, redirigir a página de confirmación
       router.push(`/checkout/success?bookingId=${data[0].id}`);
 

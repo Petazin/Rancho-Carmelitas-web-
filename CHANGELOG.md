@@ -1,8 +1,18 @@
 # Changelog - Rancho Carmelitas
 
-## [v0.2.0] - 2024-03-13
+## [0.2.1] - 2026-03-13
 ### Agregado
-- Integración oficial con **Supabase** (PostgreSQL).
+- Integración completa con **Resend** para notificaciones por correo electrónico.
+- Plantilla de correo premium diseñada con `@react-email/components`.
+- Sistema de logs de depuración para la API de correos (activado durante desarrollo).
+
+### Corregido
+- Error de renderizado de componentes React en el servidor mediante la instalación de `@react-email/render`.
+- Problemas de conectividad de API mediante la validación de variables de entorno en runtime.
+
+## [0.2.0] - 2026-03-13
+### Agregado
+- Integración con **Supabase** para datos de cabañas y reservas.
 - Carga dinámica de cabañas desde la base de datos en Home y Detalle.
 - Flujo de reservación funcional: ahora se guardan los datos del cliente en la tabla `bookings`.
 - Página de éxito (`/checkout/success`) con código de referencia único.
