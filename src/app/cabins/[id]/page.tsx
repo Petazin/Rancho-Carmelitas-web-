@@ -30,10 +30,10 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
   // Mapeamos los datos de base de datos para empatar con la estructura que el componente espera
   const cabin = {
     ...cabinData,
-    imageUrl: cabinData.image_url,
+    galleryUrls: cabinData.gallery_urls?.length ? cabinData.gallery_urls : ['/cabins/default.jpg'],
     price: cabinData.price_per_night,
     bedrooms: Math.ceil(cabinData.capacity / 2),
-    amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada", "Asador exterior", "Cocina Equipada"] // Fallback en caso de que sea null en este punto inicial
+    amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada"] 
   };
 
   if (!cabin) {
@@ -67,7 +67,7 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
         {/* Hero Image */}
         <div className="relative h-[50vh] min-h-[400px] max-h-[600px] w-full mt-16">
           <Image
-            src={cabin.imageUrl}
+            src={cabin.galleryUrls[0]}
             alt={cabin.name}
             fill
             className="object-cover"
@@ -105,9 +105,23 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
               <div className="mb-10">
                 <h2 className="text-2xl font-bold mb-4 text-gray-900">Sobre esta cabaña</h2>
                 <p className="text-gray-600 text-lg leading-relaxed">
-                  {cabin.description}
+                  {cabin.description || 'Una hermosa cabaña lista para tu descanso.'}
                 </p>
               </div>
+
+              {/* Galería Secundaria (Scroller horizontal) */}
+              {cabin.galleryUrls.length > 1 && (
+                <div className="mb-10">
+                  <h2 className="text-2xl font-bold mb-4 text-gray-900">Galería de Fotos</h2>
+                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x custom-scrollbar">
+                    {cabin.galleryUrls.slice(1).map((url: string, index: number) => (
+                      <div key={index} className="relative w-64 md:w-80 h-48 md:h-56 flex-shrink-0 snap-center rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                        <Image src={url} alt={`Vista ${index+2} de ${cabin.name}`} fill className="object-cover hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h2 className="text-2xl font-bold mb-6 text-gray-900">Lo que ofrece este lugar</h2>

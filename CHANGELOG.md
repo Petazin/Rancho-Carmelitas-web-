@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [0.4.0] - 2026-03-14
+### Agregado
+- **Galería de Cabañas (Supabase Storage):** Integración nativa con Supabase Storage para subir, almacenar y eliminar archivos físicos (JPG, PNG) directamente desde el panel administrativo.
+- **Carrusel Frontend:** Incorporación de un *slider horizontal* en la vista pública de cada cabaña para exhibir la galería completa.
+- **Píldoras de Amenidades:** Nuevo seleccionador interactivo visual para amenidades (Wi-Fi, Jacuzzi, etc.) en el CMS.
+- **Prevención de Conflictos de Fechas:** Lógicas para inhabilitar visualmente fechas bloqueadas con un widget de calendario customizado.
+- **Configuración de Seguridad:** Reglas RLS insertadas en Supabase Storage (Upload Access / Public Access).
+
 ## [0.3.0] - 2026-03-13
 ### Agregado
 - **Panel Administrativo (PMS):** Dashboard central para gestión de la propiedad.

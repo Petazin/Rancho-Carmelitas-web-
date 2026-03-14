@@ -35,4 +35,4 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 
 ## 4. Estado Actual
 
-Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos) y la **Fase 4** (Panel Administrativo - PMS). El sistema permite gestionar reservas, cabañas y autenticación de forma segura. Iniciando **Fase 5** (QA, Pulido y Despliegue Final).
+Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos) y la **Fase 4** (Panel Administrativo - PMS y Galería Nativa). El sistema permite gestionar reservas, amenidades y cargar fotos múltiple de cabañas (Storage) de forma segura. Iniciando **Fase 5** (QA, Pulido y Despliegue Final).

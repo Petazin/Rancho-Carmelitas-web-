@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { supabase } from '@/lib/supabase';
 
 interface BookingFormProps {
   cabin: any;
@@ -10,20 +11,231 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ cabin, cabinId }: BookingFormProps) {
-  // Obtenemos la fecha de hoy en formato YYYY-MM-DD para el input date
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-  const [checkIn, setCheckIn] = useState(today);
-  const [checkOut, setCheckOut] = useState(tomorrow);
+  const [checkIn, setCheckIn] = useState<string | null>(null);
+  const [checkOut, setCheckOut] = useState<string | null>(null);
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
 
+  // Estados para disponibilidad
+  const [existingBookings, setExistingBookings] = useState<any[]>([]);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [isChecking, setIsChecking] = useState(true);
+
+  // Estado del calendario interactivo
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Obtener reservas existentes para la cabaña al montar
+  useEffect(() => {
+    async function fetchBookings() {
+      setIsChecking(true);
+      const { data } = await supabase
+        .from('bookings')
+        .select('check_in, check_out')
+        .eq('cabin_id', cabinId)
+        .neq('status', 'Cancelada');
+      
+      setExistingBookings(data || []);
+      setIsChecking(false);
+    }
+    fetchBookings();
+  }, [cabinId]);
+
+  // Validar solapamiento cada vez que cambian las fechas
+  useEffect(() => {
+    if (!checkIn || !checkOut) {
+      setIsAvailable(false);
+      return;
+    }
+
+    if (existingBookings.length === 0) {
+      setIsAvailable(true);
+      return;
+    }
+
+    const checkOverlap = () => {
+      const selectedIn = new Date(checkIn);
+      const selectedOut = new Date(checkOut);
+
+      for (const b of existingBookings) {
+        const bookedIn = new Date(b.check_in);
+        const bookedOut = new Date(b.check_out);
+        
+        // Verifica intersección: (StartA < EndB) y (EndA > StartB)
+        if (selectedIn < bookedOut && selectedOut > bookedIn) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    setIsAvailable(checkOverlap());
+  }, [checkIn, checkOut, existingBookings]);
+
+
+  const isDateBooked = (dateStr: string) => {
+    return existingBookings.some(b => {
+      return dateStr >= b.check_in && dateStr < b.check_out;
+    });
+  };
+
+  const isDateInSelectedRange = (dateStr: string) => {
+    if (checkIn && checkOut) {
+      return dateStr > checkIn && dateStr < checkOut;
+    }
+    return false;
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    if (isDateBooked(dateStr)) return; // Ignorar ocupados
+
+    if (!checkIn || (checkIn && checkOut)) {
+      // Nueva selección de inicio
+      setCheckIn(dateStr);
+      setCheckOut(null);
+    } else if (checkIn && !checkOut) {
+      if (dateStr < checkIn) {
+        // Seleccionó una fecha anterior, reiniciar checkIn
+        setCheckIn(dateStr);
+      } else if (dateStr === checkIn) {
+        // Clic en el mismo día, ignorar o reiniciar
+        setCheckIn(null);
+      } else {
+        // Verificar si hay fechas ocupadas en el medio del rango
+        const inDate = new Date(checkIn);
+        const outDate = new Date(dateStr);
+        let hasOverlap = false;
+        
+        for (const b of existingBookings) {
+            const bIn = new Date(b.check_in);
+            const bOut = new Date(b.check_out);
+            if (inDate < bOut && outDate > bIn) {
+                hasOverlap = true;
+                break;
+            }
+        }
+
+        if (hasOverlap) {
+            // El rango cruza una reserva existente. Reseteamos el checkIn a esta nueva fecha
+            setCheckIn(dateStr);
+        } else {
+            setCheckOut(dateStr);
+        }
+      }
+    }
+  };
+
+  const renderCalendar = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const days = [];
+    
+    for (let i = 0; i < firstDay; i++) {
+        days.push(<div key={`empty-${i}`} className="p-2"></div>);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        const isPast = dateStr < todayStr;
+        const booked = isDateBooked(dateStr);
+        const isCheckIn = checkIn === dateStr;
+        const isCheckOut = checkOut === dateStr;
+        const inRange = isDateInSelectedRange(dateStr);
+
+        let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all cursor-pointer relative ";
+        
+        if (isPast) {
+            cellClasses += "text-gray-300 cursor-not-allowed";
+        } else if (booked) {
+            cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (isCheckIn || isCheckOut) {
+            cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
+        } else if (inRange) {
+            cellClasses += "bg-[#11d442]/10 text-[#11d442]";
+        } else {
+            cellClasses += "text-gray-700 hover:bg-gray-100";
+        }
+
+        // Estilos para el background del rango visual conectivo
+        let rangeBgClasses = "";
+        if (isCheckIn && checkOut) {
+            rangeBgClasses = "absolute top-0 bottom-0 right-0 left-1/2 bg-[#11d442]/10 -z-10";
+        } else if (isCheckOut && checkIn) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-1/2 bg-[#11d442]/10 -z-10";
+        } else if (inRange) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
+        }
+
+        // Check if full booked range (prevents selecting)
+        const isSelectable = !isPast && !booked;
+
+        days.push(
+            <div key={d} className="relative py-1 px-0.5">
+                {rangeBgClasses && <div className={rangeBgClasses}></div>}
+                <button 
+                  type="button"
+                  onClick={() => isSelectable && handleDateClick(dateStr)}
+                  disabled={!isSelectable}
+                  className={cellClasses}
+                  aria-label={dateStr}
+                >
+                  {d}
+                </button>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <button 
+                  type="button"
+                  onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div className="font-bold text-gray-900 capitalize">
+                  {currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </div>
+            <div className="grid grid-cols-7 mb-2">
+                {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'].map(d => (
+                    <div key={d} className="text-center text-xs font-bold text-gray-400">{d}</div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-1">
+                {days}
+            </div>
+            <div className="flex gap-4 mt-4 text-[10px] font-bold uppercase text-gray-500 justify-center">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#11d442]"></span> Seleccionado</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+            </div>
+        </div>
+    );
+  };
+
   // Calculamos noches y precio total estimado
-  const inDate = new Date(checkIn);
-  const outDate = new Date(checkOut);
-  const nights = Math.max(1, Math.ceil((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24)));
-  const totalEstimado = nights * cabin.price;
+  let nights = 0;
+  let totalEstimado = 0;
+
+  if (checkIn && checkOut) {
+    const inDate = new Date(checkIn);
+    const outDate = new Date(checkOut);
+    nights = Math.max(1, Math.ceil((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24)));
+    totalEstimado = nights * cabin.price;
+  }
 
   // Construimos la URL con los parámetros
   const checkoutUrl = `/checkout/${cabinId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}`;
@@ -35,39 +247,12 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         <span className="text-gray-500 mb-1">/ noche</span>
       </div>
 
+      <div className="mb-2">
+        <h3 className="font-bold text-gray-900 mb-2">Selecciona tus fechas</h3>
+        {renderCalendar()}
+      </div>
+
       <div className="border border-gray-200 rounded-2xl mb-6 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5">
-        <div className="grid grid-cols-2 border-b border-gray-200">
-          <label className="p-3 border-r border-gray-200 hover:bg-gray-50 focus-within:bg-gray-50 transition-colors cursor-pointer group block">
-            <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Llegada</span>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <input 
-                type="date" 
-                min={today}
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                className="w-full text-sm font-semibold outline-none text-gray-900 bg-transparent cursor-pointer" 
-              />
-            </div>
-          </label>
-          <label className="p-3 hover:bg-gray-50 focus-within:bg-gray-50 transition-colors cursor-pointer group block">
-            <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Salida</span>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <input 
-                type="date" 
-                min={checkIn}
-                value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-                className="w-full text-sm font-semibold outline-none text-gray-900 bg-transparent cursor-pointer" 
-              />
-            </div>
-          </label>
-        </div>
         <div className="grid grid-cols-2">
           <label className="p-3 border-r border-gray-200 block hover:bg-gray-50 focus-within:bg-gray-50 transition-colors cursor-pointer group">
             <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Adultos</span>
@@ -128,13 +313,30 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         </div>
       </div>
 
-      <Link href={checkoutUrl} className="block w-full">
-        <Button size="lg" fullWidth>
-          Confirmar y Reservar
+      {isChecking ? (
+        <Button size="lg" fullWidth disabled>Verificando disponibilidad...</Button>
+      ) : (!checkIn || !checkOut) ? (
+        <Button size="lg" fullWidth disabled className="bg-gray-300">Selecciona tus fechas primero</Button>
+      ) : isAvailable ? (
+        <Link href={checkoutUrl} className="block w-full">
+          <Button size="lg" fullWidth>
+            Confirmar y Reservar
+          </Button>
+        </Link>
+      ) : (
+        <Button size="lg" fullWidth className="bg-red-500 hover:bg-red-600 text-white cursor-not-allowed" disabled>
+          Fechas No Disponibles
         </Button>
-      </Link>
-      <p className="text-center text-sm text-gray-400 mt-4">
-        No se hará ningún cargo aún
+      )}
+      
+      <p className="text-center text-sm mt-4">
+        {(!checkIn || !checkOut) ? (
+          <span className="text-gray-400">Haz clic en el calendario arriba para elegir tu rango de estancia</span>
+        ) : isAvailable ? (
+          <span className="text-gray-400">No se hará ningún cargo aún</span>
+        ) : (
+          <span className="text-red-500 font-medium">⚠️ Alguna de las fechas en tu rango ya fue reservada.</span>
+        )}
       </p>
     </div>
   );

@@ -13,8 +13,8 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
 *   **Página de Inicio y Reservas (Cliente):** Experiencia de usuario inmersiva con vista detallada de cabañas y un formulario de reserva rápido.
 *   **PMS / Panel de Administración:**
     *   Gestión centralizada de múltiples reservas en calendario.
-    *   Módulo de Check-in Rápido para validación en recepción.
-    *   Gestión y publicación de nuevas fotos / cabañas.
+    *   Módulo de Check-in Rápido y Prevención de conflictos.
+    *   **Gestión Multi-Media (Supabase Storage):** Subida de galerías por bloque y amenidades interactivas.
     *   Control de roles (Admin/Guest).
 *   **Correos de Confirmación:** Envíos automatizados al huésped tras la reserva (integrable con SMTP/Resend).
 

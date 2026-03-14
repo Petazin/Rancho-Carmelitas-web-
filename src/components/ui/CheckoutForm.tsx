@@ -50,6 +50,21 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
     setErrorMsg('');
 
     try {
+      // 1. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo
+      const { data: colisiones, error: colError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('cabin_id', cabin.id)
+        .neq('status', 'Cancelada')
+        .or(`and(check_in.lt.${checkOut},check_out.gt.${checkIn})`);
+
+      if (colError) throw colError;
+
+      if (colisiones && colisiones.length > 0) {
+        throw new Error('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
+      }
+
+      // 2. INSERTAR EN DB
       const finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
 
       const { data, error } = await supabase
@@ -74,9 +89,11 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         ])
         .select();
 
-      if (error) throw error;
+      if (error || !data || data.length === 0) {
+          throw new Error(error?.message || 'Error desconocido al guardar en base de datos.');
+      }
 
-      // 2. Enviar correos de confirmación (Cliente y Dueño)
+      // 3. Enviar correos de confirmación (Cliente y Dueño)
       try {
         await fetch('/api/send-confirmation', {
           method: 'POST',

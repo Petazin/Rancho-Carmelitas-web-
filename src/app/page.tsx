@@ -85,7 +85,7 @@ export default async function Home() {
                     name={cabin.name}
                     description={cabin.description || ""}
                     price={cabin.price_per_night}
-                    imageUrl={cabin.image_url}
+                    imageUrl={cabin.gallery_urls?.[0] || '/cabins/default.jpg'}
                     capacity={cabin.capacity}
                     bedrooms={Math.ceil(cabin.capacity / 2)}
                   />
