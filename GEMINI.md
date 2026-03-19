@@ -33,6 +33,14 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
   - Probar conectividad con Supabase.
   - Las ejecuciones de prueba las solicita la IA pero las corre el usuario.
 
-## 4. Estado Actual
+Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos), la **Fase 4** (PMS y Galería), la **Fase 4.5 (Gestión de Usuarios y Roles)** y la **Personalización de Contenido Real (Social Media Sync)**. Actualmente se está completando la sincronización con el repositorio oficial en GitHub.
 
-Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos) y la **Fase 4** (Panel Administrativo - PMS y Galería Nativa). El sistema permite gestionar reservas, amenidades y cargar fotos múltiple de cabañas (Storage) de forma segura. Iniciando **Fase 5** (QA, Pulido y Despliegue Final).
+El sistema ahora soporta:
+
+- **RBAC (Role Based Access Control):** Perfiles de `admin` y `staff`.
+- **Panel de Gestión de Equipo:** Los administradores pueden invitar nuevos colaboradores por correo y gestionar sus roles.
+- **Protección de Rutas:** Seguridad en el servidor y en la UI basada en el rol del usuario autenticado.
+- **Identidad Dinámica:** Reconocimiento personalizado de cada integrante del equipo en el panel administrativo.
+- **Contenido Localizado:** Landing page con fotos reales de las instalaciones y datos oficiales (SERNATUR, Pullally).
+
+Próximos pasos: **Fase 5** (QA final, optimización de carga y despliegue en producción).

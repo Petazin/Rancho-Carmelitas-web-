@@ -31,9 +31,9 @@ export default async function Home() {
             <a href="/admin" className="hover:text-[#11d442] transition-colors text-gray-400">Admin</a>
           </nav>
           <div className="flex items-center gap-4">
-            <button className="btn-primary">
+            <a href="#cabins" className="btn-primary">
               Reservar Ahora
-            </button>
+            </a>
           </div>
         </div>
       </header>
@@ -44,7 +44,7 @@ export default async function Home() {
           {/* Background image temporal */}
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center"
-            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?q=80&w=2000&auto=format&fit=crop")' }}
+            style={{ backgroundImage: 'url("/gallery/hero.png")' }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/80 to-black/30 z-10" />
           
@@ -53,15 +53,16 @@ export default async function Home() {
               Escapa a la naturaleza, con total <span className="text-[#11d442]">comodidad</span>.
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto font-light">
-              Descubre nuestras exclusivas cabañas equipadas, rodeadas de bosque y tranquilidad. Tu escape de fin de semana perfecto en Rancho Carmelitas.
+              Descubre nuestras exclusivas cabañas totalmente equipadas en el corazón de <strong>Pullally, Papudo</strong>. Tu refugio perfecto entre el bosque y el mar.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="btn-primary text-lg px-8 py-4 w-full sm:w-auto">
+              <a href="#cabins" className="btn-primary text-center text-lg px-8 py-4 w-full sm:w-auto">
                 Ver Disponibilidad
-              </button>
-              <button className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors backdrop-blur-sm rounded-xl px-8 py-4 font-semibold w-full sm:w-auto">
-                Ver Galería
-              </button>
+              </a>
+              <a href="#gallery" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors backdrop-blur-sm rounded-xl px-8 py-4 font-semibold w-full sm:w-auto text-center">
+                Ver Instalaciones
+              </a>
+
             </div>
           </div>
         </section>
@@ -72,7 +73,7 @@ export default async function Home() {
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">Nuestras Cabañas</h2>
               <p className="text-gray-500 max-w-2xl mx-auto text-lg">
-                Espacios diseñados para tu confort. Elige la cabaña que mejor se adapte a tu escapada ideal.
+                Espacios diseñados para tu confort. Cabañas de madera con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.
               </p>
             </div>
             
@@ -85,7 +86,7 @@ export default async function Home() {
                     name={cabin.name}
                     description={cabin.description || ""}
                     price={cabin.price_per_night}
-                    imageUrl={cabin.gallery_urls?.[0] || '/cabins/default.jpg'}
+                    imageUrl={cabin.gallery_urls?.[0] || '/gallery/interior.png'}
                     capacity={cabin.capacity}
                     bedrooms={Math.ceil(cabin.capacity / 2)}
                   />
@@ -98,19 +99,94 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {/* Gallery Section */}
+        <section id="gallery" className="py-24 bg-white border-t border-gray-100">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">Galería de Momentos</h2>
+            <p className="text-gray-500 mb-12 max-w-2xl mx-auto">Vistas reales de nuestro entorno, piscina y confortables interiores.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { src: '/gallery/hero.png', alt: 'Vista panorámica de la piscina y cabañas' },
+                { src: '/gallery/interior.png', alt: 'Interior acogedor y cocina equipada' },
+                { src: '/gallery/piscina_hd.png', alt: 'Piscina principal con áreas verdes' },
+                { src: '/gallery/piscina.png', alt: 'Nuestros huéspedes disfrutando de la piscina' },
+                { src: '/gallery/dormitorio.png', alt: 'Dormitorio matrimonial confortable' },
+                { src: '/gallery/entorno_hd.png', alt: 'Terraza y zona de relajación exterior' },
+              ].map((img, i) => (
+                <div key={i} className="aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                  <img 
+                    src={img.src} 
+                    alt={img.alt} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Trust / SERNATUR Section */}
+        <section className="py-12 bg-white border-y border-gray-100">
+          <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-8 opacity-80 grayscale hover:grayscale-0 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-[#11d442]/10 rounded-full flex items-center justify-center text-[#11d442] font-bold text-xl">R</div>
+              <div>
+                <h4 className="font-bold text-gray-900">Servicio Turístico Registrado</h4>
+                <p className="text-sm text-gray-500">Vigencia hasta Enero 2026 • Registro № 71034</p>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-gray-200 hidden md:block" />
+            <div className="text-center md:text-left">
+              <p className="text-sm font-semibold text-gray-400 tracking-widest uppercase">Calidad y Confianza</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Rules Section */}
+        <section id="rules" className="py-24 bg-surface border-t border-gray-100">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto bg-white p-12 rounded-[32px] shadow-sm border border-gray-100">
+              <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">Reglas de Convivencia</h2>
+              <ul className="space-y-4 text-gray-600">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#11d442] mt-1">✓</span>
+                  <span><strong>Check-in:</strong> 15:00 hrs. <strong>Check-out:</strong> 11:00 hrs.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#11d442] mt-1">✓</span>
+                  <span><strong>Prohibido fumar:</strong> Por seguridad forestal, no se permite fumar dentro de las cabañas.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#11d442] mt-1">✓</span>
+                  <span><strong>Mascotas:</strong> Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#11d442] mt-1">✓</span>
+                  <span><strong>Silencio nocturno:</strong> Respetamos la paz del bosque después de las 23:00 hrs.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </main>
       
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
         <div className="container mx-auto px-4 text-center text-sm">
-          <div className="flex flex-col items-center justify-center gap-4">
+          <div className="flex flex-col items-center justify-center gap-6">
             <span className="text-2xl font-bold tracking-tight text-white">
               Rancho<span className="text-[#11d442]">Carmelitas</span>
             </span>
+            <div className="flex gap-4">
+              <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" className="hover:text-white transition-colors">Instagram</a>
+              <a href="https://www.facebook.com/rancho.c.pullally/" target="_blank" className="hover:text-white transition-colors">Facebook</a>
+            </div>
             <p>© {new Date().getFullYear()} Rancho Carmelitas. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }

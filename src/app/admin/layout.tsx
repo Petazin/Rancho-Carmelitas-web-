@@ -1,5 +1,6 @@
-'use client';
+"use client";
 
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -11,11 +12,47 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    async function getProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, role')
+        .eq('id', session?.user?.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        setProfile(data);
+      }
+      setLoading(false);
+    }
+
+    getProfile();
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#11d442]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#f3f4f6]">
@@ -70,6 +107,22 @@ export default function AdminLayout({
             </svg>
             Cabañas
           </Link>
+
+          {profile?.role === 'admin' && (
+            <Link 
+              href="/admin/usuarios" 
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                pathname.includes('/admin/usuarios') 
+                  ? 'bg-[#f0fdf4] text-[#11d442] font-medium' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Usuarios
+            </Link>
+          )}
         </nav>
 
         <div className="p-4 mt-auto border-t border-gray-100">
@@ -90,8 +143,13 @@ export default function AdminLayout({
         <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8">
           <h1 className="text-gray-500 text-sm font-medium">Panel de Gestión</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700">Claudio Milanolo</span>
-            <div className="w-8 h-8 rounded-full bg-gray-200" />
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'Cargando...'}</p>
+              <p className="text-xs text-gray-400 capitalize">{profile?.role || '...'}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#11d442] to-[#0fb337] flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
+              {(profile?.full_name || 'C').charAt(0)}
+            </div>
           </div>
         </header>
 

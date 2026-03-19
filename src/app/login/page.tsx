@@ -41,7 +41,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Acceso Administrativo</h1>
-          <p className="text-gray-500 mt-2">Bienvenido de vuelta, Claudio.</p>
+          <p className="text-gray-500 mt-2">Bienvenido al Panel de Gestión</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

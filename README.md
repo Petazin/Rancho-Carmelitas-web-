@@ -15,7 +15,9 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
     *   Gestión centralizada de múltiples reservas en calendario.
     *   Módulo de Check-in Rápido y Prevención de conflictos.
     *   **Gestión Multi-Media (Supabase Storage):** Subida de galerías por bloque y amenidades interactivas.
+    *   **Galería de Imágenes Premium:** Integración de recursos visuales personalizados basados en la identidad real del Rancho.
     *   Control de roles (Admin/Guest).
+
 *   **Correos de Confirmación:** Envíos automatizados al huésped tras la reserva (integrable con SMTP/Resend).
 
 ## Stack Tecnológico
@@ -43,3 +45,7 @@ Sigue estos pasos para arrancar el entorno en tu computadora:
     npm run dev
     ```
 5.  Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la página de inicio. El código maestro de la landing page se encuentra en `src/app/page.tsx`.
+
+## Repositorio
+
+- **GitHub:** [https://github.com/Petazin/Rancho-Carmelitas-Web](https://github.com/Petazin/Rancho-Carmelitas-Web)
