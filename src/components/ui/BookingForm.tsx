@@ -16,6 +16,9 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
 
+  const [isOpenAdults, setIsOpenAdults] = useState(false);
+  const [isOpenChildren, setIsOpenChildren] = useState(false);
+
   // Estados para disponibilidad
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -226,15 +229,32 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
     );
   };
 
+  // Cálculo de huéspedes adicionales y precio
+  const maxExtraGuests = cabin.max_extra_guests || 0;
+  const maxTotalGuests = cabin.capacity + maxExtraGuests;
+  const surchargePercentage = cabin.extra_guest_surcharge_percentage || 100;
+  
+  const totalGuests = adults + children;
+  const extraGuests = Math.max(0, totalGuests - cabin.capacity);
+  const pricePerPerson = cabin.price / cabin.capacity;
+  const surchargePerExtraPerson = pricePerPerson * (surchargePercentage / 100);
+  const extraCostPerNight = extraGuests * surchargePerExtraPerson;
+  const finalPricePerNight = cabin.price + extraCostPerNight;
+
   // Calculamos noches y precio total estimado
   let nights = 0;
+  let totalEstimadoRaw = 0;
   let totalEstimado = 0;
+  let descuentoRedondeo = 0;
 
   if (checkIn && checkOut) {
     const inDate = new Date(checkIn);
     const outDate = new Date(checkOut);
     nights = Math.max(1, Math.ceil((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24)));
-    totalEstimado = nights * cabin.price;
+    totalEstimadoRaw = nights * finalPricePerNight;
+    // Redondear siempre hacia abajo a 1000
+    totalEstimado = Math.floor(totalEstimadoRaw / 1000) * 1000;
+    descuentoRedondeo = totalEstimadoRaw - totalEstimado;
   }
 
   // Construimos la URL con los parámetros
@@ -252,64 +272,116 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         {renderCalendar()}
       </div>
 
-      <div className="border border-gray-200 rounded-2xl mb-6 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5">
+      {(isOpenAdults || isOpenChildren) && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => { setIsOpenAdults(false); setIsOpenChildren(false); }}
+        />
+      )}
+
+      <div className="border border-gray-200 rounded-2xl mb-6 bg-white shadow-sm ring-1 ring-gray-900/5 relative z-50">
         <div className="grid grid-cols-2">
-          <label className="p-3 border-r border-gray-200 block hover:bg-gray-50 focus-within:bg-gray-50 transition-colors cursor-pointer group">
-            <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Adultos</span>
-            <div className="flex items-center gap-2 relative">
-              <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <select 
-                value={adults}
-                onChange={(e) => setAdults(Number(e.target.value))}
-                className="w-full text-sm font-semibold outline-none text-gray-900 bg-transparent cursor-pointer appearance-none pr-8"
-              >
-                {[...Array(cabin.capacity)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
-                ))}
-              </select>
-              <div className="absolute right-0 pointer-events-none flex items-center h-full">
-                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* Adultos Dropdown */}
+          <div className="relative border-r border-gray-200">
+            <button 
+              type="button"
+              onClick={() => { setIsOpenAdults(!isOpenAdults); setIsOpenChildren(false); }}
+              className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 transition-colors rounded-l-2xl group"
+            >
+              <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Adultos</span>
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="w-full text-sm font-semibold text-gray-900">{adults}</span>
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${isOpenAdults ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
-            </div>
-          </label>
-          <label className="p-3 block hover:bg-gray-50 focus-within:bg-gray-50 transition-colors cursor-pointer group">
-            <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Niños</span>
-            <div className="flex items-center gap-2 relative">
-              <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <select 
-                value={children}
-                onChange={(e) => setChildren(Number(e.target.value))}
-                className="w-full text-sm font-semibold outline-none text-gray-900 bg-transparent cursor-pointer appearance-none pr-8"
-              >
-                <option value={0}>0</option>
-                {[...Array(cabin.capacity)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+            </button>
+            {isOpenAdults && (
+              <ul className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                {[...Array(Math.max(1, maxTotalGuests - children))].map((_, i) => (
+                  <li key={i + 1}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-[#11d442]/10 hover:text-[#11d442] transition-colors"
+                      onClick={() => { setAdults(i + 1); setIsOpenAdults(false); }}
+                    >
+                      {i + 1}
+                    </button>
+                  </li>
                 ))}
-              </select>
-              <div className="absolute right-0 pointer-events-none flex items-center h-full">
-                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              </ul>
+            )}
+          </div>
+
+          {/* Niños Dropdown */}
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={() => { setIsOpenChildren(!isOpenChildren); setIsOpenAdults(false); }}
+              className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 transition-colors rounded-r-2xl group"
+            >
+              <span className="block font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Niños</span>
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#11d442] group-hover:scale-110 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="w-full text-sm font-semibold text-gray-900">{children}</span>
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${isOpenChildren ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
-            </div>
-          </label>
+            </button>
+            {isOpenChildren && (
+              <ul className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <li key={0}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-[#11d442]/10 hover:text-[#11d442] transition-colors"
+                    onClick={() => { setChildren(0); setIsOpenChildren(false); }}
+                  >
+                    0
+                  </button>
+                </li>
+                {[...Array(Math.max(0, maxTotalGuests - adults))].map((_, i) => (
+                  <li key={i + 1}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-[#11d442]/10 hover:text-[#11d442] transition-colors"
+                      onClick={() => { setChildren(i + 1); setIsOpenChildren(false); }}
+                    >
+                      {i + 1}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="mb-6 space-y-2 text-sm text-gray-600">
         <div className="flex justify-between">
-          <span>${cabin.price} x {nights} noche{nights > 1 ? 's' : ''}</span>
-          <span>${totalEstimado}</span>
+          <span>${cabin.price.toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''}</span>
+          <span>${(cabin.price * nights).toLocaleString()}</span>
         </div>
+        {extraGuests > 0 && (
+          <div className="flex justify-between text-orange-600">
+            <span>+{extraGuests} adicionales (${Math.round(extraCostPerNight).toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''})</span>
+            <span>${Math.round(extraCostPerNight * nights).toLocaleString()}</span>
+          </div>
+        )}
+        {descuentoRedondeo > 0 && (
+          <div className="flex justify-between text-[#11d442] font-semibold text-xs animate-in fade-in">
+            <span>Descuento por redondeo</span>
+            <span>-${Math.round(descuentoRedondeo).toLocaleString()}</span>
+          </div>
+        )}
         <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
           <span>Total</span>
-          <span>${totalEstimado}</span>
+          <span>${totalEstimado.toLocaleString()}</span>
         </div>
       </div>
 

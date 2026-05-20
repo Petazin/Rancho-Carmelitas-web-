@@ -18,7 +18,7 @@ export default async function CheckoutPage({
   // Buscar cabaña en Supabase
   const { data: cabinData, error } = await supabase
     .from('cabins')
-    .select('id, name, price_per_night, image_url, capacity')
+    .select('id, name, price_per_night, image_url, capacity, max_extra_guests, extra_guest_surcharge_percentage')
     .eq('id', id)
     .single();
 
@@ -39,7 +39,9 @@ export default async function CheckoutPage({
     name: cabinData.name,
     price: cabinData.price_per_night,
     imageUrl: cabinData.image_url,
-    capacity: cabinData.capacity
+    capacity: cabinData.capacity,
+    max_extra_guests: cabinData.max_extra_guests || 0,
+    extra_guest_surcharge_percentage: cabinData.extra_guest_surcharge_percentage || 100
   };
 
   // Extraer valores de la URL con fallbacks por defecto
@@ -52,9 +54,17 @@ export default async function CheckoutPage({
   const inDate = new Date(checkIn);
   const outDate = new Date(checkOut);
   const nights = Math.max(1, Math.ceil((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24)));
-  const totalBase = nights * cabin.price;
+  
+  const totalGuests = adults + children;
+  const extraGuests = Math.max(0, totalGuests - cabin.capacity);
+  const pricePerPerson = cabin.price / cabin.capacity;
+  const surchargePerExtraPerson = pricePerPerson * (cabin.extra_guest_surcharge_percentage / 100);
+  const extraCostPerNight = extraGuests * surchargePerExtraPerson;
+  const extraCostTotal = extraCostPerNight * nights;
 
-  const checkoutData = { checkIn, checkOut, adults, children, nights, totalBase };
+  const totalBase = (nights * cabin.price) + extraCostTotal;
+
+  const checkoutData = { checkIn, checkOut, adults, children, nights, totalBase, extraCostTotal, extraGuests };
 
   return (
     <div className="min-h-screen bg-surface py-12">

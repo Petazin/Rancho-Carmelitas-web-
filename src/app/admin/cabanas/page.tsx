@@ -19,20 +19,25 @@ interface Cabin {
   gallery_urls: string[];
   description: string;
   amenities: string[];
+  max_extra_guests: number;
+  extra_guest_surcharge_percentage: number;
 }
 
 export default function AdminCabanasPage() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, gallery_urls: string[], description: string, amenities: string[]}>({ name: '', price: 0, capacity: 0, gallery_urls: [], description: '', amenities: [] });
+  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({ name: '', price: 0, capacity: 0, gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
   const [isCreating, setIsCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, description: string, amenities: string[]}>({
+  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number}>({
     name: '',
     price_per_night: 0,
     capacity: 2,
     description: '',
     amenities: [],
+    max_extra_guests: 0,
+    extra_guest_surcharge_percentage: 100,
+    extra_surcharge_mode: 'percentage' as 'percentage' | 'fixed'
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -60,7 +65,10 @@ export default function AdminCabanasPage() {
       capacity: cabin.capacity,
       gallery_urls: cabin.gallery_urls?.length ? cabin.gallery_urls : [''],
       description: cabin.description || '',
-      amenities: cabin.amenities || []
+      amenities: cabin.amenities || [],
+      max_extra_guests: cabin.max_extra_guests || 0,
+      extra_guest_surcharge_percentage: cabin.extra_guest_surcharge_percentage || 100,
+      extra_surcharge_mode: 'percentage'
     });
   };
 
@@ -99,7 +107,9 @@ export default function AdminCabanasPage() {
         capacity: editForm.capacity,
         gallery_urls: finalGalleryUrls.length > 0 ? finalGalleryUrls : null,
         description: editForm.description,
-        amenities: editForm.amenities.length > 0 ? editForm.amenities : null
+        amenities: editForm.amenities.length > 0 ? editForm.amenities : null,
+        max_extra_guests: editForm.max_extra_guests,
+        extra_guest_surcharge_percentage: editForm.extra_guest_surcharge_percentage
       })
       .eq('id', id);
 
@@ -131,7 +141,9 @@ export default function AdminCabanasPage() {
         capacity: createForm.capacity,
         description: createForm.description || 'Descripción pendiente...',
         amenities: createForm.amenities.length > 0 ? createForm.amenities : null,
-        is_active: true
+        is_active: true,
+        max_extra_guests: createForm.max_extra_guests,
+        extra_guest_surcharge_percentage: createForm.extra_guest_surcharge_percentage
       }])
       .select('id')
       .single();
@@ -173,7 +185,7 @@ export default function AdminCabanasPage() {
 
     setUploading(false);
     setIsCreating(false);
-    setCreateForm({ name: '', price_per_night: 0, capacity: 2, description: '', amenities: [] });
+    setCreateForm({ name: '', price_per_night: 0, capacity: 2, description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
     setSelectedFiles([]);
     fetchCabins();
   };
@@ -267,8 +279,70 @@ export default function AdminCabanasPage() {
                 onChange={e => setCreateForm({...createForm, capacity: parseInt(e.target.value) || 0})}
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Extras Máximos</label>
+              <input 
+                type="number" 
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
+                value={createForm.max_extra_guests || ''} 
+                onChange={e => setCreateForm({...createForm, max_extra_guests: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            {/* Costo por persona adicional - Crear */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Costo Persona Adicional</label>
+              <div className="flex gap-2">
+                <div className="flex bg-white rounded-xl border border-gray-200 p-0.5">
+                  <button
+                    type="button"
+                    className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${
+                      createForm.extra_surcharge_mode === 'percentage' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCreateForm({...createForm, extra_surcharge_mode: 'percentage'})}
+                  >%</button>
+                  <button
+                    type="button"
+                    className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${
+                      createForm.extra_surcharge_mode === 'fixed' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCreateForm({...createForm, extra_surcharge_mode: 'fixed'})}
+                  >$</button>
+                </div>
+                <input 
+                  type="number" 
+                  className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
+                  value={createForm.extra_surcharge_mode === 'percentage'
+                    ? (createForm.extra_guest_surcharge_percentage || '')
+                    : (createForm.price_per_night > 0 && createForm.capacity > 0
+                        ? Math.round((createForm.extra_guest_surcharge_percentage / 100) * (createForm.price_per_night / createForm.capacity))
+                        : '')
+                  }
+                  placeholder={createForm.extra_surcharge_mode === 'percentage' ? 'Ej: 80' : 'Ej: 15000'}
+                  onChange={e => {
+                    const val = Number(e.target.value) || 0;
+                    if (createForm.extra_surcharge_mode === 'percentage') {
+                      setCreateForm({...createForm, extra_guest_surcharge_percentage: val});
+                    } else {
+                      // Convertir monto fijo a porcentaje para guardar
+                      const pricePerPerson = createForm.price_per_night / (createForm.capacity || 1);
+                      const pct = pricePerPerson > 0 ? Math.round((val / pricePerPerson) * 100) : 0;
+                      setCreateForm({...createForm, extra_guest_surcharge_percentage: pct});
+                    }
+                  }}
+                />
+              </div>
+              {/* Equivalencia en tiempo real */}
+              {createForm.price_per_night > 0 && createForm.capacity > 0 && (
+                <p className="text-[11px] mt-1.5 text-blue-700 font-medium">
+                  {createForm.extra_surcharge_mode === 'percentage'
+                    ? `≈ $${Math.round((createForm.extra_guest_surcharge_percentage / 100) * (createForm.price_per_night / createForm.capacity)).toLocaleString()} por persona adicional / noche`
+                    : `≈ ${createForm.extra_guest_surcharge_percentage}% del precio por persona`
+                  }
+                </p>
+              )}
+            </div>
             
-            <div className="md:col-span-4">
+            <div className="md:col-span-5">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descripción Breve</label>
               <textarea 
                 className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]" 
@@ -278,7 +352,7 @@ export default function AdminCabanasPage() {
               />
             </div>
             
-            <div className="md:col-span-4 mt-2">
+            <div className="md:col-span-5 mt-2">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Características y Comodidades (Selección Múltiple)</label>
               <div className="flex flex-wrap gap-2">
                 {AVAILABLE_AMENITIES.map((amenity) => {
@@ -297,7 +371,7 @@ export default function AdminCabanasPage() {
               </div>
             </div>
             
-            <div className="md:col-span-4 mt-2">
+            <div className="md:col-span-5 mt-2">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Galería de Fotos (Sube desde tu PC)</label>
               
               <div className="flex flex-wrap gap-4 mb-3">
@@ -383,6 +457,66 @@ export default function AdminCabanasPage() {
                     value={editForm.capacity} 
                     onChange={e => setEditForm({...editForm, capacity: parseInt(e.target.value)})}
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Extras Máximos</label>
+                  <input 
+                    type="number" 
+                    className="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] text-sm" 
+                    value={editForm.max_extra_guests} 
+                    onChange={e => setEditForm({...editForm, max_extra_guests: parseInt(e.target.value)})}
+                  />
+                </div>
+                {/* Costo por persona adicional - Editar */}
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Costo Persona Adicional</label>
+                  <div className="flex gap-2">
+                    <div className="flex bg-gray-50 rounded-xl border border-gray-200 p-0.5">
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${
+                          editForm.extra_surcharge_mode === 'percentage' ? 'bg-[#11d442] text-white' : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setEditForm({...editForm, extra_surcharge_mode: 'percentage'})}
+                      >%</button>
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors ${
+                          editForm.extra_surcharge_mode === 'fixed' ? 'bg-[#11d442] text-white' : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setEditForm({...editForm, extra_surcharge_mode: 'fixed'})}
+                      >$</button>
+                    </div>
+                    <input 
+                      type="number" 
+                      className="flex-1 px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] text-sm"
+                      value={editForm.extra_surcharge_mode === 'percentage'
+                        ? (editForm.extra_guest_surcharge_percentage || '')
+                        : (editForm.price > 0 && editForm.capacity > 0
+                            ? Math.round((editForm.extra_guest_surcharge_percentage / 100) * (editForm.price / editForm.capacity))
+                            : '')
+                      }
+                      placeholder={editForm.extra_surcharge_mode === 'percentage' ? 'Ej: 80' : 'Ej: 15000'}
+                      onChange={e => {
+                        const val = Number(e.target.value) || 0;
+                        if (editForm.extra_surcharge_mode === 'percentage') {
+                          setEditForm({...editForm, extra_guest_surcharge_percentage: val});
+                        } else {
+                          const pricePerPerson = editForm.price / (editForm.capacity || 1);
+                          const pct = pricePerPerson > 0 ? Math.round((val / pricePerPerson) * 100) : 0;
+                          setEditForm({...editForm, extra_guest_surcharge_percentage: pct});
+                        }
+                      }}
+                    />
+                  </div>
+                  {editForm.price > 0 && editForm.capacity > 0 && (
+                    <p className="text-[11px] mt-1 text-[#11d442] font-medium">
+                      {editForm.extra_surcharge_mode === 'percentage'
+                        ? `≈ $${Math.round((editForm.extra_guest_surcharge_percentage / 100) * (editForm.price / editForm.capacity)).toLocaleString()} / pers. adicional`
+                        : `≈ ${editForm.extra_guest_surcharge_percentage}% del precio por persona`
+                      }
+                    </p>
+                  )}
                 </div>
                 
                 <div className="md:col-span-3">

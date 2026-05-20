@@ -42,5 +42,11 @@ El sistema ahora soporta:
 - **Protección de Rutas:** Seguridad en el servidor y en la UI basada en el rol del usuario autenticado.
 - **Identidad Dinámica:** Reconocimiento personalizado de cada integrante del equipo en el panel administrativo.
 - **Contenido Localizado:** Landing page con fotos reales de las instalaciones y datos oficiales (SERNATUR, Pullally).
+- **Redondeo de Tarifas a 1000:** Algoritmo de redondeo automático hacia abajo (al múltiplo de 1000 más cercano) para el total de la reserva, mostrando de manera transparente el desglose del descuento por redondeo en la interfaz de usuario.
+- **Abono Sugerido Automático (50%):** Al confirmar una reserva en el panel de administración, el sistema pre-rellena automáticamente el input de pago con el 50% sugerido del total a pagar (neto de descuentos manuales) y muestra el valor sugerido formateado.
+- **Diferenciación de Reservas en Calendario:** Visualización avanzada con código de colores en el calendario del Dashboard para distinguir claramente entre reservas Pendientes (Amarillo `🟡`), Confirmadas sin abono (Naranja `🟠`), Abonadas parcialmente al 50% (Verde `🟢`), Totalmente Pagadas (Azul `🔵`), y Conflictos de Overbooking (Rojo/Alerta `⚠️` / `🔴`).
+- **Navegación y Filtrado Reactivo por Reserva:** El hacer clic en el nombre del huésped en el calendario y en la lista de próximas llegadas inminentes del Dashboard ahora redirige a la gestión de reservas filtrando dinámicamente por el ID de la reserva seleccionada, mostrando un banner azul interactivo que permite limpiar el filtro instantáneamente.
+- **Detalle de Huésped y Cabaña en Calendario:** Las tarjetas de reserva del calendario del Dashboard ahora muestran la información en formato `Huésped: Cabaña` (ej. `Juan Pérez: Suite del Lago`) en lugar de solo la cabaña, facilitando una rápida identificación.
 
 Próximos pasos: **Fase 5** (QA final, optimización de carga y despliegue en producción).
+

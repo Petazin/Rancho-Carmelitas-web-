@@ -15,22 +15,29 @@ interface CheckoutFormProps {
     children: number;
     nights: number;
     totalBase: number;
+    extraCostTotal: number;
+    extraGuests: number;
   };
 }
 
 export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
-  const { checkIn, checkOut, adults, children, nights, totalBase } = checkoutData;
+  const { checkIn, checkOut, adults, children, nights, totalBase, extraCostTotal, extraGuests } = checkoutData;
   const guests = adults + children;
   const hasChildren = children > 0;
   
   const router = useRouter();
 
-  // Estados del formulario
+  // Estados de Facturación
   const [requiresInvoice, setRequiresInvoice] = useState(false);
+  const [invoiceRut, setInvoiceRut] = useState('');
+  const [invoiceName, setInvoiceName] = useState('');
+  const [invoiceGiro, setInvoiceGiro] = useState('');
+
   const [motivoViaje, setMotivoViaje] = useState('');
   
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [childrenAges, setChildrenAges] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
@@ -40,7 +47,10 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
 
   // Cálculos reactivos
   const iva = requiresInvoice ? totalBase * 0.19 : 0;
-  const totalConImpuestos = totalBase + iva;
+  const totalConImpuestosRaw = totalBase + iva;
+  // Redondear siempre hacia abajo a 1000
+  const totalConImpuestos = Math.floor(totalConImpuestosRaw / 1000) * 1000;
+  const descuentoRedondeo = totalConImpuestosRaw - totalConImpuestos;
   const abono = totalConImpuestos * 0.5;
   const restante = totalConImpuestos - abono;
 
@@ -50,7 +60,12 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
     setErrorMsg('');
 
     try {
-      // 1. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo
+      // 1. VALIDACIÓN DE CONTACTO
+      if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
+        throw new Error('Por favor completa todos los datos de contacto obligatorios (Nombre, Correo y Teléfono).');
+      }
+
+      // 2. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo
       const { data: colisiones, error: colError } = await supabase
         .from('bookings')
         .select('id')
@@ -64,8 +79,16 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         throw new Error('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
       }
 
+      if (guestEmail !== confirmEmail) {
+        throw new Error('Los correos electrónicos no coinciden. Por favor revísalos.');
+      }
+
       // 2. INSERTAR EN DB
-      const finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
+      let finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
+      
+      if (requiresInvoice) {
+        finalTravelReason += ` | DATOS FACTURA: RUT: ${invoiceRut}, Razón Social: ${invoiceName}, Giro: ${invoiceGiro}`;
+      }
 
       const { data, error } = await supabase
         .from('bookings')
@@ -84,6 +107,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             special_requests: null, // Por ahora el special requests se usó para "otro"
             requires_invoice: requiresInvoice,
             total_price: totalConImpuestos,
+            extra_guests_cost: extraCostTotal,
             status: 'pending'
           }
         ])
@@ -167,6 +191,18 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                   required 
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar Correo Electrónico (*)</label>
+                <input 
+                  type="email" 
+                  className="input-premium w-full" 
+                  placeholder="Vuelve a escribir tu correo" 
+                  required 
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -258,6 +294,48 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                   <span className="block text-xs text-blue-700 mt-0.5">Se agregará un 19% de IVA al total de la reserva.</span>
                 </div>
               </label>
+
+              {requiresInvoice && (
+                <div className="mt-4 p-4 bg-blue-50/30 rounded-xl border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <h4 className="font-bold text-blue-900 text-sm">Datos para Facturación</h4>
+                  <div>
+                    <label className="block text-xs font-bold text-blue-800 uppercase mb-1">RUT Empresa (*)</label>
+                    <input 
+                      type="text" 
+                      className="input-premium w-full bg-white border-blue-200 focus:ring-blue-500" 
+                      placeholder="Ej. 76.123.456-K" 
+                      required={requiresInvoice}
+                      value={invoiceRut}
+                      onChange={(e) => setInvoiceRut(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Razón Social (*)</label>
+                    <input 
+                      type="text" 
+                      className="input-premium w-full bg-white border-blue-200 focus:ring-blue-500" 
+                      placeholder="Ej. Comercializadora Limitada" 
+                      required={requiresInvoice}
+                      value={invoiceName}
+                      onChange={(e) => setInvoiceName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Giro (*)</label>
+                    <input 
+                      type="text" 
+                      className="input-premium w-full bg-white border-blue-200 focus:ring-blue-500" 
+                      placeholder="Ej. Venta al por menor" 
+                      required={requiresInvoice}
+                      value={invoiceGiro}
+                      onChange={(e) => setInvoiceGiro(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             
           </form>
@@ -314,13 +392,25 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
 
             <div className="space-y-3 text-sm text-gray-700 mb-6 pb-6 border-b border-gray-100">
               <div className="flex justify-between">
-                <span>${cabin.price} x {nights} noche{nights > 1 ? 's' : ''}</span>
-                <span>${totalBase}</span>
+                <span>${cabin.price.toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''}</span>
+                <span>${(cabin.price * nights).toLocaleString()}</span>
               </div>
+              {extraGuests > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span>+{extraGuests} adicionales</span>
+                  <span>${Math.round(extraCostTotal).toLocaleString()}</span>
+                </div>
+              )}
               {requiresInvoice && (
                 <div className="flex justify-between text-gray-500">
                   <span>IVA (19%)</span>
-                  <span>${iva}</span>
+                  <span>${iva.toLocaleString()}</span>
+                </div>
+              )}
+              {descuentoRedondeo > 0 && (
+                <div className="flex justify-between text-[#11d442] font-semibold text-xs animate-in fade-in">
+                  <span>Descuento por redondeo</span>
+                  <span>-${Math.round(descuentoRedondeo).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -328,17 +418,17 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-lg font-bold text-gray-900">
                 <span>Total Reserva</span>
-                <span>${totalConImpuestos}</span>
+                <span>${totalConImpuestos.toLocaleString()}</span>
               </div>
 
               <div className="bg-[#11d442]/10 rounded-xl p-4 border border-[#11d442]/20">
                 <div className="flex justify-between items-center text-[#11d442] font-bold mb-1">
                   <span>Abono requerido hoy (50%)</span>
-                  <span>${abono}</span>
+                  <span>${abono.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm text-gray-600">
                   <span>Pago restante al Check-in</span>
-                  <span>${restante}</span>
+                  <span>${restante.toLocaleString()}</span>
                 </div>
               </div>
             </div>

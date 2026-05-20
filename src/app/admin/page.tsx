@@ -14,6 +14,8 @@ interface Booking {
   cabin_id: string;
   cabin?: { name: string };
   isConflict?: boolean;
+  payment_amount?: number;
+  discount_applied?: number;
 }
 
 export default function AdminDashboard() {
@@ -70,6 +72,8 @@ export default function AdminDashboard() {
         total_price,
         status,
         cabin_id,
+        payment_amount,
+        discount_applied,
         cabin:cabins (name)
       `)
       .gte('check_out', startDate)
@@ -138,16 +142,43 @@ export default function AdminDashboard() {
                   {d}
                 </div>
                 <div className="flex flex-col gap-1">
-                    {dayBookings.map(b => (
-                        <div 
-                          key={b.id} 
-                          className={`text-[10px] px-1.5 py-1 rounded font-bold truncate border transition-all ${b.isConflict ? 'bg-red-100 text-red-700 border-red-300' : 'bg-[#11d442]/10 text-[#11d442] border-[#11d442]/20'}`} 
-                          title={`${b.guest_name} - ${b.cabin?.name || ''}${b.isConflict ? ' (⚠️ Requiere atención por conflicto de fechas)' : ''}`}
-                        >
-                            {b.isConflict && '⚠️ '}
-                            {b.cabin?.name || 'Cabaña'}
-                        </div>
-                    ))}
+                    {dayBookings.map(b => {
+                        const statusLower = (b.status || 'Pendiente').toLowerCase();
+                        const isConfirmed = statusLower === 'confirmada';
+                        const totalToPay = (b.total_price || 0) - (b.discount_applied || 0);
+                        const isFullyPaid = isConfirmed && (b.payment_amount || 0) >= totalToPay;
+                        const isAbonada = isConfirmed && !isFullyPaid && (b.payment_amount || 0) > 0;
+
+                        let colorClasses = "bg-yellow-50 text-yellow-700 border-yellow-200"; // Default: Pendiente (Amarillo)
+                        let labelPrefix = "🟡 ";
+
+                        if (b.isConflict) {
+                          colorClasses = "bg-red-100 text-red-700 border-red-300";
+                          labelPrefix = "⚠️ ";
+                        } else if (isFullyPaid) {
+                          colorClasses = "bg-blue-50 text-blue-700 border-blue-200";
+                          labelPrefix = "🔵 ";
+                        } else if (isAbonada) {
+                          colorClasses = "bg-green-50 text-green-700 border-green-200";
+                          labelPrefix = "🟢 ";
+                        } else if (isConfirmed) {
+                          // Confirmada pero sin abono aún (0 o nulo)
+                          colorClasses = "bg-orange-50 text-orange-700 border-orange-200";
+                          labelPrefix = "🟠 ";
+                        }
+
+                        return (
+                          <Link 
+                            key={b.id} 
+                            href={`/admin/reservas?id=${b.id}`}
+                            className={`text-[10px] px-1.5 py-1 rounded font-bold truncate border transition-all block cursor-pointer hover:shadow-sm ${colorClasses}`} 
+                            title={`${b.guest_name} - ${b.cabin?.name || ''}${b.isConflict ? ' (⚠️ Requiere atención por conflicto de fechas)' : ''} - Estado: ${b.status}`}
+                          >
+                              {labelPrefix}
+                              {b.guest_name}: {b.cabin?.name || 'Cabaña'}
+                          </Link>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -175,6 +206,13 @@ export default function AdminDashboard() {
                 {days.map((day, i) => (
                   <div key={i} className="border-r border-b border-gray-100">{day}</div>
                 ))}
+            </div>
+            <div className="flex flex-wrap gap-4 p-4 border-t border-gray-100 bg-gray-50/50 justify-center text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> 🟡 Pendiente (No Confirmada)</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span> 🟠 Confirmada (Sin Abono)</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> 🟢 Abonada (50%)</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> 🔵 Totalmente Pagada</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> 🔴 Conflicto de Fechas</span>
             </div>
         </div>
     );
@@ -298,15 +336,15 @@ export default function AdminDashboard() {
                   ) : (
                     nextListBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50/80 transition-all">
-                        <td className="px-6 py-4 font-bold text-gray-900 text-sm">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-4 font-bold text-[#11d442] hover:underline text-sm">
+                          <Link href={`/admin/reservas?id=${booking.id}`} className="flex items-center gap-2">
                             {booking.guest_name}
                             {booking.isConflict && (
                               <span className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] uppercase whitespace-nowrap" title="Conflicto de fechas en la misma cabaña">
                                 ⚠️ Conflicto
                               </span>
                             )}
-                          </div>
+                          </Link>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {booking.cabin?.name || 'Cabaña Desconocida'}
