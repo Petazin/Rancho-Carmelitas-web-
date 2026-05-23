@@ -63,3 +63,35 @@
 - Se creó la sección dinámica autogestionable de plataformas y comisiones de canales en `/admin/configuraciones` (`src/app/admin/configuraciones/page.tsx`), enlazándolo al CRUD de Supabase para añadir y remover plataformas que se propagan en tiempo real al selector de reservas manuales.
 - Se actualizaron `CHANGELOG.md` y `GEMINI.md` a la versión [0.9.0] en español.
 - Se corroboró que el servidor local de Next.js compila limpiamente y sin errores de consola.
+[2026-05-23 02:30:00] Actividad de Antigravity:
+- Se implementó el bloqueo estricto de capacidad en las reservas manuales (`src/app/admin/reservas/page.tsx`), eliminando la casilla de anulación ("Autorizar sobrecapacidad") y el estado `allowOverCapacity`.
+- Se configuró el banner a un error rojo absoluto que deshabilita por completo el botón de guardar en el modal si los huéspedes exceden el límite de la cabaña (capacidad base + adicionales), sumado a una validación estricta en el backend para mayor seguridad.
+- Se agregó el enlace dedicado "Canales de Venta" en el Sidebar del PMS (`src/app/admin/layout.tsx`) con un ícono SVG de conector (`🔌`) y estilos dinámicos Rancho (#11d442 activo).
+- Se saneó la página global de configuraciones (`src/app/admin/configuraciones/page.tsx`), quitando todo el bloque redundante y llamadas locales a Supabase de Canales/Plataformas para devolver la página a su propósito original (sólo contacto y datos institucionales).
+- Se actualizaron `CHANGELOG.md`, `GEMINI.md` y este log a la versión [0.9.1] en español de manera armoniosa y consistente.
+- Se constató que el servidor de desarrollo en Next.js compila y corre de forma impecable y reactiva tras los cambios.
+- Se identificó y resolvió el bug de consola de React en la página `/admin/reservas` que arrojaba el warning/error: "A component is changing an uncontrolled input to be controlled".
+- Se detectó que las propiedades `plataforma_comision_aplicada`, `admin_comision_porcentaje` y `admin_notes` en Supabase venían con valores `null` en reservas históricas, lo que React interpretaba como un input no controlado al renderizarse.
+- Se implementó una lógica defensiva con el operador de coalescencia nula (`?? ''`) en la inicialización de `editForm` dentro de `startEditing` y en los inputs JSX de reservas en `src/app/admin/reservas/page.tsx`.
+- Se actualizaron `CHANGELOG.md` y `GEMINI.md` para documentar la versión [0.9.1] con esta mejora de robustez en el PMS.
+- Se modificó el modal de confirmación y registro de pago (`src/app/admin/reservas/page.tsx`) a petición del usuario para incluir la referencia visual tanto del **Total Neto** como del **Sugerido (50%)** de forma clara y con maquetación interactiva en el mismo bloque de información.
+- Se actualizaron `CHANGELOG.md` y `GEMINI.md` correspondientemente reflejando la versión [0.9.1].
+- Se integró el calendario interactivo premium de ocupación en la edición de reservas inline (`src/app/admin/reservas/page.tsx`) replicando al 100% el comportamiento de reserva del cliente público.
+- Se crearon los helpers `isDateInSelectedRangeEditAdmin`, `handleDateClickEditAdmin` y `renderCalendarEditAdmin` para soportar de manera modular la selección de rango de fechas de check-in/check-out sobre el estado `editForm`.
+- Se adaptó `fetchCabinOcupancy` y se agregó un `useEffect` específico en la edición para pasar el ID de la reserva que se edita como exclusión, previniendo que sus propios días ocupados generen overbookings accidentales o bloqueos innecesarios al extender estadías.
+- Se transformaron los inputs HTML nativos de tipo date en campos de solo lectura (`readOnly`) y se maquetó de forma simétrica el renderizado del calendario debajo de la primera fila en el formulario de edición inline.
+- Se actualizaron `CHANGELOG.md` y `GEMINI.md` consolidando esta mejora de consistencia en el PMS.
+[2026-05-23 03:32:00] Actividad de Antigravity:
+- Se implementó la visualización de la expiración de 24 horas para reservas en estado Pendiente sin registrar abono, mostrando el badge interactivo `⏰ Expirada (+Xh)`.
+- Se incorporó la acción rápida de expiración con el botón de reloj de arena *"⏳ Expirar y Liberar"* que gatilla de inmediato el flujo del modal de cancelación.
+- Se desarrolló la detección y priorización automática de conflictos de fechas (overbooking) cruzando reservas de la misma cabaña, asignando prioridad por la confirmación o creación más antiguas.
+- Se maquetó la advertencia de conflicto de overbooking en rojo animado Stitch UI para la reserva secundaria, con el checkbox interactivo `📢 Marcar: Ya le avisé` que persiste reactivamente en Supabase (`admin_notified_conflict`), mutando la tarjeta visualmente al banner verde de huésped notificado.
+- Se creó el modal de cancelación multicanal interactivo de Stitch UI, facilitando opciones simultáneas de envío de correo oficial y/o WhatsApp Web.
+- Se diseñó la plantilla de correo de cancelación premium en `src/components/emails/CancelationTemplate.tsx` y el pipeline del endpoint API `/api/send-cancelation` para despachar el envío de forma segura mediante Resend.
+- Se redactaron y programaron los textos y enlaces de WhatsApp Web, adaptados de forma precisa a la razón de la cancelación (Falta de abono 24h, Overbooking/Reubicación o General).
+- Se identificó y resolvió el bug de sintaxis de map (reemplazo de `))` por `})` en la línea 1678) en `src/app/admin/reservas/page.tsx`, dejando la compilación de Next.js impecable y completamente operativa en local.
+- Se actualizaron `GEMINI.md`, `CHANGELOG.md` y este log a la versión [0.9.2] en español.
+[2026-05-23 03:48:00] Actividad de Antigravity:
+- A solicitud directa del usuario, se inicia el servidor de desarrollo de Next.js mediante el comando de shell `npm run dev` para la validación local de las funcionalidades de la versión [0.9.2] en http://localhost:3000.
+- Se resolvió el error/warning de consola de Next.js: "An empty string ("") was passed to the src attribute" en `src/components/ui/CheckoutForm.tsx` al implementar un renderizado condicional robusto para cabañas de prueba con `imageUrl` vacío o nulo, inyectando un elegante placeholder de marcador de posición gris con ícono y texto informativo.
+- Se reestructuró el pipeline de validaciones en `src/components/ui/CheckoutForm.tsx` reemplazando los lanzamientos de excepciones `throw new Error(...)` por asignaciones directas de `setErrorMsg` y retornos rápidos. Adicionalmente, se cambió `console.error` por `console.warn` en el bloque catch final, neutralizando de raíz que las validaciones de campos incompletos por parte del usuario o colisiones disparen la molesta pantalla roja de error de consola en modo dev de NextJS.

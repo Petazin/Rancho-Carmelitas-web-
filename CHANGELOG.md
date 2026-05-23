@@ -1,5 +1,26 @@
 # Changelog - Rancho Carmelitas
 
+## [0.9.2] - 2026-05-23
+
+### Añadido / Mejorado (Gestión Operativa de Reservas y Cancelación Multicanal)
+
+- **Expiración de 24 Horas con Acción Rápida:** Implementación de la visualización y alerta para reservas pendientes que superen las 24 horas de antigüedad desde su creación sin registrar abono. Se muestra un badge interactivo vibrante `⏰ Expirada (+Xh)` y un botón rápido de acción *"⏳ Expirar y Liberar"* que redirige automáticamente al flujo de cancelación multicanal.
+- **Resolución y Priorización de Conflictos de Fechas (Overbooking):** Sistema inteligente de colisiones que cruza reservas no canceladas de una misma cabaña. Se establece prioridad absoluta para la reserva confirmada primero (`confirmed_at` más antiguo) o en su defecto la creada primero (`created_at` más antiguo). La reserva secundaria de menor prioridad despliega un banner de alerta rojo animado de Stitch UI informando el conflicto. Se integró un control interactivo `📢 Marcar: Ya le avisé` que persiste el estado en Supabase (`admin_notified_conflict`), cambiando de inmediato a un banner verde mitigado de huésped notificado.
+- **Flujo de Cancelación Multicanal Interactivo:** Nuevo modal Stitch UI premium al cancelar o expirar una reserva que ofrece la opción de enviar correo electrónico oficial de cancelación (Resend), abrir WhatsApp Web con un mensaje cortés personalizado y pre-redactado de acuerdo a la razón del desestimiento (por vencimiento de 24h, colisión de fechas, u otros), o ambas opciones en paralelo.
+- **Plantilla de Correo de Cancelación Oficial:** Creación del componente `CancelationEmailTemplate` en `src/components/emails/CancelationTemplate.tsx` y el endpoint `/api/send-cancelation` para el envío transaccional automático utilizando Resend, respetando los estándares de maquetación y de privacidad corporativa del Rancho.
+- **Hotfix de Carga de Imagen en Checkout (v0.9.2):** Corrección del error de consola de Next.js/React: *"An empty string ("") was passed to the src attribute"*. Se implementó un renderizado condicional en `CheckoutForm.tsx` para evitar que cabañas de prueba con `imageUrl` vacío o nulo pasen una cadena vacía a la propiedad `src` del componente de imagen, desplegando en su lugar un elegante contenedor de marcador de posición (placeholder) gris premium con un ícono y texto descriptivo.
+
+## [0.9.1] - 2026-05-23
+
+### Añadido / Mejorado (Refinamiento de Capacidad y Canales de Venta del PMS)
+
+- **Bloqueo Estricto de Capacidad:** Exceder la capacidad de la cabaña (capacidad base + adicionales) ahora bloquea de forma rígida y absoluta el guardado de la reserva manual en el PMS. Se ha removido por completo la opción interactiva de anulación ("Autorizar sobrecapacidad") y el botón de guardado en el formulario se deshabilita automáticamente con una advertencia en rojo absoluto. También valida en el submit para mayor seguridad.
+- **Página de Canales Independiente:** La administración autogestionable de plataformas y comisiones externas de venta se ha reubicado en su propia ruta exclusiva `/admin/configuracion` bajo una interfaz Stitch UI premium, agregando un acceso directo dedicado ("Canales de Venta" con ícono de conector `🔌`) en el Sidebar de navegación del PMS.
+- **Saneamiento de la Página de Configuraciones:** La vista de configuraciones globales fue limpiada a fondo de secciones duplicadas de plataformas, manteniéndose fiel a su propósito original (datos de contacto de WhatsApp, correo, dirección, teléfono y empresa).
+- **Hotfix de Inputs Controlados:** Resolución del warning/error de React en la página de administración de reservas que indicaba *"A component is changing an uncontrolled input to be controlled"*. Se introdujeron operadores de coalescencia nula (`?? ''`) en la asignación de `editForm` (como `plataforma_comision_aplicada`, `admin_comision_porcentaje` y `admin_notes`) al iniciar la edición y directamente en las propiedades de renderizado JSX. Esto previene que registros históricos de reservas con valores `null` en Supabase rompan el control del formulario en React al momento de su apertura.
+- **Referencia Financiera en Registro de Pago:** Integración de la visualización en tiempo real del *Total Neto* de la reserva junto al valor *Sugerido (50%)* en el modal de confirmación y registro de pago. Esto provee al administrador de toda la información de cobro de un vistazo rápido sin abandonar el modal.
+- **Calendario Interactivo Premium en Edición:** Integración de la interfaz Stitch UI de calendario de ocupación en la edición de reservas inline. Realiza consultas a Supabase de los días ocupados para la cabaña, excluyendo la reserva que se está editando para evitar autoconflictos, permitiendo al administrador extender, mover o conservar las fechas con absoluta flexibilidad y con el mismo estándar de UX de la creación.
+
 ## [0.9.0] - 2026-05-23
 
 ### Añadido / Mejorado (Control de Capacidad, Calendario Interactivo y Configuración de Canales)

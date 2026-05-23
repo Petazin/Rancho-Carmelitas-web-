@@ -62,7 +62,15 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
     try {
       // 1. VALIDACIÓN DE CONTACTO
       if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
-        throw new Error('Por favor completa todos los datos de contacto obligatorios (Nombre, Correo y Teléfono).');
+        setErrorMsg('Por favor completa todos los datos de contacto obligatorios (Nombre, Correo y Teléfono).');
+        setIsLoading(false);
+        return;
+      }
+
+      if (guestEmail !== confirmEmail) {
+        setErrorMsg('Los correos electrónicos no coinciden. Por favor revísalos.');
+        setIsLoading(false);
+        return;
       }
 
       // 2. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo
@@ -76,11 +84,9 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       if (colError) throw colError;
 
       if (colisiones && colisiones.length > 0) {
-        throw new Error('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
-      }
-
-      if (guestEmail !== confirmEmail) {
-        throw new Error('Los correos electrónicos no coinciden. Por favor revísalos.');
+        setErrorMsg('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
+        setIsLoading(false);
+        return;
       }
 
       // 2. INSERTAR EN DB
@@ -141,7 +147,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       router.push(`/checkout/success?bookingId=${data[0].id}`);
 
     } catch (err: any) {
-      console.error('Error al guardar reserva:', err);
+      console.warn('Error al guardar reserva:', err);
       setErrorMsg(err.message || 'Ocurrió un error al procesar tu reserva. Inténtalo de nuevo.');
       setIsLoading(false);
     }
@@ -371,12 +377,21 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       <div className="w-full lg:w-[400px]">
         <div className="sticky top-24 bg-white rounded-3xl premium-shadow border border-gray-100 overflow-hidden">
           <div className="relative h-48 w-full">
-            <Image
-              src={cabin.imageUrl}
-              alt={cabin.name}
-              fill
-              className="object-cover"
-            />
+            {cabin.imageUrl ? (
+              <Image
+                src={cabin.imageUrl}
+                alt={cabin.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400 gap-1.5 border-b border-gray-100">
+                <svg className="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span className="text-xs font-semibold">Sin imagen de cabaña</span>
+              </div>
+            )}
           </div>
           <div className="p-6">
             <div className="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">

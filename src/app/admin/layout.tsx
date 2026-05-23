@@ -126,6 +126,22 @@ export default function AdminLayout({
 
           {profile?.role === 'admin' && (
             <Link 
+              href="/admin/configuracion" 
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                pathname === '/admin/configuracion' 
+                  ? 'bg-[#f0fdf4] text-[#11d442] font-medium' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 22v-5M9 8V2h6v6M6 8h12v4a6 6 0 01-6 6h0a6 6 0 01-6-6V8z" />
+              </svg>
+              Canales de Venta
+            </Link>
+          )}
+
+          {profile?.role === 'admin' && (
+            <Link 
               href="/admin/configuraciones" 
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 pathname.includes('/admin/configuraciones') 

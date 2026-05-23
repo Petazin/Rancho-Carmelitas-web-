@@ -31,6 +31,7 @@ interface Booking {
   admin_comision_porcentaje?: number;
   requires_invoice?: boolean;
   plataforma?: { nombre: string };
+  admin_notified_conflict?: boolean;
 }
 
 const parseLocalDate = (dateStr: string) => {
@@ -166,6 +167,15 @@ function ReservasContent() {
   const [existingBookingsForSelectedCabin, setExistingBookingsForSelectedCabin] = useState<any[]>([]);
   const [loadingCabinOcupancy, setLoadingCabinOcupancy] = useState(false);
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [cancelForm, setCancelForm] = useState({
+    sendEmail: true,
+    sendWhatsapp: true,
+    reasonType: 'no_payment' as 'no_payment' | 'conflict' | 'other'
+  });
+  const [isCanceling, setIsCanceling] = useState(false);
+
 
   useEffect(() => {
     if (createModalOpen && createForm.cabin_id) {
@@ -173,13 +183,25 @@ function ReservasContent() {
     }
   }, [createModalOpen, createForm.cabin_id]);
 
-  async function fetchCabinOcupancy(cabinId: string) {
+  useEffect(() => {
+    if (editingBooking && editForm.cabin_id) {
+      fetchCabinOcupancy(editForm.cabin_id, editingBooking.id);
+    }
+  }, [editingBooking, editForm.cabin_id]);
+
+  async function fetchCabinOcupancy(cabinId: string, excludeBookingId?: string) {
     setLoadingCabinOcupancy(true);
-    const { data } = await supabase
+    let query = supabase
       .from('bookings')
       .select('check_in, check_out')
       .eq('cabin_id', cabinId)
       .neq('status', 'Cancelada');
+
+    if (excludeBookingId) {
+      query = query.neq('id', excludeBookingId);
+    }
+
+    const { data } = await query;
     setExistingBookingsForSelectedCabin(data || []);
     setLoadingCabinOcupancy(false);
   }
@@ -358,6 +380,157 @@ function ReservasContent() {
     );
   };
 
+  const isDateInSelectedRangeEditAdmin = (dateStr: string) => {
+    const checkIn = editForm.check_in;
+    const checkOut = editForm.check_out;
+    if (checkIn && checkOut) {
+      return dateStr > checkIn && dateStr < checkOut;
+    }
+    return false;
+  };
+
+  const handleDateClickEditAdmin = (dateStr: string) => {
+    if (isDateBookedAdmin(dateStr)) return; // Ignorar ocupados
+
+    const checkIn = editForm.check_in;
+    const checkOut = editForm.check_out;
+
+    if (!checkIn || (checkIn && checkOut)) {
+      // Seleccionó inicio
+      handleEditFormChange({ check_in: dateStr, check_out: '' });
+    } else if (checkIn && !checkOut) {
+      if (dateStr < checkIn) {
+        // Seleccionó fecha anterior, reiniciar checkIn
+        handleEditFormChange({ check_in: dateStr, check_out: '' });
+      } else if (dateStr === checkIn) {
+        // Clic en el mismo día
+        handleEditFormChange({ check_in: '', check_out: '' });
+      } else {
+        // Verificar solapamiento en el medio
+        const inDate = new Date(checkIn);
+        const outDate = new Date(dateStr);
+        let hasOverlap = false;
+        
+        for (const b of existingBookingsForSelectedCabin) {
+            const bIn = new Date(b.check_in);
+            const bOut = new Date(b.check_out);
+            if (inDate < bOut && outDate > bIn) {
+                hasOverlap = true;
+                break;
+            }
+        }
+
+        if (hasOverlap) {
+            // Solapamiento detectado, reiniciar checkIn a esta fecha
+            handleEditFormChange({ check_in: dateStr, check_out: '' });
+        } else {
+            handleEditFormChange({ check_out: dateStr });
+        }
+      }
+    }
+  };
+
+  const renderCalendarEditAdmin = () => {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const days = [];
+    
+    for (let i = 0; i < firstDay; i++) {
+        days.push(<div key={`empty-edit-admin-${i}`} className="p-2"></div>);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        const isPast = dateStr < todayStr;
+        const booked = isDateBookedAdmin(dateStr);
+        const isCheckIn = editForm.check_in === dateStr;
+        const isCheckOut = editForm.check_out === dateStr;
+        const inRange = isDateInSelectedRangeEditAdmin(dateStr);
+
+        let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all cursor-pointer relative ";
+        
+        if (isPast) {
+            cellClasses += "text-gray-300 hover:bg-gray-50"; // Permitir pasado por ser reserva manual de administrador
+        } else if (booked) {
+            cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (isCheckIn || isCheckOut) {
+            cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
+        } else if (inRange) {
+            cellClasses += "bg-[#11d442]/10 text-[#11d442]";
+        } else {
+            cellClasses += "text-gray-700 hover:bg-gray-100";
+        }
+
+        // Estilos para el background del rango visual conectivo
+        let rangeBgClasses = "";
+        if (isCheckIn && editForm.check_out) {
+            rangeBgClasses = "absolute top-0 bottom-0 right-0 left-1/2 bg-[#11d442]/10 -z-10";
+        } else if (isCheckOut && editForm.check_in) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-1/2 bg-[#11d442]/10 -z-10";
+        } else if (inRange) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
+        }
+
+        const isSelectable = !booked;
+
+        days.push(
+            <div key={`day-edit-admin-${d}`} className="relative py-1 px-0.5">
+                {rangeBgClasses && <div className={rangeBgClasses}></div>}
+                <button 
+                  type="button"
+                  onClick={() => isSelectable && handleDateClickEditAdmin(dateStr)}
+                  disabled={!isSelectable}
+                  className={cellClasses}
+                  aria-label={dateStr}
+                >
+                  {d}
+                </button>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="bg-white rounded-2xl border border-gray-250 shadow-sm p-4 w-full">
+            <div className="flex items-center justify-between mb-4">
+                <button 
+                  type="button"
+                  onClick={() => setCurrentCalendarDate(new Date(year, month - 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div className="font-bold text-gray-900 capitalize text-sm">
+                  {currentCalendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setCurrentCalendarDate(new Date(year, month + 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </div>
+            <div className="grid grid-cols-7 mb-2 text-center">
+                {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'].map(d => (
+                    <div key={`header-edit-admin-${d}`} className="text-xs font-bold text-gray-400">{d}</div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-1">
+                {days}
+            </div>
+            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+            </div>
+        </div>
+    );
+  };
+
   const handleCreateFormChange = (updatedFields: Partial<typeof createForm>) => {
     if ('cabin_id' in updatedFields) {
       setAllowOverCapacity(false);
@@ -512,8 +685,92 @@ function ReservasContent() {
         receiptFile: null 
       });
       setConfirmModalOpen(true);
+    } else if (newStatus === 'Cancelada') {
+      setBookingToCancel(booking);
+      // Calcular si está expirada o en conflicto para preseleccionar la razón
+      const hoursElapsed = Math.floor((new Date().getTime() - new Date(booking.created_at).getTime()) / (1000 * 60 * 60));
+      const isExpired = booking.status === 'Pendiente' && hoursElapsed >= 24;
+      const conflict = getOverbookingConflict(booking);
+
+      let initialReason: 'no_payment' | 'conflict' | 'other' = 'other';
+      if (isExpired) {
+        initialReason = 'no_payment';
+      } else if (conflict && !conflict.isPriority) {
+        initialReason = 'conflict';
+      }
+
+      setCancelForm({
+        sendEmail: true,
+        sendWhatsapp: true,
+        reasonType: initialReason
+      });
+      setCancelModalOpen(true);
     } else {
       updateStatus(booking.id, newStatus);
+    }
+  };
+
+  const confirmCancelation = async () => {
+    if (!bookingToCancel) return;
+    setIsCanceling(true);
+    try {
+      // 1. Actualizar estado a Cancelada en Supabase
+      const { error } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'Cancelada',
+          confirmed_at: null,
+          confirmed_by: null
+        })
+        .eq('id', bookingToCancel.id);
+
+      if (error) throw error;
+
+      // 2. Enviar correo de cancelación si está seleccionado
+      if (cancelForm.sendEmail && bookingToCancel.guest_email) {
+        fetch('/api/send-cancelation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestName: bookingToCancel.guest_name,
+            guestEmail: bookingToCancel.guest_email,
+            cabinName: bookingToCancel.cabin?.name || 'Cabaña',
+            checkIn: new Date(bookingToCancel.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+            checkOut: new Date(bookingToCancel.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+            reasonType: cancelForm.reasonType,
+            bookingId: bookingToCancel.id
+          })
+        }).catch(err => console.error('Error al enviar correo de cancelación:', err));
+      }
+
+      // 3. Abrir WhatsApp Web si está seleccionado y hay teléfono
+      if (cancelForm.sendWhatsapp && bookingToCancel.guest_phone) {
+        let rawPhone = bookingToCancel.guest_phone.replace(/\s+/g, '').replace('+', '');
+        if (!rawPhone.startsWith('56') && rawPhone.length === 9) {
+          rawPhone = '56' + rawPhone;
+        }
+
+        let mensajeText = '';
+        if (cancelForm.reasonType === 'no_payment') {
+          mensajeText = `Hola *${bookingToCancel.guest_name}*, te saludamos de *Rancho Carmelitas*. Te escribimos en relación a tu solicitud de reserva en la cabaña *${bookingToCancel.cabin?.name || 'Cabaña'}* para las fechas del ${new Date(bookingToCancel.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al ${new Date(bookingToCancel.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}. Lamentablemente, debido a que expiró el plazo de 24 horas para registrar el abono del 50%, hemos liberado las fechas en el sistema. Si aún deseas alojarte con nosotros, por favor contáctanos de inmediato para verificar disponibilidad. ¡Muchas gracias!`;
+        } else if (cancelForm.reasonType === 'conflict') {
+          mensajeText = `Hola *${bookingToCancel.guest_name}*, te saludamos de *Rancho Carmelitas*. Nos contactamos sobre tu solicitud de reserva en la cabaña *${bookingToCancel.cabin?.name || 'Cabaña'}* (${new Date(bookingToCancel.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al ${new Date(bookingToCancel.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}). Lamentablemente, se ha generado una colisión de fechas en nuestro sistema con una reserva confirmada anteriormente. Nos encantaría ofrecerte una reubicación en otra de nuestras hermosas cabañas disponibles o ajustar las fechas de tu estadía con un descuento especial. Quedamos a la espera de tu respuesta por esta vía para coordinar la mejor solución. ¡Disculpa las molestias!`;
+        } else {
+          mensajeText = `Hola *${bookingToCancel.guest_name}*, te escribimos de *Rancho Carmelitas* para informarte que lamentablemente hemos cancelado tu reserva para la cabaña *${bookingToCancel.cabin?.name || 'Cabaña'}* del ${new Date(bookingToCancel.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al ${new Date(bookingToCancel.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}. Si tienes dudas o deseas reubicarte, por favor respóndenos por esta vía o llámanos directamente. ¡Muchas gracias!`;
+        }
+
+        const whatsappUrl = `https://web.whatsapp.com/send?phone=${rawPhone}&text=${encodeURIComponent(mensajeText)}`;
+        window.open(whatsappUrl, '_blank');
+      }
+
+      // 4. Actualizar estado local
+      setBookings(bookings.map(b => b.id === bookingToCancel.id ? { ...b, status: 'Cancelada', confirmed_at: undefined, confirmed_by: undefined } : b));
+      setCancelModalOpen(false);
+      setBookingToCancel(null);
+    } catch (err: any) {
+      alert('Error al cancelar la reserva: ' + err.message);
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -615,11 +872,11 @@ function ReservasContent() {
       check_in: booking.check_in,
       check_out: booking.check_out,
       discount_type: 'fixed',
-      discount_value: booking.discount_applied || '',
-      admin_notes: booking.admin_notes || '',
-      plataforma_id: booking.plataforma_id || '',
-      plataforma_comision_aplicada: booking.plataforma_comision_aplicada !== undefined ? booking.plataforma_comision_aplicada : '',
-      admin_comision_porcentaje: booking.admin_comision_porcentaje !== undefined ? booking.admin_comision_porcentaje : '',
+      discount_value: booking.discount_applied ?? '',
+      admin_notes: booking.admin_notes ?? '',
+      plataforma_id: booking.plataforma_id ?? '',
+      plataforma_comision_aplicada: booking.plataforma_comision_aplicada ?? '',
+      admin_comision_porcentaje: booking.admin_comision_porcentaje ?? '',
       requires_invoice: booking.requires_invoice || false,
       precio_base: Math.round(baseOriginal).toString()
     });
@@ -706,6 +963,16 @@ function ReservasContent() {
   const createBooking = async () => {
     setIsCreating(true);
     try {
+      // Validación rígida de exceso de capacidad
+      const selectedCabin = availableCabins.find(c => c.id === createForm.cabin_id);
+      const maxTotalGuests = selectedCabin ? (selectedCabin.capacity || 2) + (selectedCabin.max_extra_guests || 0) : 0;
+      const totalGuestsRequested = Number(createForm.adults) + Number(createForm.children);
+      if (selectedCabin && totalGuestsRequested > maxTotalGuests) {
+        alert(`❌ Error: El total de huéspedes (${totalGuestsRequested}) excede la capacidad máxima permitida para la cabaña (${maxTotalGuests} personas). Ajusta la cantidad de huéspedes antes de guardar.`);
+        setIsCreating(false);
+        return;
+      }
+
       const totalPriceNum = Number(createForm.total_price) || 0;
       let calculatedDiscount = 0;
       let finalNotes = createForm.admin_notes || '';
@@ -774,6 +1041,70 @@ function ReservasContent() {
       setIsCreating(false);
     }
   };
+
+  const getOverbookingConflict = (booking: Booking) => {
+    if (booking.status === 'Cancelada') return null;
+
+    const startA = new Date(booking.check_in);
+    const endA = new Date(booking.check_out);
+
+    const collidingBookings = bookings.filter(other => {
+      if (other.id === booking.id || other.status === 'Cancelada' || other.cabin_id !== booking.cabin_id) return false;
+      const startB = new Date(other.check_in);
+      const endB = new Date(other.check_out);
+      return startA < endB && endA > startB;
+    });
+
+    if (collidingBookings.length === 0) return null;
+
+    const allColliding = [booking, ...collidingBookings];
+
+    // Ordenar: Confirmadas primero, luego por confirmed_at más antiguo. Si son pendientes, por created_at más antiguo.
+    allColliding.sort((x, y) => {
+      const xIsConf = x.status === 'Confirmada' ? 1 : 0;
+      const yIsConf = y.status === 'Confirmada' ? 1 : 0;
+
+      if (xIsConf !== yIsConf) {
+        return yIsConf - xIsConf;
+      }
+
+      if (x.status === 'Confirmada') {
+        const timeX = x.confirmed_at ? new Date(x.confirmed_at).getTime() : new Date(x.created_at).getTime();
+        const timeY = y.confirmed_at ? new Date(y.confirmed_at).getTime() : new Date(y.created_at).getTime();
+        return timeX - timeY;
+      } else {
+        const timeX = new Date(x.created_at).getTime();
+        const timeY = new Date(y.created_at).getTime();
+        return timeX - timeY;
+      }
+    });
+
+    const priorityBooking = allColliding[0];
+    const isPriority = priorityBooking.id === booking.id;
+
+    return {
+      hasConflict: true,
+      isPriority,
+      priorityBooking,
+      otherBookings: allColliding.filter(x => x.id !== booking.id)
+    };
+  };
+
+  const toggleConflictNotification = async (bookingId: string, currentStatus: boolean) => {
+    const nextVal = !currentStatus;
+    const { error } = await supabase
+      .from('bookings')
+      .update({ admin_notified_conflict: nextVal })
+      .eq('id', bookingId);
+      
+    if (error) {
+      alert('Error al actualizar notificación: ' + error.message);
+    } else {
+      setBookings(bookings.map(b => b.id === bookingId ? { ...b, admin_notified_conflict: nextVal } : b));
+    }
+  };
+
+
 
 
   if (loading) {
@@ -872,13 +1203,74 @@ function ReservasContent() {
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-gray-50 transition-all">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900">{booking.guest_name}</p>
-                      <p className="text-xs text-gray-500">{booking.guest_email}</p>
-                      <p className="text-xs text-gray-500 font-mono mt-0.5">{booking.guest_phone || 'Sin teléfono'}</p>
-                    </td>
+                filteredBookings.map((booking) => {
+                  const hoursElapsed = Math.floor((new Date().getTime() - new Date(booking.created_at).getTime()) / (1000 * 60 * 60));
+                  const isExpired = booking.status === 'Pendiente' && hoursElapsed >= 24;
+                  const conflict = getOverbookingConflict(booking);
+
+                  return (
+                    <tr key={booking.id} className="hover:bg-gray-50 transition-all">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <p className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                            {booking.guest_name}
+                            {isExpired && (
+                              <>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                                  ⏰ Expirada (+{hoursElapsed}h)
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(booking, 'Cancelada')}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-650 hover:bg-red-700 text-white border border-red-700 shadow-sm transition-all active:scale-95 cursor-pointer ml-1.5"
+                                  title="Expirar y liberar fechas"
+                                >
+                                  ⏳ Expirar y Liberar
+                                </button>
+                              </>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500">{booking.guest_email}</p>
+                          <p className="text-xs text-gray-500 font-mono">{booking.guest_phone || 'Sin teléfono'}</p>
+                          
+                          {/* Banner de Conflicto de Overbooking */}
+                          {conflict && !conflict.isPriority && (
+                            booking.admin_notified_conflict ? (
+                              <div className="mt-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 text-[11px] flex flex-col gap-1 shadow-sm leading-tight max-w-[280px]">
+                                <p className="font-bold flex items-center gap-1">
+                                  ✓ Huésped Notificado
+                                </p>
+                                <p className="text-gray-500 text-[10px]">
+                                  A la espera de confirmación de cambio de fecha/cabaña.
+                                </p>
+                                <button 
+                                  type="button" 
+                                  onClick={() => toggleConflictNotification(booking.id, true)} 
+                                  className="text-left text-[9px] underline text-emerald-700 font-bold hover:text-emerald-950 mt-1 cursor-pointer self-start"
+                                >
+                                  Desmarcar / Revertir
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="mt-2.5 p-3 rounded-xl bg-red-50 text-red-800 border border-red-100 text-[11px] flex flex-col gap-1.5 shadow-sm leading-tight max-w-[280px]">
+                                <p className="font-bold flex items-center gap-1 text-red-900 uppercase tracking-wider text-[9px]">
+                                  ⚠️ Overbooking
+                                </p>
+                                <p className="text-gray-600 text-[10px]">
+                                  Colisiona con la reserva prioritaria de <strong className="text-gray-900">{conflict.priorityBooking.guest_name}</strong>.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleConflictNotification(booking.id, false)}
+                                  className="mt-0.5 bg-white hover:bg-red-100 text-red-950 border border-red-200 px-2 py-1 rounded-lg text-[9px] font-bold flex items-center gap-1 self-start transition-colors active:scale-95 shadow-sm cursor-pointer"
+                                >
+                                  📢 Marcar: Ya le avisé
+                                </button>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </td>
 
                     {/* Lógica condicional si estamos editando esta fila */}
                     {editingBooking?.id === booking.id ? (
@@ -901,17 +1293,19 @@ function ReservasContent() {
                               <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Fechas Estadía</label>
                               <div className="flex gap-2">
                                 <input 
-                                  type="date" 
-                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  type="text" 
+                                  readOnly
+                                  placeholder="Clic en calendario..."
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-gray-50 font-semibold text-gray-800 cursor-default shadow-inner text-center"
                                   value={editForm.check_in}
-                                  onChange={e => handleEditFormChange({ check_in: e.target.value })}
                                 />
                                 <span className="text-gray-400 self-center">-</span>
                                 <input 
-                                  type="date" 
-                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  type="text" 
+                                  readOnly
+                                  placeholder="Clic en calendario..."
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-gray-50 font-semibold text-gray-800 cursor-default shadow-inner text-center"
                                   value={editForm.check_out}
-                                  onChange={e => handleEditFormChange({ check_out: e.target.value })}
                                 />
                               </div>
                             </div>
@@ -919,12 +1313,25 @@ function ReservasContent() {
                               <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Precio Base Estadía ($)</label>
                               <input 
                                 type="number" 
-                                className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                className="p-2 border border-gray-205 rounded-xl text-sm w-full bg-white shadow-sm"
                                 value={editForm.precio_base}
                                 onChange={e => setEditForm({...editForm, precio_base: e.target.value})}
                                 min="0"
                               />
                             </div>
+                          </div>
+
+                          {/* Calendario Interactivo de Ocupación para Edición */}
+                          <div className="space-y-1">
+                            <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Calendario de Disponibilidad (Haz clic para seleccionar fechas) *</label>
+                            {loadingCabinOcupancy ? (
+                              <div className="flex items-center justify-center p-8 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#11d442]"></div>
+                                <span className="ml-2 text-xs text-gray-500 font-semibold">Cargando ocupación de cabaña...</span>
+                              </div>
+                            ) : (
+                              renderCalendarEditAdmin()
+                            )}
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-blue-100">
@@ -982,7 +1389,7 @@ function ReservasContent() {
                                 type="number"
                                 step="0.01"
                                 className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
-                                value={editForm.plataforma_comision_aplicada}
+                                value={editForm.plataforma_comision_aplicada ?? ''}
                                 onChange={e => setEditForm({...editForm, plataforma_comision_aplicada: e.target.value === '' ? '' : e.target.value})}
                               />
                             </div>
@@ -995,7 +1402,7 @@ function ReservasContent() {
                                 type="number"
                                 step="0.01"
                                 className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
-                                value={editForm.admin_comision_porcentaje}
+                                value={editForm.admin_comision_porcentaje ?? ''}
                                 onChange={e => setEditForm({...editForm, admin_comision_porcentaje: e.target.value === '' ? '' : e.target.value})}
                               />
                             </div>
@@ -1005,7 +1412,7 @@ function ReservasContent() {
                                 type="text"
                                 className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
                                 placeholder="Ej: Descuento por promoción de invierno..."
-                                value={editForm.admin_notes}
+                                value={editForm.admin_notes ?? ''}
                                 onChange={e => setEditForm({...editForm, admin_notes: e.target.value})}
                               />
                             </div>
@@ -1268,12 +1675,112 @@ function ReservasContent() {
                       )}
                     </td>
                   </tr>
-                ))
+                );
+              })
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Modal Cancelación de Reserva Multicanal */}
+      {cancelModalOpen && bookingToCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-[24px] p-8 w-full max-w-md shadow-2xl relative border border-gray-150">
+            <button 
+              onClick={() => {
+                setCancelModalOpen(false);
+                setBookingToCancel(null);
+              }}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Cancelar Reserva</h3>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Estás a punto de cancelar la reserva de <strong className="text-gray-800">{bookingToCancel.guest_name}</strong> para la cabaña <strong>{bookingToCancel.cabin?.name}</strong>.
+            </p>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Razón de la Cancelación</label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-semibold focus:bg-white focus:outline-none"
+                  value={cancelForm.reasonType}
+                  onChange={e => setCancelForm({...cancelForm, reasonType: e.target.value as any})}
+                >
+                  <option value="no_payment">⏳ Falta de Abono (Plazo 24h vencido)</option>
+                  <option value="conflict">⚠️ Conflicto de Overbooking / Reubicación</option>
+                  <option value="other">⚙️ Otro Motivo / Cancelación General</option>
+                </select>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-150 space-y-3">
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">📢 Notificar al Huésped por:</h4>
+                
+                <label className="flex items-center gap-3 cursor-pointer py-1 select-none">
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 text-[#11d442] focus:ring-[#11d442]/30 rounded border-gray-300 cursor-pointer"
+                    checked={cancelForm.sendEmail}
+                    onChange={e => setCancelForm({...cancelForm, sendEmail: e.target.checked})}
+                  />
+                  <span className="text-xs font-bold text-gray-700 flex items-center gap-1">
+                    📧 Correo Electrónico {bookingToCancel.guest_email ? <span className="text-[10px] text-gray-400 font-medium">({bookingToCancel.guest_email})</span> : <span className="text-red-500 text-[10px] font-medium">(No registrado)</span>}
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer py-1 select-none">
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 text-[#11d442] focus:ring-[#11d442]/30 rounded border-gray-300 cursor-pointer"
+                    checked={cancelForm.sendWhatsapp}
+                    onChange={e => setCancelForm({...cancelForm, sendWhatsapp: e.target.checked})}
+                    disabled={!bookingToCancel.guest_phone}
+                  />
+                  <span className={`text-xs font-bold flex items-center gap-1 ${!bookingToCancel.guest_phone ? 'text-gray-400' : 'text-gray-700'}`}>
+                    💬 WhatsApp Web {bookingToCancel.guest_phone ? <span className="text-[10px] text-gray-400 font-medium">({bookingToCancel.guest_phone})</span> : <span className="text-red-500 text-[10px] font-medium">(No registrado)</span>}
+                  </span>
+                </label>
+              </div>
+
+              {cancelForm.sendWhatsapp && bookingToCancel.guest_phone && (
+                <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 p-3 rounded-xl leading-relaxed">
+                  💡 **Nota de WhatsApp:** Al confirmar, se abrirá automáticamente una pestaña de WhatsApp Web con un mensaje cortés pre-redactado y adaptado al motivo de la cancelación.
+                </p>
+              )}
+
+              <div className="pt-2 flex gap-3">
+                <button 
+                  onClick={confirmCancelation}
+                  disabled={isCanceling}
+                  className="flex-1 bg-red-500 hover:bg-red-650 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                >
+                  {isCanceling ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Cancelando...
+                    </>
+                  ) : 'Confirmar Cancelación'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setCancelModalOpen(false);
+                    setBookingToCancel(null);
+                  }}
+                  disabled={isCanceling}
+                  className="px-6 py-3 font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors text-sm"
+                >
+                  Volver
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Confirmación de Pago */}
       {confirmModalOpen && bookingToConfirm && (
@@ -1287,8 +1794,9 @@ function ReservasContent() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Monto del Abono Recibido ($)</label>
-                <p className="text-xs text-[#11d442] font-semibold mb-2">
-                  Sugerido (50%): ${Math.round(((bookingToConfirm.total_price || 0) - (bookingToConfirm.discount_applied || 0)) * 0.5).toLocaleString()}
+                <p className="text-xs text-gray-500 font-semibold mb-2 flex flex-wrap justify-between gap-1">
+                  <span>Total Neto: <strong className="text-gray-800">${((bookingToConfirm.total_price || 0) - (bookingToConfirm.discount_applied || 0)).toLocaleString()}</strong></span>
+                  <span className="text-[#11d442]">Sugerido (50%): <strong>${Math.round(((bookingToConfirm.total_price || 0) - (bookingToConfirm.discount_applied || 0)) * 0.5).toLocaleString()}</strong></span>
                 </p>
                 <input 
                   type="number" 
@@ -1495,22 +2003,10 @@ function ReservasContent() {
                     />
                   </div>
                   {selectedCabinForCreate && isCapacityExceededForCreate && (
-                    <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-xl p-4 space-y-3 mt-2 animate-in fade-in">
+                    <div className="sm:col-span-2 bg-red-50 border border-red-150 rounded-xl p-4 mt-2 animate-in fade-in">
                       <p className="text-xs font-bold text-red-700 flex items-center gap-1.5 leading-tight">
-                        ⚠️ LÍMITE DE CAPACIDAD EXCEDIDO: La capacidad máxima para la cabaña {selectedCabinForCreate.name} es de {maxTotalGuestsForCreate} personas (capacidad base {selectedCabinForCreate.capacity} + {selectedCabinForCreate.max_extra_guests || 0} adicionales). Estás intentando reservar para {totalGuestsRequestedForCreate} personas.
+                        ❌ CAPACIDAD MÁXIMA EXCEDIDA: La capacidad máxima para la cabaña {selectedCabinForCreate.name} es de {maxTotalGuestsForCreate} personas (capacidad base {selectedCabinForCreate.capacity} + {selectedCabinForCreate.max_extra_guests || 0} adicionales). Estás intentando registrar {totalGuestsRequestedForCreate} personas. Modifica la cantidad de huéspedes para habilitar el guardado.
                       </p>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="checkbox"
-                          id="allow-overcapacity"
-                          className="w-4 h-4 text-red-600 focus:ring-red-500 rounded border-gray-300 cursor-pointer"
-                          checked={allowOverCapacity}
-                          onChange={e => setAllowOverCapacity(e.target.checked)}
-                        />
-                        <label htmlFor="allow-overcapacity" className="text-xs font-bold text-red-900 cursor-pointer select-none">
-                          Autorizar sobrecapacidad (Ignorar límite para reserva de emergencia)
-                        </label>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1584,7 +2080,7 @@ function ReservasContent() {
                       step="0.01"
                       min="0"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
-                      value={createForm.plataforma_comision_aplicada}
+                      value={createForm.plataforma_comision_aplicada ?? ''}
                       onChange={e => setCreateForm({...createForm, plataforma_comision_aplicada: e.target.value})}
                     />
                   </div>
@@ -1595,7 +2091,7 @@ function ReservasContent() {
                       step="0.01"
                       min="0"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
-                      value={createForm.admin_comision_porcentaje}
+                      value={createForm.admin_comision_porcentaje ?? ''}
                       onChange={e => setCreateForm({...createForm, admin_comision_porcentaje: e.target.value})}
                     />
                   </div>
@@ -1720,9 +2216,9 @@ function ReservasContent() {
               <div className="pt-4 flex gap-3">
                 <button 
                   type="submit"
-                  disabled={isCreating || (isCapacityExceededForCreate && !allowOverCapacity)}
+                  disabled={isCreating || isCapacityExceededForCreate}
                   className={`flex-1 font-bold py-3 px-4 rounded-xl transition-colors text-sm shadow-md active:scale-95 ${
-                    (isCreating || (isCapacityExceededForCreate && !allowOverCapacity))
+                    (isCreating || isCapacityExceededForCreate)
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
                       : 'bg-[#11d442] text-white hover:bg-[#0fb337]'
                   }`}
