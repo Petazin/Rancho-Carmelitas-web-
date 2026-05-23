@@ -1,5 +1,16 @@
 # Changelog - Rancho Carmelitas
 
+## [0.9.4] - 2026-05-23
+
+### Añadido / Mejorado (Módulo de Gestión de Landing Page Autogestionable en el PMS)
+
+- **Módulo Administrativo "Gestión de Landing":** Creación de una página exclusiva de administración (`/admin/landing`) protegida para roles `admin` que permite gestionar globalmente el diseño de la Landing Page pública de Rancho Carmelitas de manera centralizada.
+- **Autogestión de Hero Banner (Textos y Fondo):** Integración de campos editables en tiempo real para el título y el subtítulo del encabezado del Home. Permite subir de forma independiente una imagen de fondo panorámica al Storage de Supabase, impactando de forma reactiva en el portal.
+- **Galería de Momentos Dinámica y Reordenable:** Módulo de administración para el carrusel de la Landing. Permite la subida múltiple de archivos de fotos de instalaciones reales con edición directa del texto alternativo (SEO) y controles interactivos premium de flechas (`▲` / `▼`) para reordenar las imágenes e intercambiar el `order_index` en la base de datos de manera fluida.
+- **Nueva Pestaña en Sidebar:** Inyección en el menú lateral administrativo de Next.js (`layout.tsx`) de la pestaña `"Gestión de Landing"` con un ícono interactivo Stitch UI estilizado y validación de permisos de seguridad RBAC.
+- **Arquitectura de Base de Datos Separada (v0.9.4):** Diseño del script `schema_update_v3.sql` que implementa la tabla de configuración global única `landing_settings` y la tabla relacional de fotos `landing_gallery` con seguridad de filas (RLS) habilitada para lectura pública y control de escritura administrativa.
+- **Lógica Defensiva de Fallback Local:** Integración de bloques robustos de interceptación `try-catch` en la Landing pública (`src/app/page.tsx`). Si la base de datos no tiene las nuevas tablas creadas, el sistema atrapa el error y de forma automática usa el fallback de fotos locales estáticas en `/public/gallery` y textos por defecto, garantizando que el portal permanezca 100% estable y visible sin interrupciones del servicio.
+
 ## [0.9.3] - 2026-05-23
 
 ### Añadido / Mejorado (Gestión Diferenciada de Fotos de Portada y Galería en el PMS)

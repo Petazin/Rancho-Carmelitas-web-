@@ -142,6 +142,23 @@ export default function AdminLayout({
 
           {profile?.role === 'admin' && (
             <Link 
+              href="/admin/landing" 
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                pathname === '/admin/landing' 
+                  ? 'bg-[#f0fdf4] text-[#11d442] font-medium' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.24 9.42a3 3 0 11-4.24-4.24M15.24 9.42L19.5 5.16M15.24 9.42a3 3 0 10-4.24 4.24M11 13.66l-4.26 4.26a1.5 1.5 0 11-2.12-2.12L8.88 11.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 7.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+              </svg>
+              Gestión de Landing
+            </Link>
+          )}
+
+          {profile?.role === 'admin' && (
+            <Link 
               href="/admin/configuraciones" 
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 pathname.includes('/admin/configuraciones') 

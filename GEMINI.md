@@ -31,13 +31,11 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita la IA pero las corre el usuario.
-
-Se ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos), la **Fase 4** (PMS y Galería), la **Fase 4.5 (Gestión de Usuarios y Roles)**, la **Personalización de Contenido Real (Social Media Sync)**, la **Fase 4.75 (Evolución de Cobros y Comisiones Parametrizables)**, el **Saneamiento del Módulo de Reservas Manuales (Versión 0.8.1)**, el **Robustecimiento de Capacidad, Calendario Interactivo y Configuración de Canales (Versión 0.9.0)**, el **Refinamiento de Capacidad y Canales de Venta (Versión 0.9.1)**, la **Gestión Operativa de Reservas y Cancelación Multicanal (Versión 0.9.2)** y la **Gestión Diferenciada de Fotos de Portada y Galería en el PMS (Versión 0.9.3)**. Actualmente se está completando la sincronización con el repositorio oficial en GitHub.
+  - Las ejecuciones de prueba las solicita la IA pero las corre elSe ha completado la **Fase 1** (UI Base), la **Fase 2** (Integración de Supabase), la **Fase 3** (Correos), la **Fase 4** (PMS y Galería), la **Fase 4.5 (Gestión de Usuarios y Roles)**, la **Personalización de Contenido Real (Social Media Sync)**, la **Fase 4.75 (Evolución de Cobros y Comisiones Parametrizables)**, el **Saneamiento del Módulo de Reservas Manuales (Versión 0.8.1)**, el **Robustecimiento de Capacidad, Calendario Interactivo y Configuración de Canales (Versión 0.9.0)**, el **Refinamiento de Capacidad y Canales de Venta (Versión 0.9.1)**, la **Gestión Operativa de Reservas y Cancelación Multicanal (Versión 0.9.2)**, la **Gestión Diferenciada de Fotos de Portada y Galería en el PMS (Versión 0.9.3)** y el **Módulo de Gestión de Landing Page Autogestionable en el PMS (Versión 0.9.4)**. Actualmente se está completando la sincronización con el repositorio oficial en GitHub.
 
 El sistema ahora soporta:
 
-- **RBAC (Role Based Access Control):** Perfiles de `admin` y `staff`.
+- **RBAC (Role Based Access Control):** Perfiles de `admin` and `staff`.
 - **Panel de Gestión de Equipo:** Los administradores pueden invitar nuevos colaboradores por correo y gestionar sus roles.
 - **Protección de Rutas:** Seguridad en el servidor y en la UI basada en el rol del usuario autenticado.
 - **Identidad Dinámica:** Reconocimiento personalizado de cada integrante del equipo en el panel administrativo.
@@ -64,5 +62,5 @@ El sistema ahora soporta:
 - **Cancelación Multicanal e Interacciones WhatsApp / Resend (v0.9.2):** Opción multicanal en el modal de cancelación para despachar correo premium oficial (mediante la plantilla `CancelationEmailTemplate` y endpoint `/api/send-cancelation`) y abrir WhatsApp Web con un mensaje cortés pre-redactado de acuerdo a la razón exacta seleccionada.
 - **Hotfix de Carga de Imagen en Checkout (v0.9.2):** Integración de lógica de renderizado condicional en `CheckoutForm.tsx` para evitar que cabañas con `imageUrl` vacío o nulo pasen un `src` vacío a la etiqueta de imagen, desplegando en su lugar un marcador de posición gris premium con ícono de casa.
 - **Gestión Diferenciada de Fotos de Portada y Galería en el PMS (v0.9.3):** Incorporación de un cargador independiente para la **Foto de Portada Principal** oficial de cada cabaña (`image_url` en Supabase) con su guía de tamaño ideal (**Aspecto 3:2, ej: 1200x800 px**) y la integración de badges informativos dinámicos de ayuda visual sobre la galería de fotos, clasificando en tiempo real la **Primera Foto** de la galería combinada como `🌌 BANNER HERO` (**Recomendado: 1920x1080 px, 16:9/21:9**) y las **Fotos 2 en adelante** como `🖼️ CARRUSEL` (**Recomendado: 1200x800 px, 3:2**), para asegurar una edición precisa y estética sin reutilización ineficiente.
-
-Próximos pasos: **Fase 7** (Validación final y QA de integración de la versión v0.9.3).
+- **Módulo de Gestión de Landing Page Autogestionable en el PMS (v0.9.4):** Autogestión del Home público de Rancho Carmelitas mediante una pantalla dedicada `/admin/landing` reservada para roles `admin`. Permite modificar en tiempo real el título y el subtítulo del Hero principal, actualizar la imagen panorámica de fondo e inyectar, eliminar y reordenar interactivamente las fotos de la Galería de Momentos mediante flechas (`▲` / `▼`). Incorpora una arquitectura de base de datos dedicada (`landing_settings` y `landing_gallery`) y lógica de fallbacks robustos try-catch en el Home público para garantizar estabilidad del 100% incluso ante la ausencia previa de tablas en Supabase.
+Próximos pasos: **Fase 7** (Validación final y QA de integración de la versión v0.9.4).

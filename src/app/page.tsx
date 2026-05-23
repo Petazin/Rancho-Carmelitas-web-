@@ -14,6 +14,68 @@ export default async function Home() {
     console.error("Error cargando cabañas desde Supabase:", error);
   }
 
+  // 1. Cargar configuraciones del Hero de forma defensiva (Fallback si no existen tablas)
+  let heroSettings = {
+    hero_title: 'Escapa a la naturaleza, con total comodidad.',
+    hero_subtitle: 'Descubre nuestras exclusivas cabañas totalmente equipadas en el corazón de Pullally, Papudo. Tu refugio perfecto entre el bosque y el mar.',
+    hero_bg_url: '/gallery/hero.png'
+  };
+
+  try {
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('landing_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (!settingsError && settingsData) {
+      heroSettings = settingsData;
+    }
+  } catch (err) {
+    console.warn("Advertencia cargando landing_settings (usando fallback estático local):", err);
+  }
+
+  // Formatear dinámicamente el título del Hero destacando "comodidad" en verde Rancho
+  const titleText = heroSettings.hero_title;
+  const highlightWord = "comodidad";
+  let formattedTitle: React.ReactNode = titleText;
+  if (titleText.includes(highlightWord)) {
+    const parts = titleText.split(highlightWord);
+    formattedTitle = (
+      <>
+        {parts[0]}
+        <span className="text-[#11d442]">{highlightWord}</span>
+        {parts[1]}
+      </>
+    );
+  }
+
+  // 2. Cargar fotos de la galería de momentos de forma defensiva
+  let galleryItems = [
+    { src: '/gallery/hero.png', alt: 'Vista panorámica de la piscina y cabañas' },
+    { src: '/gallery/interior.png', alt: 'Interior acogedor y cocina equipada' },
+    { src: '/gallery/piscina_hd.png', alt: 'Piscina principal con áreas verdes' },
+    { src: '/gallery/piscina.png', alt: 'Nuestros huéspedes disfrutando de la piscina' },
+    { src: '/gallery/dormitorio.png', alt: 'Dormitorio matrimonial confortable' },
+    { src: '/gallery/entorno_hd.png', alt: 'Terraza y zona de relajación exterior' },
+  ];
+
+  try {
+    const { data: dbGallery, error: galleryError } = await supabase
+      .from('landing_gallery')
+      .select('*')
+      .order('order_index', { ascending: true });
+
+    if (!galleryError && dbGallery && dbGallery.length > 0) {
+      galleryItems = dbGallery.map(item => ({
+        src: item.image_url,
+        alt: item.alt_text || 'Foto de momentos Rancho Carmelitas'
+      }));
+    }
+  } catch (err) {
+    console.warn("Advertencia cargando landing_gallery (usando fallback estático local):", err);
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header / Navbar */}
@@ -41,19 +103,19 @@ export default async function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center bg-gray-900 overflow-hidden">
-          {/* Background image temporal */}
+          {/* Background image autogestionable */}
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center"
-            style={{ backgroundImage: 'url("/gallery/hero.png")' }}
+            style={{ backgroundImage: `url("${heroSettings.hero_bg_url}")` }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/80 to-black/30 z-10" />
           
           <div className="relative z-20 text-center px-4 max-w-4xl mx-auto mt-16 hover-lift">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight leading-tight">
-              Escapa a la naturaleza, con total <span className="text-[#11d442]">comodidad</span>.
+              {formattedTitle}
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto font-light">
-              Descubre nuestras exclusivas cabañas totalmente equipadas en el corazón de <strong>Pullally, Papudo</strong>. Tu refugio perfecto entre el bosque y el mar.
+              {heroSettings.hero_subtitle}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a href="#cabins" className="btn-primary text-center text-lg px-8 py-4 w-full sm:w-auto">
@@ -106,14 +168,7 @@ export default async function Home() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">Galería de Momentos</h2>
             <p className="text-gray-500 mb-12 max-w-2xl mx-auto">Vistas reales de nuestro entorno, piscina y confortables interiores.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { src: '/gallery/hero.png', alt: 'Vista panorámica de la piscina y cabañas' },
-                { src: '/gallery/interior.png', alt: 'Interior acogedor y cocina equipada' },
-                { src: '/gallery/piscina_hd.png', alt: 'Piscina principal con áreas verdes' },
-                { src: '/gallery/piscina.png', alt: 'Nuestros huéspedes disfrutando de la piscina' },
-                { src: '/gallery/dormitorio.png', alt: 'Dormitorio matrimonial confortable' },
-                { src: '/gallery/entorno_hd.png', alt: 'Terraza y zona de relajación exterior' },
-              ].map((img, i) => (
+              {galleryItems.map((img, i) => (
                 <div key={i} className="aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 shadow-sm">
                   <img 
                     src={img.src} 

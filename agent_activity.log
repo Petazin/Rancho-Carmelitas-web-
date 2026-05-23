@@ -107,3 +107,11 @@
 - Se implementaron los mismos cargadores de portada independientes y badges explicativos dinámicos de galería en el formulario de edición inline (`editingId === cabin.id`), combinando de forma inteligente y reactiva la primera foto real visible para el cliente (existente o nueva).
 - Se saneó la sintaxis TSX en las secciones modificadas para evitar warnings de consola y errores de renderizado de React con Turbopack en el PMS local.
 - Se actualizaron de manera armoniosa y consistente `CHANGELOG.md` y `GEMINI.md` a la versión [0.9.3] en español.
+[2026-05-23 04:30:00] Actividad de Antigravity:
+- Se diseñó y creó el script SQL `schema_update_v3.sql` que implementa la tabla global `landing_settings` y la tabla relacional `landing_gallery` para la autogestión completa del Home público.
+- Se implementó la nueva pantalla administrativa interactiva `src/app/admin/landing/page.tsx` con soporte para editar en tiempo real los textos del Hero banner (título y subtítulo descriptivos), cambiar el fondo panorámico mediante carga directa y gestionar el carrusel de la galería de momentos.
+- Se integraron controles de ordenación interactiva (flechas `▲` / `▼`) e inputs de edición SEO para `alt_text` sobre las miniaturas de la galería en el panel.
+- Se inyectó la nueva pestaña de navegación `"Gestión de Landing"` en el Sidebar del PMS administrativo (`src/app/admin/layout.tsx`) con un ícono interactivo Stitch UI estilizado y validación de permisos exclusiva para roles `admin`.
+- Se modificó la Landing Page pública (`src/app/page.tsx`) para consultar de manera dinámica y reactiva los datos del Hero banner y la Galería de Momentos en Supabase.
+- Se inyectaron lógicas defensivas robustas basadas en bloques `try-catch` y fallbacks en `src/app/page.tsx` para evitar que la Landing pública se caiga si el usuario no ha ejecutado el script SQL en Supabase, utilizando de forma transparente y automática las fotos físicas locales en `/public/gallery` y textos por defecto.
+- Se actualizaron de manera consistente `CHANGELOG.md` y `GEMINI.md` a la versión [0.9.4] en español.
