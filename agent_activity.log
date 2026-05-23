@@ -27,3 +27,39 @@
 - Se prepararon los archivos con `git add .` para ser incluidos en el commit.
 - Se realizó un commit de los cambios con el mensaje en español descriptivo correspondiente a la consolidación de la versión 0.7.4.
 - Se realizó un push a la rama `master` en GitHub para consolidar las mejoras en el repositorio remoto.
+[2026-05-22 12:15:00] Actividad de Antigravity:
+- Se implementó la evolución del sistema de comisiones en la base de datos Supabase con la nueva tabla `plataformas` y alteración de `bookings` (creación del script SQL `schema_update.sql`).
+- Se rediseñó la vista de edición inline en `src/app/admin/reservas/page.tsx` para integrar el selector de plataforma y el cálculo automático de comisión sobre el Precio Bruto e IVA.
+- Se implementó la visualización inactiva de las reservas en la tabla de `page.tsx` mostrando el badge del origen (Booking.com, Airbnb, etc. o Directo) y una Ficha de Liquidación Interna discreta y de uso privado.
+- Se desarrolló el botón y el modal de creación manual "+ Nueva Reserva Manual" con todos los datos del huésped, estadía, y una previsualización dinámica del desglose financiero en tiempo real.
+- Se actualizó la plantilla de correo `src/components/emails/PaymentConfirmationTemplate.tsx` para incluir el desglose del cobro de plataforma y el cálculo del Precio Bruto, manteniendo bajo estricta exclusión de privacidad la comisión interna del administrador.
+- Se modificó la ruta de la API de confirmación de pago `src/app/api/send-payment-confirmation/route.tsx` para recibir y pasar las nuevas propiedades a la plantilla.
+- Se actualizaron los archivos de documentación y control: `GEMINI.md`, `README.md` y `CHANGELOG.md` elevando la versión a [0.8.0].
+[2026-05-22 12:18:00] Actividad de Antigravity:
+- Se detectó un error por caché corrupta de Turbopack al iniciar el servidor de desarrollo de Next.js.
+- Se ejecutó el comando de shell `Remove-Item -Recurse -Force .next` para eliminar la caché corrupta.
+- Se volvió a ejecutar el comando de shell `npm run dev` para levantar el servidor de desarrollo de Next.js de forma exitosa y segura.
+[2026-05-22 12:45:00] Actividad de Antigravity:
+- Se removieron por completo todas las alertas visuales de overbooking ("Cabaña Ocupada") y capacidad máxima ("Capacidad Máxima Excedida") en el modal de creación de reservas manuales.
+- Se eliminaron las alertas y bloqueos del `onSubmit` del formulario de reserva manual, habilitando libertad total de decisión de overbooking/capacidad al administrador del PMS.
+- Se actualizaron los campos selectores de Cabaña y fechas Check-in/Check-out del modal de reserva manual para invocar el helper reactivo `handleCreateFormChange`, auto-rellenando el precio sugerido oficial y permitiendo su posterior personalización.
+- Se saneó la sintaxis JSX rota en la sección final del modal de creación manual en `src/app/admin/reservas/page.tsx`, erradicando fragmentos rotos de lógica de previsualización que tiraban error en React.
+- Se incorporó la visualización del "Precio Bruto (Sin IVA)" en la previsualización del huésped en el modal manual, alineándola con el cálculo financiero requerido.
+- Se actualizaron `CHANGELOG.md` y `GEMINI.md` a la versión [0.8.1] en español y se registró la actividad.
+[2026-05-22 13:00:00] Actividad de Antigravity:
+- Se reanudó el contexto después de una compactación del PMS Rancho Carmelitas.
+- Se auditó exhaustivamente el estado actual de `src/app/admin/reservas/page.tsx` para corroborar la remoción de alertas de capacidad y overbooking en reservas manuales, la inicialización y reactividad inmediata del precio base sugerido al abrir el modal y cambiar cabañas/fechas, y la exactitud matemática del desglose de IVA (19%) y comisiones de plataforma.
+- Se verificó que la reconstrucción matemática inversa en `getBookingBreakdown` opera con precisión y sin pérdidas en el listado de reservas del panel administrativo.
+- Se comprobó que el servidor local de Next.js se encuentra activo y compilando sin errores en `http://localhost:3000`.
+- Se preparó el entorno para la validación transparente y en vivo por parte del usuario previo a la consolidación en Git y GitHub.
+[2026-05-22 23:05:00] Actividad de Antigravity:
+- A solicitud directa del usuario en el chat, se inició el servidor de desarrollo de Next.js ejecutando el comando de shell `npm run dev` para reanudar las pruebas del PMS localmente en http://localhost:3000.
+[2026-05-23 02:05:00] Actividad de Antigravity:
+- Aprobado el plan de implementación, se inició la fase de ejecución de la versión [0.9.0].
+- Se corrigió el desacoplamiento de IVA (19%) en reservas manuales, garantizando que el cálculo del impuesto dependa estrictamente de la casilla `requires_invoice` marcada, desligándose del origen de la plataforma.
+- Se unificó el descuento porcentual (`%`) y descuento fijo (`$`) en el modal de creación de reservas manuales en `src/app/admin/reservas/page.tsx`, calculando la conversión en pesos de forma exacta y registrando notas administrativas automáticas si aplica.
+- Se implementó un control dinámico y banner de advertencia visual rojo de capacidad excedida de la cabaña, bloqueando el guardado a menos que el administrador autorice de forma interactiva la sobrecapacidad de emergencia.
+- Se integró la interfaz Stitch UI de calendario interactivo de ocupación en el modal manual, cargando de inmediato las reservas existentes en Supabase de la cabaña seleccionada y deshabilitando y tachando en rojo los días ocupados para prevenir overbookings accidentales, vinculándolo a campos de fecha de solo lectura.
+- Se creó la sección dinámica autogestionable de plataformas y comisiones de canales en `/admin/configuraciones` (`src/app/admin/configuraciones/page.tsx`), enlazándolo al CRUD de Supabase para añadir y remover plataformas que se propagan en tiempo real al selector de reservas manuales.
+- Se actualizaron `CHANGELOG.md` y `GEMINI.md` a la versión [0.9.0] en español.
+- Se corroboró que el servidor local de Next.js compila limpiamente y sin errores de consola.

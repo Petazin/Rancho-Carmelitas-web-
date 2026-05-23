@@ -20,6 +20,10 @@ interface PaymentConfirmationEmailProps {
   companyAddress?: string;
   companyPhone?: string;
   companyEmail?: string;
+  // Nuevas propiedades de plataforma
+  plataformaNombre?: string | null;
+  plataformaComisionAplicada?: number;
+  requiresInvoice?: boolean;
 }
 
 export const PaymentConfirmationTemplate: React.FC<Readonly<PaymentConfirmationEmailProps>> = ({
@@ -41,10 +45,26 @@ export const PaymentConfirmationTemplate: React.FC<Readonly<PaymentConfirmationE
   companyAddress,
   companyPhone,
   companyEmail,
+  plataformaNombre = null,
+  plataformaComisionAplicada = 0,
+  requiresInvoice = false,
 }) => {
-  const totalBase = totalPrice - extraGuestsCost;
-  const totalAPagar = totalPrice - discountApplied;
+  const aplicaIVA = !!plataformaNombre || requiresInvoice;
+  const C = (plataformaComisionAplicada || 0) / 100;
+  const totalCliente = totalPrice || 0;
+  
+  const precioBaseNeto = aplicaIVA 
+    ? totalCliente / (1.19 * (1 + C))
+    : totalCliente / (1 + C);
+    
+  const comisionPlataformaMonto = precioBaseNeto * C;
+  const ivaMonto = aplicaIVA ? (precioBaseNeto + comisionPlataformaMonto) * 0.19 : 0;
+  
+  const precioBaseOriginal = precioBaseNeto + discountApplied;
+  
+  const totalAPagar = totalCliente;
   const saldoPendiente = Math.max(0, totalAPagar - paymentAmount);
+
   const totalGuests = adults + children;
 
   return (
@@ -100,24 +120,36 @@ export const PaymentConfirmationTemplate: React.FC<Readonly<PaymentConfirmationE
             <table style={styles.table}>
               <tbody>
                 <tr>
-                  <td style={styles.tdLabel}>Total Base (cabaña):</td>
-                  <td style={styles.tdValue}>${totalBase.toLocaleString('es-CL')}</td>
+                  <td style={styles.tdLabel}>Precio Base (cabaña):</td>
+                  <td style={styles.tdValue}>${Math.round(precioBaseOriginal).toLocaleString('es-CL')}</td>
                 </tr>
-                {extraGuestsCost > 0 && (
+                {discountApplied > 0 && (
                   <tr>
-                    <td style={{ ...styles.tdLabel, color: '#c2410c' }}>+ Huéspedes adicionales:</td>
-                    <td style={{ ...styles.tdValue, color: '#c2410c' }}>+ ${extraGuestsCost.toLocaleString('es-CL')}</td>
+                    <td style={{ ...styles.tdLabel, color: '#16a34a' }}>- Descuento aplicado:</td>
+                    <td style={{ ...styles.tdValue, color: '#16a34a' }}>- ${Math.round(discountApplied).toLocaleString('es-CL')}</td>
                   </tr>
                 )}
                 {discountApplied > 0 && (
                   <tr>
-                    <td style={{ ...styles.tdLabel, color: '#16a34a' }}>- Descuento aplicado:</td>
-                    <td style={{ ...styles.tdValue, color: '#16a34a' }}>- ${discountApplied.toLocaleString('es-CL')}</td>
+                    <td style={{ ...styles.tdLabel, color: '#6b7280', fontSize: '13px' }}>Precio Base Neto:</td>
+                    <td style={{ ...styles.tdValue, color: '#6b7280', fontSize: '13px' }}>${Math.round(precioBaseNeto).toLocaleString('es-CL')}</td>
+                  </tr>
+                )}
+                {plataformaNombre && plataformaComisionAplicada > 0 && (
+                  <tr>
+                    <td style={{ ...styles.tdLabel, color: '#2563eb' }}>+ Comisión de Servicio ({plataformaNombre} - {plataformaComisionAplicada}%):</td>
+                    <td style={{ ...styles.tdValue, color: '#2563eb' }}>+ ${Math.round(comisionPlataformaMonto).toLocaleString('es-CL')}</td>
+                  </tr>
+                )}
+                {aplicaIVA && (
+                  <tr>
+                    <td style={{ ...styles.tdLabel, color: '#6b7280' }}>+ IVA (19%):</td>
+                    <td style={{ ...styles.tdValue, color: '#6b7280' }}>+ ${Math.round(ivaMonto).toLocaleString('es-CL')}</td>
                   </tr>
                 )}
                 <tr>
                   <td style={{ ...styles.tdLabel, fontWeight: 'bold', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>Total Estadía:</td>
-                  <td style={{ ...styles.tdValue, fontWeight: 'bold', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>${totalAPagar.toLocaleString('es-CL')}</td>
+                  <td style={{ ...styles.tdValue, fontWeight: 'bold', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>${Math.round(totalAPagar).toLocaleString('es-CL')}</td>
                 </tr>
               </tbody>
             </table>

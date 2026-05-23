@@ -1,5 +1,39 @@
 # Changelog - Rancho Carmelitas
 
+## [0.9.0] - 2026-05-23
+
+### Añadido / Mejorado (Control de Capacidad, Calendario Interactivo y Configuración de Canales)
+
+- **Calendario Interactivo Premium en Reservas Manuales:** Integración de la elegante interfaz de calendario Stitch UI en el modal de reserva manual del PMS. Consulta en tiempo real las reservas existentes en Supabase para la cabaña elegida y deshabilita/marca en rojo tachado (`bg-red-50 text-red-400 line-through`) las fechas ocupadas para evitar overbookings accidentales, vinculando la selección reactiva a los campos de fecha de solo lectura.
+- **Control de Capacidad y Límite de Huéspedes:** Obtención dinámica de la capacidad y adicionales máximos de la cabaña. Si la cantidad ingresada la supera, se muestra un banner de advertencia visual rojo y se bloquea el guardado a menos que el administrador autorice de forma explícita mediante una casilla interactiva de *"Autorizar sobrecapacidad (Reserva de Emergencia)"*.
+- **Descuento Unificado de Tipo/Valor en Modal:** Implementación de la selección de descuento porcentual (`%`) y descuento fijo (`$`) en el modal de creación manual de reservas. Realiza la conversión matemática automática a pesos y agrega la información del porcentaje en las notas administrativas de forma transparente.
+- **Desacoplamiento Estricto de IVA:** Modificación de la lógica financiera para que el IVA (19%) dependa única y exclusivamente de la casilla *"Suma 19% de IVA para Cálculo de Bruto"*, permitiendo que las reservas asociadas a plataformas o huéspedes directos se calculen sin IVA si el administrador desmarca la casilla.
+- **Panel Autogestionable de Configuración de Canales:** Enriquecimiento de la página `/admin/configuraciones` con una sección dedicada premium para agregar y eliminar canales/plataformas con sus respectivas comisiones por defecto en Supabase. Las comisiones ingresadas aquí se propagan automáticamente al selector de plataforma de la reserva manual.
+
+## [0.8.1] - 2026-05-22
+
+### Corregido / Mejorado (Reserva Manual y Desglose Financiero)
+
+- **Remoción de Alertas Restrictivas:** Eliminación de los paneles visuales de overbooking ("Cabaña Ocupada") y capacidad ("Capacidad Máxima Excedida") en la creación de reservas manuales. Se quitó el bloqueo por `alert` en el `onSubmit` del formulario para conceder control y libertad total al administrador.
+- **Autopreferencia de Tarifas Reactiva:** Modificación de los inputs de selección de cabaña, fechas, adultos y niños en el modal de reserva manual para usar el helper reactivo `handleCreateFormChange`, garantizando que al cambiar de cabaña o fechas se auto-rellene de forma inmediata el precio base oficial de la cabaña (calculado mediante `calcularTarifaOficial`), permitiendo su edición manual posterior.
+- **Saneamiento de Sintaxis JSX:** Reparación completa del bloque roto al pie del modal de reservas manuales (línea de notas administrativas y fragmentos JSX residuales corruptos) que provocaba errores de renderizado/compilación en Next.js.
+- **Desglose de Previsualización Avanzada:** Adición de la visualización del campo `Precio Bruto (Sin IVA)` en el desglose del huésped en el modal manual, permitiendo previsualizar los cálculos de IVA y comisiones tal como se hace en la edición inline de la tabla de reservas.
+
+## [0.8.0] - 2026-05-22
+
+### Añadido / Mejorado (Evolución de Cobros y Liquidación)
+
+- **Sistema Parametrizable de Comisiones:** Creación e integración de la tabla `plataformas` en Supabase para almacenar canales de reserva (Booking, Airbnb, etc.) con sus comisiones por defecto en %.
+- **Campos Estáticos en Reservas:** Modificación de la tabla `bookings` para registrar estáticamente `plataforma_id`, `plataforma_comision_aplicada` (el porcentaje específico al reservar) y `admin_comision_porcentaje` (comisión de administración interna).
+- **Selector de Plataforma al Editar/Crear:** Carga relacional en la UI de reservas de las plataformas disponibles. Al seleccionar una plataforma, se pre-rellena el porcentaje sugerido, con opción de sobreescritura manual.
+- **Cálculo Dinámico sobre Precio Bruto:** Lógica en frontend para calcular la comisión de plataforma sobre el Precio Bruto de la reserva (antes de IVA, dividiendo por 1.19 si la reserva requiere factura en base a las regulaciones de Chile).
+- **Ficha de Liquidación Interna Privada:** Incorporación en el detalle de la reserva de una tarjeta interactiva en tiempo real ("Ficha de Liquidación") exclusiva para administradores. Calcula la comisión de administración sobre el Total (post-IVA) y el pago neto estimado al dueño.
+- **Visualización de Origen en la Lista de Reservas:** Etiquetas personalizadas e interactivas en la tabla de reservas para identificar de inmediato si es una reserva directa (`👤 Directo`) o externa (`🔌 Booking`, `Airbnb`, etc.).
+- **Micro-ficha de Liquidación Discreta:** Bloque de uso interno privado desplegado directamente en la columna "Total Pagar" si la reserva cuenta con comisiones registradas.
+- **Modal Premium de Creación Manual:** Formulario premium de registro de reservas externas bajo el estándar Stitch UI (bordes de 12px, Inter, color `#11d442`). Incluye los datos del huésped, fechas de estadía, requiere boleta/factura y una sección interactiva de previsualización de costos y liquidación en tiempo real.
+- **Desglose de Comisión Externa en Correos:** Modificación de `PaymentConfirmationTemplate.tsx` (Resend) para presentar al cliente el cobro de la comisión de servicio externa de la plataforma en base a su precio bruto.
+- **Garantía de Privacidad Absoluta:** Exclusión rigurosa de la comisión de administración interna en las plantillas y flujos de envío de correos electrónicos.
+
 ## [0.7.4] - 2026-05-20
 
 ### Añadido / Mejorado (QA Parte 4)

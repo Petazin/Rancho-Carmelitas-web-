@@ -26,11 +26,102 @@ interface Booking {
   payment_reference?: string;
   payment_amount?: number;
   payment_receipt_url?: string;
+  plataforma_id?: string;
+  plataforma_comision_aplicada?: number;
+  admin_comision_porcentaje?: number;
+  requires_invoice?: boolean;
+  plataforma?: { nombre: string };
 }
+
+const parseLocalDate = (dateStr: string) => {
+  if (!dateStr) return null;
+  const cleanStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const parts = cleanStr.split('-');
+  if (parts.length !== 3) return null;
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+};
+
+const formatDateString = (dateInput: string | Date | undefined | null) => {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string') {
+    return dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+  }
+  const year = dateInput.getFullYear();
+  const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+  const day = String(dateInput.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const calcularTarifaOficial = (cabin: any, checkIn: string, checkOut: string, adults: number, children: number) => {
+  if (!cabin || !checkIn || !checkOut) return 0;
+  
+  const start = parseLocalDate(checkIn);
+  const end = parseLocalDate(checkOut);
+  if (!start || !end || start >= end) return 0;
+
+  const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const totalGuests = (Number(adults) || 1) + (Number(children) || 0);
+  const capacity = cabin.capacity || 2;
+  const pricePerNight = cabin.price_per_night || 0;
+  const maxExtraGuests = cabin.max_extra_guests || 0;
+  const surchargePercentage = cabin.extra_guest_surcharge_percentage || 100;
+
+  const extraGuests = Math.max(0, totalGuests - capacity);
+  const pricePerPerson = pricePerNight / capacity;
+  const surchargePerExtraPerson = pricePerPerson * (surchargePercentage / 100);
+  const extraCostPerNight = extraGuests * surchargePerExtraPerson;
+  const finalPricePerNight = pricePerNight + extraCostPerNight;
+
+  const totalRaw = nights * finalPricePerNight;
+  return Math.floor(totalRaw / 1000) * 1000;
+};
+
+const getBookingBreakdown = (booking: Booking) => {
+  const platComPct = booking.plataforma_comision_aplicada || 0;
+  const adminComPct = booking.admin_comision_porcentaje || 0;
+  const discount = booking.discount_applied || 0;
+  
+  const aplicaIVA = !!booking.requires_invoice;
+  const totalCliente = booking.total_price || 0;
+
+  // Reconstrucción inversa del Precio Base Neto
+  let precioBaseNeto = 0;
+  if (aplicaIVA) {
+    precioBaseNeto = totalCliente / (1.19 * (1 + platComPct / 100));
+  } else {
+    precioBaseNeto = totalCliente / (1 + platComPct / 100);
+  }
+  
+  // Redondear para evitar decimales flotantes
+  precioBaseNeto = Math.round(precioBaseNeto);
+  
+  const precioBaseOriginal = precioBaseNeto + discount;
+  const comisionPlataformaMonto = Math.round(precioBaseNeto * (platComPct / 100));
+  const ivaMonto = aplicaIVA ? Math.round((precioBaseNeto + comisionPlataformaMonto) * 0.19) : 0;
+  const adminComisionMonto = Math.round(totalCliente * (adminComPct / 100));
+  const pagoNetoDueño = totalCliente - adminComisionMonto;
+  const precioBrutoSinIva = Math.round(aplicaIVA ? totalCliente / 1.19 : totalCliente);
+
+  return {
+    precioBaseOriginal,
+    discount,
+    precioBaseNeto,
+    platComPct,
+    comisionPlataformaMonto,
+    ivaMonto,
+    totalCliente,
+    adminComPct,
+    adminComisionMonto,
+    pagoNetoDueño,
+    precioBrutoSinIva,
+    aplicaIVA
+  };
+};
 
 function ReservasContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [plataformas, setPlataformas] = useState<any[]>([]);
   
   // Estados para la Edición de Reserva
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -38,11 +129,292 @@ function ReservasContent() {
     cabin_id: '',
     check_in: '',
     check_out: '',
-    discount_type: 'percentage',
+    discount_type: 'fixed',
     discount_value: '' as string | number,
-    admin_notes: ''
+    admin_notes: '',
+    plataforma_id: '',
+    plataforma_comision_aplicada: '' as string | number,
+    admin_comision_porcentaje: '' as string | number,
+    requires_invoice: false,
+    precio_base: '' as string | number
   });
   const [availableCabins, setAvailableCabins] = useState<any[]>([]);
+
+  // Estados para Modal de Creación Manual
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    guest_name: '',
+    guest_email: '',
+    guest_phone: '',
+    cabin_id: '',
+    check_in: '',
+    check_out: '',
+    adults: 1,
+    children: 0,
+    requires_invoice: false,
+    total_price: '',
+    discount_type: 'fixed',
+    discount_value: '0',
+    plataforma_id: '',
+    plataforma_comision_aplicada: '0',
+    admin_comision_porcentaje: '0',
+    admin_notes: '',
+    status: 'Pendiente'
+  });
+  const [isCreating, setIsCreating] = useState(false);
+  const [allowOverCapacity, setAllowOverCapacity] = useState(false);
+  const [existingBookingsForSelectedCabin, setExistingBookingsForSelectedCabin] = useState<any[]>([]);
+  const [loadingCabinOcupancy, setLoadingCabinOcupancy] = useState(false);
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+
+  useEffect(() => {
+    if (createModalOpen && createForm.cabin_id) {
+      fetchCabinOcupancy(createForm.cabin_id);
+    }
+  }, [createModalOpen, createForm.cabin_id]);
+
+  async function fetchCabinOcupancy(cabinId: string) {
+    setLoadingCabinOcupancy(true);
+    const { data } = await supabase
+      .from('bookings')
+      .select('check_in, check_out')
+      .eq('cabin_id', cabinId)
+      .neq('status', 'Cancelada');
+    setExistingBookingsForSelectedCabin(data || []);
+    setLoadingCabinOcupancy(false);
+  }
+
+  // Asegurar que siempre haya una cabaña seleccionada por defecto al abrir el modal
+  useEffect(() => {
+    if (createModalOpen && availableCabins.length > 0) {
+      const cabinId = createForm.cabin_id || availableCabins[0].id;
+      const cabin = availableCabins.find(c => c.id === cabinId);
+      if (cabin && (!createForm.cabin_id || !createForm.total_price)) {
+        setCreateForm(prev => ({
+          ...prev,
+          cabin_id: cabinId,
+          total_price: prev.total_price || cabin.price_per_night.toString()
+        }));
+      }
+    }
+  }, [createModalOpen, availableCabins, createForm.cabin_id, createForm.total_price]);
+
+  const isDateBookedAdmin = (dateStr: string) => {
+    return existingBookingsForSelectedCabin.some(b => {
+      return dateStr >= b.check_in && dateStr < b.check_out;
+    });
+  };
+
+  const isDateInSelectedRangeAdmin = (dateStr: string) => {
+    const checkIn = createForm.check_in;
+    const checkOut = createForm.check_out;
+    if (checkIn && checkOut) {
+      return dateStr > checkIn && dateStr < checkOut;
+    }
+    return false;
+  };
+
+  const handleDateClickAdmin = (dateStr: string) => {
+    if (isDateBookedAdmin(dateStr)) return; // Ignorar ocupados
+
+    const checkIn = createForm.check_in;
+    const checkOut = createForm.check_out;
+
+    if (!checkIn || (checkIn && checkOut)) {
+      // Seleccionó inicio
+      handleCreateFormChange({ check_in: dateStr, check_out: '' });
+    } else if (checkIn && !checkOut) {
+      if (dateStr < checkIn) {
+        // Seleccionó fecha anterior, reiniciar checkIn
+        handleCreateFormChange({ check_in: dateStr, check_out: '' });
+      } else if (dateStr === checkIn) {
+        // Clic en el mismo día
+        handleCreateFormChange({ check_in: '', check_out: '' });
+      } else {
+        // Verificar solapamiento en el medio
+        const inDate = new Date(checkIn);
+        const outDate = new Date(dateStr);
+        let hasOverlap = false;
+        
+        for (const b of existingBookingsForSelectedCabin) {
+            const bIn = new Date(b.check_in);
+            const bOut = new Date(b.check_out);
+            if (inDate < bOut && outDate > bIn) {
+                hasOverlap = true;
+                break;
+            }
+        }
+
+        if (hasOverlap) {
+            // Solapamiento detectado, reiniciar checkIn a esta fecha
+            handleCreateFormChange({ check_in: dateStr, check_out: '' });
+        } else {
+            handleCreateFormChange({ check_out: dateStr });
+        }
+      }
+    }
+  };
+
+  const renderCalendarAdmin = () => {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const days = [];
+    
+    for (let i = 0; i < firstDay; i++) {
+        days.push(<div key={`empty-admin-${i}`} className="p-2"></div>);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        const isPast = dateStr < todayStr;
+        const booked = isDateBookedAdmin(dateStr);
+        const isCheckIn = createForm.check_in === dateStr;
+        const isCheckOut = createForm.check_out === dateStr;
+        const inRange = isDateInSelectedRangeAdmin(dateStr);
+
+        let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all cursor-pointer relative ";
+        
+        if (isPast) {
+            cellClasses += "text-gray-300 hover:bg-gray-50"; // Permitir pasado por ser reserva manual de administrador
+        } else if (booked) {
+            cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (isCheckIn || isCheckOut) {
+            cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
+        } else if (inRange) {
+            cellClasses += "bg-[#11d442]/10 text-[#11d442]";
+        } else {
+            cellClasses += "text-gray-700 hover:bg-gray-100";
+        }
+
+        // Estilos para el background del rango visual conectivo
+        let rangeBgClasses = "";
+        if (isCheckIn && createForm.check_out) {
+            rangeBgClasses = "absolute top-0 bottom-0 right-0 left-1/2 bg-[#11d442]/10 -z-10";
+        } else if (isCheckOut && createForm.check_in) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-1/2 bg-[#11d442]/10 -z-10";
+        } else if (inRange) {
+            rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
+        }
+
+        // Permitimos seleccionar fechas pasadas porque el administrador puede querer registrar una reserva histórica.
+        // Pero no permitimos seleccionar fechas ocupadas.
+        const isSelectable = !booked;
+
+        days.push(
+            <div key={`day-admin-${d}`} className="relative py-1 px-0.5">
+                {rangeBgClasses && <div className={rangeBgClasses}></div>}
+                <button 
+                  type="button"
+                  onClick={() => isSelectable && handleDateClickAdmin(dateStr)}
+                  disabled={!isSelectable}
+                  className={cellClasses}
+                  aria-label={dateStr}
+                >
+                  {d}
+                </button>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="bg-white rounded-2xl border border-gray-250 shadow-sm p-4 w-full">
+            <div className="flex items-center justify-between mb-4">
+                <button 
+                  type="button"
+                  onClick={() => setCurrentCalendarDate(new Date(year, month - 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div className="font-bold text-gray-900 capitalize text-sm">
+                  {currentCalendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setCurrentCalendarDate(new Date(year, month + 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+            </div>
+            <div className="grid grid-cols-7 mb-2 text-center">
+                {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'].map(d => (
+                    <div key={`header-admin-${d}`} className="text-xs font-bold text-gray-400">{d}</div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-1">
+                {days}
+            </div>
+            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+            </div>
+        </div>
+    );
+  };
+
+  const handleCreateFormChange = (updatedFields: Partial<typeof createForm>) => {
+    if ('cabin_id' in updatedFields) {
+      setAllowOverCapacity(false);
+    }
+    setCreateForm(prev => {
+      const nextForm = { ...prev, ...updatedFields };
+      const cabin = availableCabins.find(c => c.id === nextForm.cabin_id);
+      
+      const shouldRecalculate = 'cabin_id' in updatedFields || 
+                                'check_in' in updatedFields || 
+                                'check_out' in updatedFields || 
+                                'adults' in updatedFields || 
+                                'children' in updatedFields;
+      
+      if (shouldRecalculate && cabin) {
+        const suggested = (nextForm.check_in && nextForm.check_out)
+          ? calcularTarifaOficial(
+              cabin,
+              nextForm.check_in,
+              nextForm.check_out,
+              nextForm.adults,
+              nextForm.children
+            )
+          : (cabin.price_per_night || 0);
+        
+        nextForm.total_price = suggested.toString();
+      }
+      return nextForm;
+    });
+  };
+
+  const handleEditFormChange = (updatedFields: Partial<typeof editForm>) => {
+    setEditForm(prev => {
+      const nextForm = { ...prev, ...updatedFields };
+      const cabin = availableCabins.find(c => c.id === nextForm.cabin_id);
+      
+      const shouldRecalculate = 'cabin_id' in updatedFields || 
+                                'check_in' in updatedFields || 
+                                'check_out' in updatedFields;
+      
+      if (shouldRecalculate && cabin) {
+        const suggested = (nextForm.check_in && nextForm.check_out)
+          ? calcularTarifaOficial(
+              cabin,
+              nextForm.check_in,
+              nextForm.check_out,
+              editingBooking?.adults || 1,
+              editingBooking?.children || 0
+            )
+          : (cabin.price_per_night || 0);
+        
+        nextForm.precio_base = suggested.toString();
+      }
+      return nextForm;
+    });
+  };
+
 
   // Estados para Modal de Confirmación de Pago
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -63,11 +435,17 @@ function ReservasContent() {
   useEffect(() => {
     fetchBookings();
     fetchCabins();
+    fetchPlataformas();
   }, []);
 
   async function fetchCabins() {
-    const { data } = await supabase.from('cabins').select('id, name').order('name');
+    const { data } = await supabase.from('cabins').select('id, name, price_per_night, capacity, max_extra_guests, extra_guest_surcharge_percentage').order('name');
     setAvailableCabins(data || []);
+  }
+
+  async function fetchPlataformas() {
+    const { data } = await supabase.from('plataformas').select('id, nombre, comision_porcentaje').order('nombre');
+    setPlataformas(data || []);
   }
 
   async function fetchBookings() {
@@ -75,7 +453,8 @@ function ReservasContent() {
       .from('bookings')
       .select(`
         *,
-        cabin:cabins (name)
+        cabin:cabins (name),
+        plataforma:plataformas (nombre)
       `)
       .order('created_at', { ascending: false });
 
@@ -201,7 +580,10 @@ function ReservasContent() {
           paymentReceiptUrl: receiptUrl || null,
           adults: bookingToConfirm.adults || 1,
           children: bookingToConfirm.children || 0,
-          bookingId: bookingToConfirm.id
+          bookingId: bookingToConfirm.id,
+          plataformaNombre: bookingToConfirm.plataforma?.nombre || null,
+          plataformaComisionAplicada: bookingToConfirm.plataforma_comision_aplicada || 0,
+          requiresInvoice: bookingToConfirm.requires_invoice || false
         })
       });
 
@@ -216,27 +598,44 @@ function ReservasContent() {
 
   const startEditing = (booking: Booking) => {
     setEditingBooking(booking);
+    
+    // Calcular el precio base original usando la lógica inversa
+    const aplicaIVA = !!booking.requires_invoice;
+    const C = (booking.plataforma_comision_aplicada || 0) / 100;
+    const totalConDescuento = booking.total_price || 0;
+    
+    let baseNeto = aplicaIVA 
+      ? totalConDescuento / (1.19 * (1 + C))
+      : totalConDescuento / (1 + C);
+      
+    const baseOriginal = baseNeto + (booking.discount_applied || 0);
+
     setEditForm({
       cabin_id: booking.cabin_id,
       check_in: booking.check_in,
       check_out: booking.check_out,
       discount_type: 'fixed',
       discount_value: booking.discount_applied || '',
-      admin_notes: booking.admin_notes || ''
+      admin_notes: booking.admin_notes || '',
+      plataforma_id: booking.plataforma_id || '',
+      plataforma_comision_aplicada: booking.plataforma_comision_aplicada !== undefined ? booking.plataforma_comision_aplicada : '',
+      admin_comision_porcentaje: booking.admin_comision_porcentaje !== undefined ? booking.admin_comision_porcentaje : '',
+      requires_invoice: booking.requires_invoice || false,
+      precio_base: Math.round(baseOriginal).toString()
     });
   };
 
   const saveEdit = async () => {
     if (!editingBooking) return;
     
-    // Calcular el descuento real y las notas
+    const precioBaseOriginal = Number(editForm.precio_base) || 0;
     let calculatedDiscount = 0;
     let finalNotes = editForm.admin_notes;
 
     const numericValue = Number(editForm.discount_value) || 0;
     if (numericValue > 0) {
       if (editForm.discount_type === 'percentage') {
-        calculatedDiscount = editingBooking.total_price * (numericValue / 100);
+        calculatedDiscount = precioBaseOriginal * (numericValue / 100);
         const discountString = `[Descuento aplicado: ${numericValue}%]`;
         if (!finalNotes.includes(discountString)) {
           finalNotes = finalNotes ? `${finalNotes} ${discountString}` : discountString;
@@ -246,6 +645,19 @@ function ReservasContent() {
       }
     }
 
+    // Calcular nuevo total a pagar por el huésped usando las fórmulas correctas
+    const precioBaseNeto = Math.max(0, precioBaseOriginal - calculatedDiscount);
+    const platId = editForm.plataforma_id;
+    const platComPct = Number(editForm.plataforma_comision_aplicada) || 0;
+    const adminComPct = Number(editForm.admin_comision_porcentaje) || 0;
+    const isInvoice = !!editForm.requires_invoice;
+
+    const comisionPlataformaMonto = precioBaseNeto * (platComPct / 100);
+    const ivaMonto = isInvoice ? (precioBaseNeto + comisionPlataformaMonto) * 0.19 : 0;
+    
+    // Total a pagar final es la suma de Precio Base Neto + Comisión Plataforma + IVA
+    const nuevoTotalAPagar = Math.round(precioBaseNeto + comisionPlataformaMonto + ivaMonto);
+
     // Aquí actualizamos cabaña y/o fechas en Supabase
     const { error } = await supabase
       .from('bookings')
@@ -253,8 +665,13 @@ function ReservasContent() {
         cabin_id: editForm.cabin_id,
         check_in: editForm.check_in,
         check_out: editForm.check_out,
-        discount_applied: calculatedDiscount,
-        admin_notes: finalNotes
+        discount_applied: Math.round(calculatedDiscount),
+        admin_notes: finalNotes,
+        plataforma_id: platId || null,
+        plataforma_comision_aplicada: platComPct,
+        admin_comision_porcentaje: adminComPct,
+        requires_invoice: editForm.requires_invoice,
+        total_price: nuevoTotalAPagar
       })
       .eq('id', editingBooking.id);
 
@@ -263,21 +680,101 @@ function ReservasContent() {
     } else {
       // Actualizamos el estado local
       const updatedCabin = availableCabins.find(c => c.id === editForm.cabin_id);
+      const updatedPlataforma = plataformas.find(p => p.id === platId);
       setBookings(bookings.map(b => b.id === editingBooking.id 
         ? { 
             ...b, 
             cabin_id: editForm.cabin_id, 
             check_in: editForm.check_in, 
             check_out: editForm.check_out,
-            discount_applied: calculatedDiscount,
+            discount_applied: Math.round(calculatedDiscount),
             admin_notes: finalNotes,
-            cabin: updatedCabin ? { name: updatedCabin.name } : b.cabin 
+            plataforma_id: platId || undefined,
+            plataforma_comision_aplicada: platComPct,
+            admin_comision_porcentaje: adminComPct,
+            requires_invoice: editForm.requires_invoice,
+            total_price: nuevoTotalAPagar,
+            cabin: updatedCabin ? { name: updatedCabin.name } : b.cabin,
+            plataforma: updatedPlataforma ? { nombre: updatedPlataforma.nombre } : undefined
           } 
         : b
       ));
       setEditingBooking(null);
     }
   };
+
+  const createBooking = async () => {
+    setIsCreating(true);
+    try {
+      const totalPriceNum = Number(createForm.total_price) || 0;
+      let calculatedDiscount = 0;
+      let finalNotes = createForm.admin_notes || '';
+
+      const numericValue = Number(createForm.discount_value) || 0;
+      if (numericValue > 0) {
+        if (createForm.discount_type === 'percentage') {
+          calculatedDiscount = totalPriceNum * (numericValue / 100);
+          const discountString = `[Descuento aplicado: ${numericValue}%]`;
+          if (!finalNotes.includes(discountString)) {
+            finalNotes = finalNotes ? `${finalNotes} ${discountString}` : discountString;
+          }
+        } else {
+          calculatedDiscount = numericValue;
+        }
+      }
+
+      const plataformaComisionNum = Number(createForm.plataforma_comision_aplicada) || 0;
+      const adminComisionNum = Number(createForm.admin_comision_porcentaje) || 0;
+
+      // Calcular nuevo total a pagar por el huésped usando las fórmulas correctas
+      const precioBaseNeto = Math.max(0, totalPriceNum - calculatedDiscount);
+      const platId = createForm.plataforma_id;
+      const isInvoice = !!createForm.requires_invoice;
+
+      const comisionPlataformaMonto = precioBaseNeto * (plataformaComisionNum / 100);
+      const ivaMonto = isInvoice ? (precioBaseNeto + comisionPlataformaMonto) * 0.19 : 0;
+      
+      // Total a pagar final es la suma de Precio Base Neto + Comisión Plataforma + IVA
+      const nuevoTotalAPagar = Math.round(precioBaseNeto + comisionPlataformaMonto + ivaMonto);
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([{
+          guest_name: createForm.guest_name,
+          guest_email: createForm.guest_email,
+          guest_phone: createForm.guest_phone || null,
+          cabin_id: createForm.cabin_id,
+          check_in: createForm.check_in,
+          check_out: createForm.check_out,
+          adults: Number(createForm.adults) || 1,
+          children: Number(createForm.children) || 0,
+          requires_invoice: createForm.requires_invoice,
+          total_price: nuevoTotalAPagar,
+          discount_applied: Math.round(calculatedDiscount),
+          plataforma_id: platId || null,
+          plataforma_comision_aplicada: plataformaComisionNum,
+          admin_comision_porcentaje: adminComisionNum,
+          admin_notes: finalNotes || null,
+          status: createForm.status
+        }])
+        .select(`
+          *,
+          cabin:cabins (name),
+          plataforma:plataformas (nombre)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      setBookings([data, ...bookings]);
+      setCreateModalOpen(false);
+    } catch (err: any) {
+      alert('Error al crear la reserva: ' + err.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -287,13 +784,49 @@ function ReservasContent() {
     );
   }
 
+  const selectedCabinForCreate = availableCabins.find(c => c.id === createForm.cabin_id);
+  const maxTotalGuestsForCreate = selectedCabinForCreate ? (selectedCabinForCreate.capacity || 2) + (selectedCabinForCreate.max_extra_guests || 0) : 0;
+  const totalGuestsRequestedForCreate = Number(createForm.adults) + Number(createForm.children);
+  const isCapacityExceededForCreate = selectedCabinForCreate && totalGuestsRequestedForCreate > maxTotalGuestsForCreate;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Reservas</h2>
           <p className="text-gray-500">Administra todas las reservaciones de Rancho Carmelitas.</p>
         </div>
+        <button
+          onClick={() => {
+            const defaultCabin = availableCabins[0];
+            setCreateForm({
+              guest_name: '',
+              guest_email: '',
+              guest_phone: '',
+              cabin_id: defaultCabin?.id || '',
+              check_in: '',
+              check_out: '',
+              adults: 1,
+              children: 0,
+              requires_invoice: false,
+              total_price: defaultCabin?.price_per_night?.toString() || '',
+              discount_applied: '0',
+              plataforma_id: '',
+              plataforma_comision_aplicada: '0',
+              admin_comision_porcentaje: '0',
+              admin_notes: '',
+              status: 'Pendiente'
+            });
+            setAllowOverCapacity(false);
+            setCreateModalOpen(true);
+          }}
+          className="bg-[#11d442] hover:bg-[#0fb337] text-white px-5 py-3 rounded-[12px] font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 self-start sm:self-auto"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva Reserva Manual
+        </button>
       </div>
 
       {bookingIdFilter && (
@@ -349,147 +882,349 @@ function ReservasContent() {
 
                     {/* Lógica condicional si estamos editando esta fila */}
                     {editingBooking?.id === booking.id ? (
-                      <td colSpan={2} className="px-6 py-4 bg-blue-50/50 rounded-xl my-2">
-                        <div className="flex gap-4 items-center">
-                          <select 
-                            className="p-2 border border-gray-200 rounded text-sm w-48"
-                            value={editForm.cabin_id}
-                            onChange={e => setEditForm({...editForm, cabin_id: e.target.value})}
-                          >
-                            {availableCabins.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
-                          <div className="flex gap-2">
-                            <input 
-                              type="date" 
-                              className="p-2 border border-gray-200 rounded text-sm"
-                              value={editForm.check_in}
-                              onChange={e => setEditForm({...editForm, check_in: e.target.value})}
-                            />
-                            <span className="text-gray-400 self-center">-</span>
-                            <input 
-                              type="date" 
-                              className="p-2 border border-gray-200 rounded text-sm"
-                              value={editForm.check_out}
-                              onChange={e => setEditForm({...editForm, check_out: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-4 mt-3 pt-3 border-t border-blue-100">
-                          <div className="flex gap-4 items-end">
+                      <td colSpan={2} className="px-6 py-5 bg-blue-50/50 rounded-xl my-2">
+                        <div className="flex flex-col gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Descuento</label>
-                              <div className="flex bg-white rounded border border-gray-200 p-0.5">
-                                <button 
-                                  className={`px-2 py-1 text-xs font-bold rounded transition-colors ${editForm.discount_type === 'percentage' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
-                              onClick={() => setEditForm({...editForm, discount_type: 'percentage', discount_value: ''})}
-                                >%</button>
-                                <button 
-                                  className={`px-2 py-1 text-xs font-bold rounded transition-colors ${editForm.discount_type === 'fixed' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
-                              onClick={() => setEditForm({...editForm, discount_type: 'fixed', discount_value: ''})}
-                                >$</button>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Cabaña</label>
+                              <select 
+                                className="p-2.5 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                value={editForm.cabin_id}
+                                onChange={e => handleEditFormChange({ cabin_id: e.target.value })}
+                              >
+                                {availableCabins.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Fechas Estadía</label>
+                              <div className="flex gap-2">
+                                <input 
+                                  type="date" 
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  value={editForm.check_in}
+                                  onChange={e => handleEditFormChange({ check_in: e.target.value })}
+                                />
+                                <span className="text-gray-400 self-center">-</span>
+                                <input 
+                                  type="date" 
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  value={editForm.check_out}
+                                  onChange={e => handleEditFormChange({ check_out: e.target.value })}
+                                />
                               </div>
                             </div>
                             <div>
-                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Valor ({editForm.discount_type === 'percentage' ? '%' : '$'})</label>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Precio Base Estadía ($)</label>
                               <input 
-                                type="number"
-                                className="p-2 border border-gray-200 rounded text-sm w-24"
-                                value={editForm.discount_value === 0 || editForm.discount_value === '' ? '' : editForm.discount_value}
-                                placeholder="0"
+                                type="number" 
+                                className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                value={editForm.precio_base}
+                                onChange={e => setEditForm({...editForm, precio_base: e.target.value})}
                                 min="0"
-                                onChange={e => setEditForm({...editForm, discount_value: e.target.value === '' ? '' : e.target.value})}
                               />
                             </div>
-                            <div className="flex-1">
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-blue-100">
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Descuento</label>
+                              <div className="flex gap-2">
+                                <div className="flex bg-white rounded-xl border border-gray-200 p-0.5 shadow-sm">
+                                  <button 
+                                    type="button"
+                                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${editForm.discount_type === 'percentage' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                                    onClick={() => setEditForm({...editForm, discount_type: 'percentage', discount_value: ''})}
+                                  >%</button>
+                                  <button 
+                                    type="button"
+                                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${editForm.discount_type === 'fixed' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                                    onClick={() => setEditForm({...editForm, discount_type: 'fixed', discount_value: ''})}
+                                  >$</button>
+                                </div>
+                                <input 
+                                  type="number"
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  value={editForm.discount_value === 0 || editForm.discount_value === '' ? '' : editForm.discount_value}
+                                  placeholder="0"
+                                  min="0"
+                                  onChange={e => setEditForm({...editForm, discount_value: e.target.value === '' ? '' : e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Plataforma Origen</label>
+                              <select
+                                className="p-2.5 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm focus:outline-none"
+                                value={editForm.plataforma_id}
+                                onChange={e => {
+                                  const platId = e.target.value;
+                                  const plat = plataformas.find(p => p.id === platId);
+                                  setEditForm({
+                                    ...editForm,
+                                    plataforma_id: platId,
+                                    plataforma_comision_aplicada: plat ? plat.comision_porcentaje : 0
+                                  });
+                                }}
+                              >
+                                <option value="">Sin Plataforma (Directo)</option>
+                                {plataformas.map(p => (
+                                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Comisión Plataforma (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                value={editForm.plataforma_comision_aplicada}
+                                onChange={e => setEditForm({...editForm, plataforma_comision_aplicada: e.target.value === '' ? '' : e.target.value})}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Comisión Administración Interna (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                value={editForm.admin_comision_porcentaje}
+                                onChange={e => setEditForm({...editForm, admin_comision_porcentaje: e.target.value === '' ? '' : e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
                               <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Notas Administrativas</label>
                               <input 
                                 type="text"
-                                className="p-2 border border-gray-200 rounded text-sm w-full"
+                                className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
                                 placeholder="Ej: Descuento por promoción de invierno..."
                                 value={editForm.admin_notes}
                                 onChange={e => setEditForm({...editForm, admin_notes: e.target.value})}
                               />
                             </div>
                           </div>
-                          {/* Vista previa del desglose */}
-                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                            <h4 className="text-[10px] uppercase font-bold text-gray-500 mb-2">Vista previa del Total</h4>
-                            <div className="space-y-1 text-sm">
-                              <div className="flex justify-between text-gray-600">
-                                <span>Total Base:</span>
-                                <span>${editingBooking.total_price?.toLocaleString()}</span>
-                              </div>
-                              {Number(editForm.discount_value) > 0 && (
-                                <div className="flex justify-between text-green-600 font-medium">
-                                  <span>Descuento aplicado:</span>
-                                  <span>
-                                    - ${editForm.discount_type === 'percentage' 
-                                      ? (editingBooking.total_price * (Number(editForm.discount_value) / 100)).toLocaleString() 
-                                      : Number(editForm.discount_value).toLocaleString()}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100 mt-1">
-                                <span>Nuevo Total a Pagar:</span>
-                                <span>
-                                  ${(editingBooking.total_price - (
-                                    editForm.discount_type === 'percentage' 
-                                      ? (editingBooking.total_price * (Number(editForm.discount_value) / 100))
-                                      : (Number(editForm.discount_value) || 0)
-                                  )).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
+
+                          <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                            <input 
+                              type="checkbox"
+                              id={`edit-invoice-${booking.id}`}
+                              className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                              checked={editForm.requires_invoice}
+                              onChange={e => setEditForm({...editForm, requires_invoice: e.target.checked})}
+                            />
+                            <label htmlFor={`edit-invoice-${booking.id}`} className="text-xs font-bold text-blue-900 cursor-pointer">
+                              Requiere Boleta / Factura (Suma 19% de IVA para cálculo del Precio Bruto)
+                            </label>
                           </div>
+
+                          {/* Previsualización del Desglose de Liquidación */}
+                          {(() => {
+                            const precioBaseOriginal = Number(editForm.precio_base) || 0;
+                            const discVal = Number(editForm.discount_value) || 0;
+                            let discAmt = 0;
+                            if (discVal > 0) {
+                              discAmt = editForm.discount_type === 'percentage' 
+                                ? precioBaseOriginal * (discVal / 100) 
+                                : discVal;
+                            }
+                            const precioBaseNeto = Math.max(0, precioBaseOriginal - discAmt);
+                            
+                            const platComPct = Number(editForm.plataforma_comision_aplicada) || 0;
+                            const comisionPlataformaMonto = precioBaseNeto * (platComPct / 100);
+
+                            const tienePlataforma = !!editForm.plataforma_id;
+                            const aplicaIVA = tienePlataforma || editForm.requires_invoice;
+                            const ivaMonto = aplicaIVA ? (precioBaseNeto + comisionPlataformaMonto) * 0.19 : 0;
+
+                            const totalCliente = precioBaseNeto + comisionPlataformaMonto + ivaMonto;
+
+                            const adminComPct = Number(editForm.admin_comision_porcentaje) || 0;
+                            const adminComisionMonto = totalCliente * (adminComPct / 100);
+                            const pagoNetoDueño = totalCliente - adminComisionMonto;
+
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-xs space-y-1.5">
+                                  <h4 className="text-[10px] uppercase font-bold text-gray-500 mb-1">Resumen Estadía (Huésped)</h4>
+                                  <div className="flex justify-between text-gray-600">
+                                    <span>Precio Base Estadía:</span>
+                                    <span>${precioBaseOriginal.toLocaleString()}</span>
+                                  </div>
+                                  {discAmt > 0 && (
+                                    <div className="flex justify-between text-green-600 font-medium">
+                                      <span>Descuento aplicado:</span>
+                                      <span>-${Math.round(discAmt).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {discAmt > 0 && (
+                                    <div className="flex justify-between text-gray-500 text-[11px]">
+                                      <span>Precio Base Neto:</span>
+                                      <span>${Math.round(precioBaseNeto).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {tienePlataforma && (
+                                    <div className="flex justify-between text-gray-600">
+                                      <span>Comisión Plataforma ({platComPct}%):</span>
+                                      <span>+${Math.round(comisionPlataformaMonto).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {aplicaIVA && (
+                                    <div className="flex justify-between text-gray-600">
+                                      <span>IVA (19%):</span>
+                                      <span>+${Math.round(ivaMonto).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between font-bold text-gray-900 pt-1.5 border-t border-gray-150">
+                                    <span>Total a Pagar (Post-IVA):</span>
+                                    <span>${Math.round(totalCliente).toLocaleString()}</span>
+                                  </div>
+                                  {aplicaIVA && (
+                                    <div className="flex justify-between text-gray-400 text-[10px] pt-1">
+                                      <span>Precio Bruto (Sin IVA):</span>
+                                      <span>${Math.round(totalCliente / 1.19).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 shadow-sm text-xs space-y-1.5">
+                                  <h4 className="text-[10px] uppercase font-bold text-emerald-800 mb-1 flex items-center gap-1">
+                                    🛡️ Ficha de Liquidación <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Uso Interno</span>
+                                  </h4>
+                                  {tienePlataforma && (
+                                    <div className="flex justify-between text-emerald-750">
+                                      <span>Comisión Plataforma ({platComPct}% s/Neto):</span>
+                                      <span>${Math.round(comisionPlataformaMonto).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-emerald-800 font-bold pt-1.5 border-t border-emerald-100">
+                                    <span>Comisión Administración ({adminComPct}% s/Total):</span>
+                                    <span>${Math.round(adminComisionMonto).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-emerald-950 font-extrabold text-sm pt-1 mt-1 border-t border-dashed border-emerald-200">
+                                    <span>Pago Neto Estimado al Dueño:</span>
+                                    <span>${Math.round(pagoNetoDueño).toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </td>
                     ) : (
                       <>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {booking.cabin?.name || 'Cabaña Desconocida'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {new Date(booking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al {new Date(booking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                        </td>
-                      </>
-                    )}
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-gray-800">{booking.cabin?.name || 'Cabaña Desconocida'}</p>
+                          {booking.plataforma ? (
+                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                              🔌 {booking.plataforma.nombre}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-150">
+                                👤 Directo
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {new Date(booking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al {new Date(booking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          </td>
+                        </>
+                      )}
 
                     <td className="px-6 py-4">
-                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 w-full max-w-[200px]">
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between items-center text-xs text-gray-500">
-                            <span>Total Base</span>
-                            <span>${(booking.total_price || 0).toLocaleString()}</span>
-                          </div>
-                          
-                          {booking.extra_guests_cost && booking.extra_guests_cost > 0 ? (
-                            <div className="flex justify-between items-center text-[11px] text-orange-600 font-medium">
-                              <span>+ Extras</span>
-                              <span>${booking.extra_guests_cost.toLocaleString()}</span>
-                            </div>
-                          ) : null}
+                      {(() => {
+                        const breakdown = getBookingBreakdown(booking);
+                        return (
+                          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 w-full max-w-[220px]">
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between items-center text-gray-500">
+                                <span>Precio Base:</span>
+                                <span>${breakdown.precioBaseOriginal.toLocaleString()}</span>
+                              </div>
+                              
+                              {breakdown.discount > 0 && (
+                                <div className="flex justify-between items-center text-[11px] text-green-600 font-medium">
+                                  <span>- Descuento:</span>
+                                  <span>-${breakdown.discount.toLocaleString()}</span>
+                                </div>
+                              )}
 
-                          {booking.discount_applied && booking.discount_applied > 0 ? (
-                            <div className="flex justify-between items-center text-[11px] text-green-600 font-medium">
-                              <span>- Descuento</span>
-                              <span>${booking.discount_applied.toLocaleString()}</span>
-                            </div>
-                          ) : null}
-                          
-                          <div className="flex justify-between items-center font-bold text-gray-900 pt-2 border-t border-gray-200 mt-1">
-                            <span>Total Pagar</span>
-                            <span className="text-base">${((booking.total_price || 0) - (booking.discount_applied || 0)).toLocaleString()}</span>
-                          </div>
-                        </div>
+                              {breakdown.discount > 0 && (
+                                <div className="flex justify-between items-center text-[10px] text-gray-400">
+                                  <span>Base Neto:</span>
+                                  <span>${breakdown.precioBaseNeto.toLocaleString()}</span>
+                                </div>
+                              )}
 
-                        {booking.admin_notes && (
-                          <div className="mt-3 pt-2 border-t border-gray-200 text-[11px] text-gray-500 bg-white p-2 rounded-lg leading-tight" title={booking.admin_notes}>
-                            📝 {booking.admin_notes}
+                              {breakdown.comisionPlataformaMonto > 0 && (
+                                <div className="flex justify-between items-center text-[11px] text-gray-600">
+                                  <span>+ Comisión Plat ({breakdown.platComPct}%):</span>
+                                  <span>+${breakdown.comisionPlataformaMonto.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              {breakdown.ivaMonto > 0 && (
+                                <div className="flex justify-between items-center text-[11px] text-gray-600">
+                                  <span>+ IVA (19%):</span>
+                                  <span>+${breakdown.ivaMonto.toLocaleString()}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between items-center font-bold text-gray-900 pt-2 border-t border-gray-200 mt-1">
+                                <span>Total Pagar:</span>
+                                <span className="text-base">${breakdown.totalCliente.toLocaleString()}</span>
+                              </div>
+
+                              {breakdown.aplicaIVA && (
+                                <div className="flex justify-between items-center text-[10px] text-gray-400 pt-0.5">
+                                  <span>Bruto Sin IVA:</span>
+                                  <span>${breakdown.precioBrutoSinIva.toLocaleString()}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Micro-ficha de liquidación interna (solo admin, uso privado) */}
+                            {breakdown.adminComPct > 0 || breakdown.comisionPlataformaMonto > 0 ? (
+                              <div className="mt-2.5 pt-2 border-t border-dashed border-gray-250 text-[10px] space-y-1 bg-emerald-50/40 p-2 rounded-lg text-emerald-800">
+                                <p className="font-bold text-[9px] uppercase tracking-wider text-emerald-950 flex items-center justify-between">
+                                  <span>🛡️ Liquidación</span>
+                                  <span className="bg-emerald-100 text-emerald-700 px-1 py-0.2 rounded text-[7px]">Privado</span>
+                                </p>
+                                {breakdown.comisionPlataformaMonto > 0 && (
+                                  <div className="flex justify-between text-gray-500">
+                                    <span>Comisión Plat:</span>
+                                    <span>-${breakdown.comisionPlataformaMonto.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {breakdown.adminComPct > 0 && (
+                                  <>
+                                    <div className="flex justify-between text-gray-500">
+                                      <span>Admin ({breakdown.adminComPct}%):</span>
+                                      <span>-${breakdown.adminComisionMonto.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-emerald-950 border-t border-emerald-100 pt-1 mt-0.5">
+                                      <span>Neto Dueño:</span>
+                                      <span>${breakdown.pagoNetoDueño.toLocaleString()}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ) : null}
+
+                            {booking.admin_notes && (
+                              <div className="mt-3 pt-2 border-t border-gray-200 text-[11px] text-gray-500 bg-white p-2 rounded-lg leading-tight" title={booking.admin_notes}>
+                                📝 {booking.admin_notes}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       {editingBooking?.id === booking.id ? (
@@ -606,6 +1341,404 @@ function ReservasContent() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Creación de Reserva Manual */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="bg-white rounded-[24px] p-8 w-full max-w-2xl shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto border border-gray-150">
+            <button 
+              onClick={() => setCreateModalOpen(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Crear Nueva Reserva Manual</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Registra una reserva recibida de forma externa o directa. Configura la plataforma y las comisiones para la liquidación.
+            </p>
+
+            <form 
+              onSubmit={(e) => { 
+                e.preventDefault(); 
+                createBooking(); 
+              }} 
+              className="space-y-5"
+            >
+              <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">👤 Datos del Huésped</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Nombre Completo *</label>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#11d442]/30 focus:border-[#11d442] text-sm"
+                      placeholder="Ej: Juan Pérez"
+                      value={createForm.guest_name}
+                      onChange={e => setCreateForm({...createForm, guest_name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Correo Electrónico *</label>
+                    <input 
+                      type="email" 
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#11d442]/30 focus:border-[#11d442] text-sm"
+                      placeholder="juan@correo.com"
+                      value={createForm.guest_email}
+                      onChange={e => setCreateForm({...createForm, guest_email: e.target.value})}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Teléfono de Contacto</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#11d442]/30 focus:border-[#11d442] text-sm"
+                      placeholder="Ej: +56 9 1234 5678"
+                      value={createForm.guest_phone}
+                      onChange={e => setCreateForm({...createForm, guest_phone: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">🏡 Detalles de Estadía</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Cabaña Seleccionada *</label>
+                    <select 
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#11d442]/30 text-sm"
+                      value={createForm.cabin_id}
+                      onChange={e => handleCreateFormChange({ cabin_id: e.target.value })}
+                    >
+                      <option value="">Seleccione una cabaña...</option>
+                      {availableCabins.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Estado Inicial *</label>
+                    <select 
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#11d442]/30 text-sm"
+                      value={createForm.status}
+                      onChange={e => setCreateForm({...createForm, status: e.target.value})}
+                    >
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="Confirmada">Confirmada</option>
+                      <option value="Cancelada">Cancelada</option>
+                    </select>
+                  </div>
+                  {/* Calendario Interactivo de Ocupación */}
+                  <div className="sm:col-span-2 space-y-1 mt-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Calendario de Disponibilidad (Haz clic para seleccionar fechas) *</label>
+                    {loadingCabinOcupancy ? (
+                      <div className="flex items-center justify-center p-8 bg-gray-50 rounded-2xl border border-gray-200">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#11d442]"></div>
+                        <span className="ml-2 text-xs text-gray-500 font-semibold">Cargando ocupación de cabaña...</span>
+                      </div>
+                    ) : (
+                      renderCalendarAdmin()
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Fecha Check-in *</label>
+                    <input 
+                      type="text" 
+                      required
+                      readOnly
+                      placeholder="Haz clic en el calendario"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 font-semibold text-sm focus:outline-none cursor-default shadow-inner"
+                      value={createForm.check_in}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Fecha Check-out *</label>
+                    <input 
+                      type="text" 
+                      required
+                      readOnly
+                      placeholder="Haz clic en el calendario"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 font-semibold text-sm focus:outline-none cursor-default shadow-inner"
+                      value={createForm.check_out}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Adultos *</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                      value={createForm.adults}
+                      onChange={e => handleCreateFormChange({ adults: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Niños</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                      value={createForm.children}
+                      onChange={e => handleCreateFormChange({ children: Number(e.target.value) })}
+                    />
+                  </div>
+                  {selectedCabinForCreate && isCapacityExceededForCreate && (
+                    <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-xl p-4 space-y-3 mt-2 animate-in fade-in">
+                      <p className="text-xs font-bold text-red-700 flex items-center gap-1.5 leading-tight">
+                        ⚠️ LÍMITE DE CAPACIDAD EXCEDIDO: La capacidad máxima para la cabaña {selectedCabinForCreate.name} es de {maxTotalGuestsForCreate} personas (capacidad base {selectedCabinForCreate.capacity} + {selectedCabinForCreate.max_extra_guests || 0} adicionales). Estás intentando reservar para {totalGuestsRequestedForCreate} personas.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox"
+                          id="allow-overcapacity"
+                          className="w-4 h-4 text-red-600 focus:ring-red-500 rounded border-gray-300 cursor-pointer"
+                          checked={allowOverCapacity}
+                          onChange={e => setAllowOverCapacity(e.target.checked)}
+                        />
+                        <label htmlFor="allow-overcapacity" className="text-xs font-bold text-red-900 cursor-pointer select-none">
+                          Autorizar sobrecapacidad (Ignorar límite para reserva de emergencia)
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">💳 Finanzas y Comisiones</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Precio Total Base ($) *</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                      placeholder="Ej: 150000"
+                      value={createForm.total_price}
+                      onChange={e => setCreateForm({...createForm, total_price: e.target.value})}
+                    />
+                  </div>
+                                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Descuento</label>
+                    <div className="flex gap-2">
+                      <div className="flex bg-white rounded-xl border border-gray-200 p-0.5 shadow-sm">
+                        <button 
+                          type="button"
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${createForm.discount_type === 'percentage' ? 'bg-[#11d442]/10 text-[#11d442]' : 'text-gray-500 hover:bg-gray-50'}`}
+                          onClick={() => setCreateForm({...createForm, discount_type: 'percentage', discount_value: ''})}
+                        >%</button>
+                        <button 
+                          type="button"
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${createForm.discount_type === 'fixed' ? 'bg-[#11d442]/10 text-[#11d442]' : 'text-gray-500 hover:bg-gray-50'}`}
+                          onClick={() => setCreateForm({...createForm, discount_type: 'fixed', discount_value: ''})}
+                        >$</button>
+                      </div>
+                      <input 
+                        type="number"
+                        className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm focus:outline-none"
+                        value={createForm.discount_value === 0 || createForm.discount_value === '0' || createForm.discount_value === '' ? '' : createForm.discount_value}
+                        placeholder="0"
+                        min="0"
+                        onChange={e => setCreateForm({...createForm, discount_value: e.target.value === '' ? '' : e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Plataforma Origen</label>
+                    <select
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none"
+                      value={createForm.plataforma_id}
+                      onChange={e => {
+                        const platId = e.target.value;
+                        const plat = plataformas.find(p => p.id === platId);
+                        setCreateForm({
+                          ...createForm,
+                          plataforma_id: platId,
+                          plataforma_comision_aplicada: plat ? plat.comision_porcentaje.toString() : '0'
+                        });
+                      }}
+                    >
+                      <option value="">Sin Plataforma (Directo)</option>
+                      {plataformas.map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Comisión Plataforma (%)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                      value={createForm.plataforma_comision_aplicada}
+                      onChange={e => setCreateForm({...createForm, plataforma_comision_aplicada: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Comisión Admin Interna (%)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                      value={createForm.admin_comision_porcentaje}
+                      onChange={e => setCreateForm({...createForm, admin_comision_porcentaje: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2.5 self-end h-[42px] bg-white px-4 rounded-xl border border-gray-200">
+                    <input 
+                      type="checkbox"
+                      id="create-invoice"
+                      className="w-4 h-4 text-[#11d442] focus:ring-[#11d442] rounded border-gray-300"
+                      checked={createForm.requires_invoice}
+                      onChange={e => setCreateForm({...createForm, requires_invoice: e.target.checked})}
+                    />
+                    <label htmlFor="create-invoice" className="text-xs font-bold text-gray-700 cursor-pointer">
+                      Suma 19% de IVA para Cálculo de Bruto
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">Notas Administrativas</label>
+                <textarea 
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm min-h-[60px]"
+                  placeholder="Notas internas..."
+                  value={createForm.admin_notes}
+                  onChange={e => setCreateForm({...createForm, admin_notes: e.target.value})}
+                />
+              </div>
+
+              {/* Previsualización del Desglose en Tiempo Real */}
+              {(() => {
+                const precioBaseOriginal = Number(createForm.total_price) || 0;
+                const discVal = Number(createForm.discount_value) || 0;
+                let discAmt = 0;
+                if (discVal > 0) {
+                  discAmt = createForm.discount_type === 'percentage' 
+                    ? precioBaseOriginal * (discVal / 100) 
+                    : discVal;
+                }
+                const precioBaseNeto = Math.max(0, precioBaseOriginal - discAmt);
+                
+                const platComPct = Number(createForm.plataforma_comision_aplicada) || 0;
+                const comisionPlataformaMonto = precioBaseNeto * (platComPct / 100);
+
+                const tienePlataforma = !!createForm.plataforma_id;
+                const aplicaIVA = !!createForm.requires_invoice;
+                const ivaMonto = aplicaIVA ? (precioBaseNeto + comisionPlataformaMonto) * 0.19 : 0;
+
+                const totalCliente = precioBaseNeto + comisionPlataformaMonto + ivaMonto;
+
+                const adminComPct = Number(createForm.admin_comision_porcentaje) || 0;
+                const adminComisionMonto = totalCliente * (adminComPct / 100);
+                const pagoNetoDueño = totalCliente - adminComisionMonto;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4 animate-in fade-in">
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-xs space-y-1.5">
+                      <h5 className="text-[10px] uppercase font-bold text-gray-500 mb-1">Previsualización Huésped</h5>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Precio Base Estadía:</span>
+                        <span>${precioBaseOriginal.toLocaleString()}</span>
+                      </div>
+                      {discAmt > 0 && (
+                        <div className="flex justify-between text-green-600 font-medium">
+                          <span>Descuento aplicado:</span>
+                          <span>-${Math.round(discAmt).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {discAmt > 0 && (
+                        <div className="flex justify-between text-gray-500 text-[11px]">
+                          <span>Precio Base Neto:</span>
+                          <span>${Math.round(precioBaseNeto).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {tienePlataforma && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Comisión Plataforma ({platComPct}%):</span>
+                          <span>+${Math.round(comisionPlataformaMonto).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {aplicaIVA && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>IVA (19%):</span>
+                          <span>+${Math.round(ivaMonto).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-gray-900 pt-1.5 border-t border-gray-200 mt-1">
+                        <span>Total a Pagar (Post-IVA):</span>
+                        <span>${Math.round(totalCliente).toLocaleString()}</span>
+                      </div>
+                      {aplicaIVA && (
+                        <div className="flex justify-between text-gray-400 text-[10px] pt-1">
+                          <span>Precio Bruto (Sin IVA):</span>
+                          <span>${Math.round(totalCliente / 1.19).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 text-xs space-y-1.5">
+                      <h5 className="text-[10px] uppercase font-bold text-emerald-850 mb-1 flex items-center justify-between">
+                        <span>🛡️ Ficha de Liquidación</span>
+                        <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Uso Interno</span>
+                      </h5>
+                      {tienePlataforma && (
+                        <div className="flex justify-between text-emerald-750">
+                          <span>Comisión Plataforma ({platComPct}% s/Neto):</span>
+                          <span>${Math.round(comisionPlataformaMonto).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-emerald-800 font-bold pt-1.5 border-t border-emerald-100">
+                        <span>Comisión Administración ({adminComPct}% s/Total):</span>
+                        <span>${Math.round(adminComisionMonto).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-emerald-950 font-extrabold text-sm pt-1 mt-1 border-t border-dashed border-emerald-200">
+                        <span>Pago Neto Estimado al Dueño:</span>
+                        <span>${Math.round(pagoNetoDueño).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="submit"
+                  disabled={isCreating || (isCapacityExceededForCreate && !allowOverCapacity)}
+                  className={`flex-1 font-bold py-3 px-4 rounded-xl transition-colors text-sm shadow-md active:scale-95 ${
+                    (isCreating || (isCapacityExceededForCreate && !allowOverCapacity))
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+                      : 'bg-[#11d442] text-white hover:bg-[#0fb337]'
+                  }`}
+                >
+                  {isCreating ? 'Creando Reserva...' : 'Crear y Guardar Reserva'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  disabled={isCreating}
+                  className="px-6 py-3 font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 text-sm transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

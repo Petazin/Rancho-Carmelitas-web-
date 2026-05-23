@@ -35,7 +35,10 @@ export async function POST(req: Request) {
       paymentReceiptUrl,
       adults,
       children,
-      bookingId 
+      bookingId,
+      plataformaNombre,
+      plataformaComisionAplicada,
+      requiresInvoice
     } = body;
 
     // Leer datos de la empresa desde Supabase settings
@@ -70,6 +73,9 @@ export async function POST(req: Request) {
       companyAddress: settings.company_address || undefined,
       companyPhone: settings.company_phone || undefined,
       companyEmail: settings.company_email || undefined,
+      plataformaNombre: plataformaNombre || null,
+      plataformaComisionAplicada: plataformaComisionAplicada !== undefined ? Number(plataformaComisionAplicada) : 0,
+      requiresInvoice: requiresInvoice || false,
     });
 
     // Enviar correo definitivo al Cliente
