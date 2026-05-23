@@ -432,7 +432,10 @@ export default function AdminCabanasPage() {
                     </button>
                   );
                 })}
-              </d            {/* Foto de Portada Principal - Crear */}
+              </div>
+            </div>
+            
+            {/* Foto de Portada Principal - Crear */}
             <div className="md:col-span-5 mt-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
               <label className="block text-sm font-bold text-gray-800 mb-1 flex items-center gap-1.5">
                 📸 FOTO DE PORTADA PRINCIPAL (OFICIAL)
