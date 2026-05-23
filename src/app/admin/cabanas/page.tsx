@@ -16,6 +16,7 @@ interface Cabin {
   price_per_night: number;
   capacity: number;
   is_active: boolean;
+  image_url?: string;
   gallery_urls: string[];
   description: string;
   amenities: string[];
@@ -27,12 +28,13 @@ export default function AdminCabanasPage() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({ name: '', price: 0, capacity: 0, gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
+  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, image_url: string, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({ name: '', price: 0, capacity: 0, image_url: '', gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
   const [isCreating, setIsCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number}>({
+  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, image_url: string, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({
     name: '',
     price_per_night: 0,
     capacity: 2,
+    image_url: '',
     description: '',
     amenities: [],
     max_extra_guests: 0,
@@ -40,6 +42,7 @@ export default function AdminCabanasPage() {
     extra_surcharge_mode: 'percentage' as 'percentage' | 'fixed'
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export default function AdminCabanasPage() {
       name: cabin.name, 
       price: cabin.price_per_night, 
       capacity: cabin.capacity,
+      image_url: cabin.image_url || '',
       gallery_urls: cabin.gallery_urls?.length ? cabin.gallery_urls : [''],
       description: cabin.description || '',
       amenities: cabin.amenities || [],
@@ -75,6 +79,28 @@ export default function AdminCabanasPage() {
   const handleUpdate = async (id: string) => {
     setUploading(true);
     let finalGalleryUrls = editForm.gallery_urls.filter(url => url.trim() !== '' && !url.startsWith('blob:')); // Preservar antiguas URLs válidas
+    let finalImageUrl = editForm.image_url;
+
+    // Subir nueva foto de portada si está seleccionada
+    if (coverFile) {
+      const fileExt = coverFile.name.split('.').pop();
+      const fileName = `cover_${Math.random()}.${fileExt}`;
+      const filePath = `${id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cabin-images')
+        .upload(filePath, coverFile);
+
+      if (uploadError) {
+        console.error('Error subiendo foto de portada:', uploadError);
+        alert(`Hubo un error al subir la portada: ${coverFile.name}`);
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('cabin-images')
+          .getPublicUrl(filePath);
+        finalImageUrl = publicUrl;
+      }
+    }
     
     // Subir nuevos archivos locales si los hay
     if (selectedFiles.length > 0) {
@@ -105,6 +131,7 @@ export default function AdminCabanasPage() {
         name: editForm.name, 
         price_per_night: editForm.price,
         capacity: editForm.capacity,
+        image_url: finalImageUrl || null,
         gallery_urls: finalGalleryUrls.length > 0 ? finalGalleryUrls : null,
         description: editForm.description,
         amenities: editForm.amenities.length > 0 ? editForm.amenities : null,
@@ -119,6 +146,7 @@ export default function AdminCabanasPage() {
     } else {
       setEditingId(null);
       setSelectedFiles([]);
+      setCoverFile(null);
       fetchCabins();
     }
   };
@@ -131,6 +159,7 @@ export default function AdminCabanasPage() {
 
     setUploading(true);
     let finalGalleryUrls: string[] = [];
+    let finalImageUrl = '';
 
     // Primero insertamos la cabaña para obtener un ID, usamos ese ID como folder de imágenes
     const { data: newCabinData, error: insertError } = await supabase
@@ -156,6 +185,26 @@ export default function AdminCabanasPage() {
 
     const newId = newCabinData.id;
 
+    // Subir foto de portada si está seleccionada
+    if (coverFile) {
+      const fileExt = coverFile.name.split('.').pop();
+      const fileName = `cover_${Math.random()}.${fileExt}`;
+      const filePath = `${newId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cabin-images')
+        .upload(filePath, coverFile);
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('cabin-images')
+          .getPublicUrl(filePath);
+        finalImageUrl = publicUrl;
+      } else {
+        console.error("Fallo al subir foto de portada", coverFile.name, uploadError);
+      }
+    }
+
     // Subir archivos al Storage a la carpeta específica de esta cabaña (ID)
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
@@ -176,17 +225,22 @@ export default function AdminCabanasPage() {
           console.error("Fallo al subir archivo", file.name, uploadError);
         }
       }
+    }
 
-      // Actualizamos la cabaña recién creada con las nuevas URLs de Storage
-      if (finalGalleryUrls.length > 0) {
-        await supabase.from('cabins').update({ gallery_urls: finalGalleryUrls }).eq('id', newId);
-      }
+    // Actualizamos la cabaña recién creada con las nuevas URLs de Storage
+    const updatePayload: any = {};
+    if (finalImageUrl) updatePayload.image_url = finalImageUrl;
+    if (finalGalleryUrls.length > 0) updatePayload.gallery_urls = finalGalleryUrls;
+
+    if (Object.keys(updatePayload).length > 0) {
+      await supabase.from('cabins').update(updatePayload).eq('id', newId);
     }
 
     setUploading(false);
     setIsCreating(false);
-    setCreateForm({ name: '', price_per_night: 0, capacity: 2, description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
+    setCreateForm({ name: '', price_per_night: 0, capacity: 2, image_url: '', description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
     setSelectedFiles([]);
+    setCoverFile(null);
     fetchCabins();
   };
 
@@ -211,6 +265,16 @@ export default function AdminCabanasPage() {
       const newFiles = Array.from(e.target.files);
       setSelectedFiles(prev => [...prev, ...newFiles]);
     }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCoverFile(e.target.files[0]);
+    }
+  };
+
+  const removeCoverFile = () => {
+    setCoverFile(null);
   };
 
   const removeSelectedFile = (index: number) => {
@@ -368,28 +432,102 @@ export default function AdminCabanasPage() {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-            
-            <div className="md:col-span-5 mt-2">
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Galería de Fotos (Sube desde tu PC)</label>
+              </d            {/* Foto de Portada Principal - Crear */}
+            <div className="md:col-span-5 mt-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+              <label className="block text-sm font-bold text-gray-800 mb-1 flex items-center gap-1.5">
+                📸 FOTO DE PORTADA PRINCIPAL (OFICIAL)
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                📐 **Aspecto 3:2 recomendado (ej: 1200x800 px)**. Se despliega en la lista de cabañas del Home público y en resúmenes de pago.
+              </p>
               
-              <div className="flex flex-wrap gap-4 mb-3">
-                {selectedFiles.map((file, i) => (
-                  <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 group">
-                    <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+              <div className="flex items-center gap-4">
+                {coverFile ? (
+                  <div className="relative w-36 h-24 rounded-xl overflow-hidden border-2 border-[#11d442] shadow-sm group">
+                    <img src={URL.createObjectURL(coverFile)} alt="Preview Portada" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 w-full bg-[#11d442] text-white text-[9px] text-center font-bold py-0.5">📸 PORTADA SELECCIONADA</span>
                     <button 
-                      onClick={() => removeSelectedFile(i)}
-                      className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={removeCoverFile}
+                      type="button"
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
                     >
-                      ✕ Quitar
+                      ✕ Cambiar Foto
                     </button>
                   </div>
-                ))}
+                ) : (
+                  <label className="w-36 h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-[#11d442] transition-all bg-white/50 shadow-sm">
+                    <span className="text-xl text-gray-400">📸</span>
+                    <span className="text-[10px] text-gray-500 font-bold mt-1 text-center px-2">Cargar Portada</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleCoverChange}
+                    />
+                  </label>
+                )}
                 
-                <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-blue-400 transition-colors">
+                <div className="flex-1 text-xs text-gray-400 font-medium">
+                  {coverFile ? (
+                    <span className="text-[#11d442] font-semibold">✓ Imagen cargada: {coverFile.name} ({(coverFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  ) : (
+                    <span>Sube la foto principal del alojamiento. Esta foto es independiente de la galería de instalaciones.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Galería de Fotos - Crear */}
+            <div className="md:col-span-5 mt-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+              <label className="block text-sm font-bold text-gray-800 mb-1">
+                🖼️ GALERÍA DE FOTOS Y PANORÁMICAS
+              </label>
+              <div className="mb-4 bg-white/80 p-3 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1 shadow-sm">
+                <p className="font-bold text-gray-700">📌 Guía de Posicionamiento en el Sitio Web:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><span className="font-semibold text-blue-700">1ª Foto (🌌 Banner Superior):</span> Se utiliza automáticamente como fondo de pantalla panorámica en el detalle de la cabaña. Recomendado: **1920x1080 px (16:9)**.</li>
+                  <li><span className="font-semibold text-gray-600">Fotos 2 en adelante (🖼️ Carrusel):</span> Se muestran en el carrusel de comodidades de la cabaña. Recomendado: **1200x800 px (3:2)**.</li>
+                </ul>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 mb-3">
+                {selectedFiles.map((file, i) => {
+                  const isHeroBanner = i === 0;
+                  return (
+                    <div 
+                      key={i} 
+                      className={`relative w-28 h-28 rounded-xl overflow-hidden border-2 shadow-sm group transition-all ${
+                        isHeroBanner ? 'border-blue-500 scale-105 z-10' : 'border-gray-200'
+                      }`}
+                    >
+                      <img src={URL.createObjectURL(file)} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                      
+                      {/* Badge superior indicando su destino */}
+                      <span className={`absolute top-0 w-full text-[8px] text-center font-bold py-0.5 text-white ${
+                        isHeroBanner ? 'bg-blue-600' : 'bg-gray-500'
+                      }`}>
+                        {isHeroBanner ? '🌌 BANNER HERO (1ª)' : `🖼️ CARRUSEL (${i + 1}ª)`}
+                      </span>
+                      
+                      {/* Badge inferior de tamaño sugerido */}
+                      <span className="absolute bottom-0 w-full bg-black/75 text-white text-[8px] text-center py-0.5 font-medium">
+                        {isHeroBanner ? '1920x1080 px' : '1200x800 px'}
+                      </span>
+                      
+                      <button 
+                        onClick={() => removeSelectedFile(i)}
+                        type="button"
+                        className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                      >
+                        ✕ Quitar
+                      </button>
+                    </div>
+                  );
+                })}
+                
+                <label className="w-28 h-28 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-blue-400 transition-colors bg-white shadow-sm">
                   <span className="text-2xl text-gray-400">+</span>
-                  <span className="text-[10px] text-gray-400 font-bold mt-1">Subir Foto</span>
+                  <span className="text-[10px] text-gray-400 font-bold mt-1">Agregar Foto</span>
                   <input 
                     type="file" 
                     multiple 
@@ -546,40 +684,164 @@ export default function AdminCabanasPage() {
                   </div>
                 </div>
 
-                <div className="md:col-span-3 mt-2">
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Galería de Fotos (Sube desde tu PC)</label>
+                {/* Foto de Portada Principal - Editar */}
+                <div className="md:col-span-3 mt-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-800 uppercase mb-1">
+                    📸 Foto de Portada Principal (Oficial)
+                  </label>
+                  <p className="text-[10px] text-gray-500 mb-2">
+                    📐 **Sugerido: 1200x800 px (3:2)**. Se muestra en el catálogo del Home y checkout público.
+                  </p>
                   
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {/* Imágenes de Supabase (Existentes) */}
-                    {editForm.gallery_urls.filter(url => url.trim() !== '').map((url, i) => (
-                      <div key={`existing-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
-                        <img src={url} alt={`Existente ${i}`} className="w-full h-full object-cover opacity-80" />
+                  <div className="flex items-center gap-3">
+                    {coverFile ? (
+                      <div className="relative w-28 h-20 rounded-xl overflow-hidden border-2 border-blue-500 shadow-sm group">
+                        <img src={URL.createObjectURL(coverFile)} alt="Preview Nueva Portada" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-0 w-full bg-blue-500 text-white text-[8px] text-center font-bold py-0.5">NUEVA</span>
                         <button 
-                          onClick={() => setEditForm({...editForm, gallery_urls: editForm.gallery_urls.filter((_, index) => index !== i)})}
-                          className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
-                          title="Eliminar permanentemente"
-                        >
-                          ✕ Borrar
-                        </button>
-                      </div>
-                    ))}
-                    
-                    {/* Archivos Locales (Previsualización antes de subir) */}
-                    {selectedFiles.map((file, i) => (
-                      <div key={`new-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-blue-400 group">
-                        <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0 w-full bg-blue-500 text-white text-[9px] text-center font-bold">NUEVA</span>
-                        <button 
-                          onClick={() => removeSelectedFile(i)}
-                          className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={removeCoverFile}
+                          type="button"
+                          className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
                         >
                           ✕ Quitar
                         </button>
                       </div>
-                    ))}
+                    ) : editForm.image_url ? (
+                      <div className="relative w-28 h-20 rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+                        <img src={editForm.image_url} alt="Portada Actual" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-0 w-full bg-gray-700/80 text-white text-[8px] text-center font-bold py-0.5">PORTADA ACTUAL</span>
+                        <button 
+                          type="button"
+                          className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                          title="Subir una nueva portada"
+                        >
+                          ✕ Cambiar
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                            onChange={handleCoverChange}
+                          />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-28 h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-[#11d442] transition-all bg-white/50 shadow-sm">
+                        <span className="text-lg text-gray-400">📸</span>
+                        <span className="text-[9px] text-gray-500 font-bold mt-0.5">Cargar Portada</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleCoverChange}
+                        />
+                      </label>
+                    )}
                     
-                    <label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#11d442] transition-colors">
+                    <div className="flex-1 text-[10px] text-gray-400 font-medium">
+                      {coverFile ? (
+                        <span className="text-blue-600 font-semibold">✓ Nueva portada lista para subir.</span>
+                      ) : editForm.image_url ? (
+                        <span>Portada actual guardada. Pasa el cursor para cambiarla por una nueva.</span>
+                      ) : (
+                        <span>Carga la portada principal de la cabaña.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Galería de Fotos - Editar */}
+                <div className="md:col-span-3 mt-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-800 uppercase mb-2">
+                    🖼️ Galería de Fotos e Instalaciones
+                  </label>
+                  
+                  <div className="mb-3 bg-white/80 p-2.5 rounded-xl border border-gray-200 text-[10px] text-gray-600 space-y-1 shadow-sm">
+                    <p className="font-bold text-gray-700">📌 Guía de Destino de la Imagen:</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li><span className="font-semibold text-blue-700">1ª Foto (🌌 Banner Superior):</span> Fondo panorámico de la cabaña. Recomendado: **1920x1080 px**.</li>
+                      <li><span className="font-semibold text-gray-600">Siguientes Fotos (🖼️ Carrusel):</span> Carrusel interactivo. Recomendado: **1200x800 px**.</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2.5 mb-2">
+                    {/* Imágenes de Supabase (Existentes) */}
+                    {editForm.gallery_urls.filter(url => url.trim() !== '').map((url, i) => {
+                      const isHeroBanner = i === 0;
+                      return (
+                        <div 
+                          key={`existing-${i}`} 
+                          className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 shadow-sm group transition-all ${
+                            isHeroBanner ? 'border-blue-500 scale-105 z-10' : 'border-gray-200'
+                          }`}
+                        >
+                          <img src={url} alt={`Existente ${i}`} className="w-full h-full object-cover" />
+                          
+                          {/* Badge superior indicando su destino */}
+                          <span className={`absolute top-0 w-full text-[7px] text-center font-bold py-0.5 text-white ${
+                            isHeroBanner ? 'bg-blue-600' : 'bg-gray-500'
+                          }`}>
+                            {isHeroBanner ? '🌌 BANNER HERO (1ª)' : `🖼️ CARRUSEL (${i + 1}ª)`}
+                          </span>
+                          
+                          {/* Badge de tamaño */}
+                          <span className="absolute bottom-0 w-full bg-black/75 text-white text-[7px] text-center py-0.5">
+                            {isHeroBanner ? '1920x1080 px' : '1200x800 px'}
+                          </span>
+                          
+                          <button 
+                            type="button"
+                            onClick={() => setEditForm({...editForm, gallery_urls: editForm.gallery_urls.filter((_, index) => index !== i)})}
+                            className="absolute inset-0 bg-red-500/85 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                            title="Eliminar de la galería"
+                          >
+                            ✕ Borrar
+                          </button>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Archivos Locales Nuevos */}
+                    {selectedFiles.map((file, i) => {
+                      const hasExistingGallery = editForm.gallery_urls.filter(url => url.trim() !== '').length > 0;
+                      const isHeroBanner = !hasExistingGallery && i === 0;
+                      const globalIndex = editForm.gallery_urls.filter(url => url.trim() !== '').length + i;
+                      
+                      return (
+                        <div 
+                          key={`new-${i}`} 
+                          className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 shadow-sm group transition-all ${
+                            isHeroBanner ? 'border-blue-500 scale-105 z-10' : 'border-blue-400'
+                          }`}
+                        >
+                          <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                          <span className="absolute bottom-2 right-1 bg-blue-500 text-white text-[7px] font-bold px-1 rounded-sm">NUEVA</span>
+                          
+                          {/* Badge superior indicando su destino */}
+                          <span className={`absolute top-0 w-full text-[7px] text-center font-bold py-0.5 text-white ${
+                            isHeroBanner ? 'bg-blue-600' : 'bg-blue-500'
+                          }`}>
+                            {isHeroBanner ? '🌌 BANNER HERO (1ª)' : `🖼️ CARRUSEL (${globalIndex + 1}ª)`}
+                          </span>
+                          
+                          {/* Badge de tamaño */}
+                          <span className="absolute bottom-0 w-full bg-black/75 text-white text-[7px] text-center py-0.5">
+                            {isHeroBanner ? '1920x1080 px' : '1200x800 px'}
+                          </span>
+                          
+                          <button 
+                            type="button"
+                            onClick={() => removeSelectedFile(i)}
+                            className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                          >
+                            ✕ Quitar
+                          </button>
+                        </div>
+                      );
+                    })}
+                    
+                    <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-blue-400 transition-colors bg-white shadow-sm">
                       <span className="text-xl text-gray-400">+</span>
+                      <span className="text-[9px] text-gray-400 mt-0.5">Subir Foto</span>
                       <input 
                         type="file" 
                         multiple 
@@ -589,7 +851,7 @@ export default function AdminCabanasPage() {
                       />
                     </label>
                   </div>
-                  <p className="text-[10px] text-gray-400">Las fotos marcadas con "NUEVA" se subirán a la nube al guardar los cambios.</p>
+                  <p className="text-[9px] text-gray-400 font-medium">Las fotos marcadas con el contorno azul o celeste son nuevos archivos que se subirán al guardar.</p>
                 </div>
               </div>
             ) : (

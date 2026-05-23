@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [0.9.3] - 2026-05-23
+
+### Añadido / Mejorado (Gestión Diferenciada de Fotos de Portada y Galería en el PMS)
+
+- **Cargador Dedicado de Portada Principal:** Incorporación de una sección exclusiva e independiente en el panel de administración (creación y edición inline) para subir la **Foto de Portada Principal** oficial de cada cabaña (`image_url` en Supabase). Cuenta con previsualizaciones interactivas locales y persistidas en la nube y la indicación de su tamaño ideal sugerido (**Aspecto 3:2, ej: 1200x800 px**).
+- **Badges de Ayuda Visual Inteligentes en Galería:** Rediseño completo del panel de carga de la galería de fotos. Incorpora un banner instructivo de posicionamiento de imágenes y badges dinámicos en tiempo real sobre las miniaturas que clasifican la **Primera Foto** de la galería combinada como `🌌 BANNER HERO` (**Recomendado: 1920x1080 px, 16:9/21:9**) y las **Fotos 2 en adelante** como `🖼️ CARRUSEL` (**Recomendado: 1200x800 px, 3:2**), reflejando con precisión matemática y visual el despliegue del portal público.
+- **Limpieza de Sintaxis TSX:** Saneamiento y validación de las etiquetas React y el flujo de estados condicionales en el formulario de edición inline para evitar warnings de consola y fallos de compilación con Turbopack.
+
 ## [0.9.2] - 2026-05-23
 
 ### Añadido / Mejorado (Gestión Operativa de Reservas y Cancelación Multicanal)
