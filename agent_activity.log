@@ -179,3 +179,8 @@
   - Comando: `git add .` para preparar los archivos de código, esquemas e historial actualizados.
   - Comando: `git commit -m "feat(users): gestión avanzada de equipo con edición de contacto, bloqueo nativo Supabase Auth y trazabilidad robusta en bitácora de auditoría"`
   - Comando: `git push` para sincronizar y desplegar la versión final hacia el repositorio oficial en GitHub.
+[2026-05-25 19:25:00] Actividad de Antigravity:
+- Se implementó un robustecimiento arquitectónico en el backend en `src/app/api/admin/users/route.ts` para resolver el registro del operador en creaciones y eliminaciones de perfiles gatilladas de fondo por Supabase Auth:
+  - En **DELETE**: Modificado para borrar explícitamente el perfil en PostgreSQL con `supabaseAdminLocal` (que lleva inyectado el header de auditoría `x-audit-user-id`) antes de revocar el acceso en Auth. Esto asegura que el trigger de PostgreSQL grabe con total precisión el nombre del operador administrador real.
+  - En **POST**: Implementada la corrección retroactiva automática en la tabla `audit_logs`. Tras completarse la invitación de Auth, localiza el registro automático de tipo `INSERT` generado por el trigger de base de datos de Supabase y le asigna el ID, nombre, correo y rol exacto del administrador logueado que inició la invitación, eliminando por completo las firmas "Sistema / Anon" de la bitácora PMS.
+- Se propuso y ejecutó la sincronización y actualización de versiones Git hacia la rama master en GitHub.

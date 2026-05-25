@@ -138,6 +138,34 @@ export async function POST(request: Request) {
       if (profileError) {
         console.error('Error insertando perfil manual:', profileError);
       }
+
+      // 3. Corregir retroactivamente el registro automático "INSERT" del trigger interno de Supabase
+      if (adminId) {
+        try {
+          const { data: adminProfile } = await supabaseAdminLocal
+            .from('profiles')
+            .select('full_name, email, role')
+            .eq('id', adminId)
+            .single();
+
+          if (adminProfile) {
+            await supabaseAdminLocal
+              .from('audit_logs')
+              .update({
+                performed_by_id: adminId,
+                performed_by_email: adminProfile.email || '',
+                performed_by_name: adminProfile.full_name || '',
+                user_role: adminProfile.role || 'admin'
+              })
+              .eq('table_name', 'profiles')
+              .eq('record_id', inviteData.user.id)
+              .eq('action', 'INSERT')
+              .eq('user_role', 'sistema');
+          }
+        } catch (e) {
+          console.error('Error actualizando log de inserción de auditoría:', e);
+        }
+      }
     }
 
     return NextResponse.json({ data: inviteData, message: 'Invitación enviada correctamente.' });
@@ -303,6 +331,21 @@ export async function DELETE(request: Request) {
       }
     );
 
+    // 1. Borrar de forma explícita el perfil público con el cliente dinámico para que el trigger de auditoría asocie al operador real
+    try {
+      const { error: profileDeleteError } = await supabaseAdminLocal
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileDeleteError) {
+        console.error('Error borrando perfil de forma explícita:', profileDeleteError);
+      }
+    } catch (e) {
+      console.error('Excepción al borrar perfil explícito:', e);
+    }
+
+    // 2. Borrar de Supabase Auth
     const { error } = await supabaseAdminLocal.auth.admin.deleteUser(userId);
 
     if (error) throw error;
