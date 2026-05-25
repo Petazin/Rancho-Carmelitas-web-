@@ -20,6 +20,8 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
     *   **Sistema de Comisiones Dinámicas:** Gestión y cálculo automático de comisiones de plataformas (externas) sobre el Precio Bruto e IVA de la reserva.
     *   **Ficha de Liquidación Interna Privada:** Desglose interactivo en tiempo real del pago neto estimado al dueño, excluido de los correos transaccionales por privacidad.
     *   **Creación Manual de Reservas:** Formulario premium de registro con previsualización financiera reactiva en tiempo real.
+    *   **Cierres y Bloqueos Temporales (Parcial / Total):** Módulo administrativo autogestionable para declarar periodos de cierre por mantención o vacaciones del Rancho. Bloquea de forma estricta reservas en el cliente y el PMS e inyecta alertas rojas prioritarias ante colisiones con reservas activas.
+
 
 *   **Correos de Confirmación (Resend):** Envíos automatizados al huésped con el desglose del cobro de plataforma y el comprobante oficial de pago, protegiendo los datos confidenciales de administración.
 

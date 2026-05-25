@@ -1,5 +1,58 @@
 # Changelog - Rancho Carmelitas
 
+## [1.1.1] - 2026-05-25
+
+### Añadido / Mejorado (Gestión Avanzada, Edición y Bloqueo Nativo de Usuarios v1.1.1)
+
+- **Edición en Caliente de Datos de Equipo:** Implementación del botón "Editar" en la tabla de miembros que abre un modal Stitch UI reactivo para modificar en tiempo real el Nombre Completo, el Celular/Teléfono de Contacto y el Rol Operativo de cualquier colaborador del Rancho.
+- **Bloqueo y Suspensión Nativa con Motivo Obligatorio:** Integración nativa con la propiedad de baneo de Supabase Auth (`ban_duration: '87600h'` para bloqueo permanente y `ban_duration: 'none'` para desbloquear). Solicita de forma obligatoria un motivo de bloqueo que se almacena en los metadatos de autenticación y se sincroniza en caliente en la tabla pública de perfiles (`profiles.block_reason` y `profiles.banned_until`), garantizando trazabilidad y transparencia absoluta en el panel.
+- **Badges Premium de Visualización de Bloqueo:** Adición de un badge de estado `🔒 BANEADO` con estilo Stitch UI rojo en la tabla de miembros bajo el nombre del usuario bloqueado. Despliega de forma interactiva e inmediata el motivo del bloqueo al pasar el cursor o mediante texto auxiliar descriptivo.
+- **Eliminación Definitiva de Colaboradores:** Habilitación de la revocación completa de accesos a la plataforma eliminando de forma física y permanente al colaborador en Supabase Auth y en la tabla de perfiles sincronizada.
+
+## [1.1.0] - 2026-05-25
+
+### Añadido / Mejorado (Bitácora de Auditoría Trace Trail y Roles Dinámicos Fase 1)
+
+- **Triggers de Auditoría en Supabase PostgreSQL:** Creación del script `src/lib/setup_audit_logs.sql` que inicializa de forma automatizada y segura la tabla centralizada `audit_logs` con seguridad de filas (RLS) habilitada únicamente para roles de administrador. Registra de forma proactiva cada `INSERT`, `UPDATE` o `DELETE` sobre las tablas nucleares del PMS (`bookings`, `cabins`, `cabin_closures` y `profiles`), comparando mediante diferencias JSONB los datos anteriores (`old_data`) y posteriores (`new_data`), identificando al instante el ID, correo, nombre y rol del operador que ejecutó el cambio.
+- **Panel Premium interactivo "Bitácora de Auditoría":** Desarrollo de una sofisticada interfaz de usuario Stitch UI bajo la ruta exclusiva `/admin/auditoria`. Incorpora un timeline vertical interactivo y filtros avanzados reactivos de tipo de acción, módulo/tabla, fecha y búsqueda por usuario.
+- **Traductor Inteligente a Lenguaje Natural:** Incorporación de un motor generador de explicaciones en lenguaje natural en el timeline e inspector de detalles. Traduce al instante las operaciones JSON frías en enunciados amigables para humanos en español nativo. Resuelve de forma proactiva nombres dinámicos de cabañas cargados en memoria a través de su identificador y formatea los eventos de manera contextual según el módulo:
+  - **Cierres/Bloqueos (`cabin_closures`):** Detalla si es de una cabaña específica o un cierre total del Rancho, el motivo exacto, fechas y estado (Ej: *"⚙️ Claudio Milanolo aplicó un nuevo bloqueo por 'EXTRA Vacaciones' restringiendo la cabaña 'Suite del Lago'..."* o *"🔓 Claudio Milanolo levantó y eliminó el bloqueo..."*).
+  - **Reservas (`bookings`):** Identifica el nombre del huésped, la cabaña asignada, acciones de creación, modificación general, eliminación o cambios puntuales de estado de reserva (Ej: *"🔄 Claudio Milanolo cambió el estado de la reserva de 'Huésped' a 'Confirmada'..."*).
+  - **Usuarios/Perfiles (`profiles`):** Traduce creaciones, cambios específicos de roles de seguridad (Staff, Administrador, etc.) o revocaciones (Ej: *"👤 Claudio Milanolo creó el perfil de usuario asignándole el rol de..."* o *"🛡️ Claudio Milanolo actualizó el rol de seguridad..."*).
+  - **Cabañas (`cabins`):** Narra creaciones, deshabilitaciones o activaciones de servicio y bajas.
+- **Visualizador Comparativo de Cambios en Caliente:** Diseño en el panel de detalle de un renderizador de diferencias inteligente (`renderDataDiff`) que detecta y lista de forma coloreada y formateada únicamente las propiedades modificadas de primer nivel en updates, ofreciendo también exportación directa de la bitácora a formato JSON.
+- **Enlace Dedicado en Sidebar:** Adición del enlace *"Bitácora de Auditoría"* con ícono de documento en el sidebar lateral de administrador (`src/app/admin/layout.tsx`).
+- **Pestaña de Roles y Permisos Dinámicos en Usuarios:** Rediseño modular de `/admin/usuarios` estructurado en pestañas fluidas. La primera contiene el listado de miembros del equipo y la segunda presenta la **Matriz de Permisos Dinámicos**, donde el administrador puede visualizar interactivamente la matriz de permisos de los roles principales (`admin`, `staff`, `recepcion`, `mantenimiento`) con preajustes de acceso a pantallas y botones del PMS.
+- **Robustecimiento del Pipeline de Invitación y Reenvío de Usuarios:** Rediseño estructural en el flujo de invitaciones de Supabase Auth. El endpoint GET de `api/admin/users/route.ts` ahora cruza dinámicamente y en caliente la tabla pública `public.profiles` con la base de datos interna de usuarios de autenticación `auth.users` mediante privilegios administrativos (`listUsers`), garantizando que **todos los datos de contacto reales** (email y teléfono/celular) se visualicen de inmediato en la tabla de miembros en `/admin/usuarios` sin esperar a que el usuario complete su registro. Se inyectó soporte para capturar e invitar con **Celular / Teléfono de Contacto**, columna de Contacto enriquecida visualmente con íconos premium de correo/teléfono de Stitch UI, y un flujo interactivo de **Reenvío de Invitaciones** en caliente.
+
+
+## [1.0.1] - 2026-05-25
+
+### Añadido / Mejorado (Enlaces Directos y Vista Centralizada de Reservas en Conflicto)
+
+- **Enlaces Directos en Banners de Alerta Crítica:** Modificación de los banners rojos interactivos animados en el **Dashboard** (`src/app/admin/page.tsx`) y en la **Gestión de Reservas** (`src/app/admin/reservas/page.tsx`). Ahora el nombre de los huéspedes en conflicto con cierres temporales es un `<Link>` interactivo directo que filtra el panel a esa reserva específica al instante, acelerando los tiempos de reubicación del PMS.
+- **Pestaña Centralizada de Conflictos en Reservas:** Integración de un sistema de pestañas premium Stitch UI sobre la tabla principal en el panel de reservas.
+- **Agrupación y Conteo Reactivo de Incidentes:** Creación de una pestaña dedicada `"⚠️ Reservas en Conflicto"` que calcula y muestra dinámicamente un contador de advertencia rojo pulsante con el total de incidentes activos. Al seleccionarse, la tabla principal se filtra instantáneamente para agrupar únicamente:
+  - Reservas con colisiones por **cierres temporales** (`closureConflicts`).
+  - Reservas con colisiones por **overbooking o duplicidad de fechas** cruzadas.
+- **Barra de Filtro Activo Inteligente con Alternador de Conflictos:** Rediseño completo del banner de filtro de URL (`bookingIdFilter`). Ahora despliega de forma explícita el nombre del huésped filtrado, su cabaña y el rango de fechas. Además, incluye un selector dinámico (`select`) Rancho Stitch UI para alternar instantáneamente entre todas las reservas en conflicto activas de manera ágil y visual.
+- **Refresco Reactivo de Conflictos en Tiempo Real:** Corrección en el flujo del PMS; ahora tras confirmar, cancelar, registrar pagos o guardar modificaciones de reservas en la base de datos (incluso a través del modal de confirmación de cancelación), el sistema invoca de forma inmediata `fetchBookings()`. Esto recalcula las colisiones y asegura que los banners superiores de advertencia se limpien y desvanezcan al instante tan pronto como los incidentes sean resueltos en Supabase.
+- **Limpieza de Filtrado Multi-Capa:** Garantía de coherencia al mezclar el filtro de URL proveniente del Dashboard con la pestaña de conflictos de forma robusta.
+
+## [1.0.0] - 2026-05-25
+
+### Añadido / Mejorado (Sistema de Cierres y Bloqueos Temporales Parcial y Total)
+
+- **Arquitectura de Base de Datos para Bloqueos:** Creación e integración de la tabla `cabin_closures` en Supabase con RLS habilitada para lectura pública y permisos administrativos de edición, optimizada con índices cronológicos para búsquedas de disponibilidad inmediatas.
+- **Cierre Individual y Cierre Total:** Capacidad para configurar bloqueos parciales por rango de fechas para cabañas específicas (mantenciones, reparaciones, etc.) y opción rápida de **Cierre Total** (todas las cabañas a la vez) para vacaciones del Rancho.
+- **Bloqueo Estricto de Reservas (Frontend Cliente):** Integración de cierres temporales en la Landing y Checkout públicos. El calendario interactivo (`BookingForm.tsx`) ahora marca los días cerrados como no seleccionables con un estilo visual premium de bloqueo (`bg-gray-100 border border-dashed border-gray-300`) y despliega alertas animadas Stitch UI especificando el motivo del cierre ingresado por el administrador.
+- **Bloqueo Estricto de Reservas (Frontend Admin):** Inyección de la misma lógica de deshabilitación y marcado en los calendarios interactivos del modal de creación manual y edición inline de reservas en el PMS.
+- **Lógica de Seguridad en Backend (API & Supabase):** Implementación de validaciones a nivel de base de datos y en los métodos de inserción y actualización (`CheckoutForm.tsx`, `createBooking` y `saveEdit`). Bloquea de forma absoluta cualquier intento de inserción de reserva si coincide con un cierre temporal, mostrando mensajes de error descriptivos.
+- **Detección Preventiva de Conflictos de Cierre:** Al configurar un cierre, el panel analiza reservas activas en ese rango de fechas y despliega un diálogo confirmatorio detallado advirtiendo las colisiones.
+- **Alertas Críticas e Intensas (`🚨`):** Si existe algún conflicto activo entre un cierre y una reserva, el sistema inyecta un banner rojo animado de Stitch UI super llamativo y prioritario en el **Dashboard** y la **Lista de Reservas**, exigiendo la atención del administrador.
+- **Apagado Reactivo de Alertas:** Las alertas se desvanecen automáticamente del PMS tan pronto como todas las colisiones sean resueltas (reubicando o cancelando las reservas afectadas, o eliminando el cierre temporal).
+- **Módulo de Gestión "Cierres y Bloqueos" en Cabañas:** Nueva pestaña/sección autogestionable premium en la página de Gestión de Cabañas (`src/app/admin/cabanas/page.tsx`) con un formulario intuitivo de bloqueo y tabla dinámica para auditar y remover cierres futuros o en curso.
+
 ## [0.9.4] - 2026-05-23
 
 ### Añadido / Mejorado (Módulo de Gestión de Landing Page Autogestionable en el PMS)

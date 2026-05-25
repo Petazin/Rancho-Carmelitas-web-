@@ -89,6 +89,22 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         return;
       }
 
+      // 3. VALIDACIÓN DE CIERRES TEMPORALES (Backend Check)
+      const { data: cierres, error: cierresError } = await supabase
+        .from('cabin_closures')
+        .select('reason')
+        .or(`cabin_id.eq.${cabin.id},cabin_id.is.null`)
+        .lte('start_date', checkOut)
+        .gte('end_date', checkIn);
+
+      if (cierresError) throw cierresError;
+
+      if (cierres && cierres.length > 0) {
+        setErrorMsg(`Lo sentimos, la cabaña se encuentra cerrada temporalmente en el periodo seleccionado por: "${cierres[0].reason}". Por favor vuelve atrás y elige otras fechas.`);
+        setIsLoading(false);
+        return;
+      }
+
       // 2. INSERTAR EN DB
       let finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
       

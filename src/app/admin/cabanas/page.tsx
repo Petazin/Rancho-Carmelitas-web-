@@ -45,8 +45,20 @@ export default function AdminCabanasPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Estados de cierres temporales
+  const [closures, setClosures] = useState<any[]>([]);
+  const [loadingClosures, setLoadingClosures] = useState(true);
+  const [isCreatingClosure, setIsCreatingClosure] = useState(false);
+  const [closureForm, setClosureForm] = useState({
+    cabin_id: '', // '' o 'ALL' indica cierre total
+    start_date: '',
+    end_date: '',
+    reason: 'Vacaciones'
+  });
+
   useEffect(() => {
     fetchCabins();
+    fetchClosures();
   }, []);
 
   async function fetchCabins() {
@@ -59,6 +71,127 @@ export default function AdminCabanasPage() {
     else setCabins(data || []);
     setLoading(false);
   }
+
+  async function fetchClosures() {
+    setLoadingClosures(true);
+    const { data, error } = await supabase
+      .from('cabin_closures')
+      .select(`
+        *,
+        cabin:cabins(name)
+      `)
+      .order('start_date', { ascending: true });
+
+    if (error) console.error('Error fetching closures:', error);
+    else setClosures(data || []);
+    setLoadingClosures(false);
+  }
+
+  async function checkForBookingConflicts(cabinId: string | null, startStr: string, endStr: string) {
+    let query = supabase
+      .from('bookings')
+      .select(`
+        id,
+        guest_name,
+        check_in,
+        check_out,
+        cabin:cabins(name)
+      `)
+      .neq('status', 'Cancelada');
+
+    if (cabinId) {
+      query = query.eq('cabin_id', cabinId);
+    }
+
+    const { data: bookingsData } = await query;
+    if (!bookingsData) return [];
+
+    const selectedIn = new Date(startStr);
+    const selectedOut = new Date(endStr);
+
+    return bookingsData.filter(b => {
+      const bIn = new Date(b.check_in);
+      const bOut = new Date(b.check_out);
+      return selectedIn <= bOut && selectedOut >= bIn;
+    });
+  }
+
+  const handleCreateClosure = async () => {
+    const { cabin_id, start_date, end_date, reason } = closureForm;
+    if (!start_date || !end_date || !reason) {
+      alert('Por favor, completa las fechas y el motivo del cierre.');
+      return;
+    }
+
+    if (start_date > end_date) {
+      alert('La fecha de inicio no puede ser posterior a la fecha de término.');
+      return;
+    }
+
+    setUploading(true);
+    const targetCabinId = (cabin_id === '' || cabin_id === 'ALL') ? null : cabin_id;
+
+    // 1. Detección preventiva de conflictos de reservas
+    const conflicts = await checkForBookingConflicts(targetCabinId, start_date, end_date);
+    if (conflicts.length > 0) {
+      const conflictMsg = conflicts
+        .map(c => `- ${c.guest_name} en ${c.cabin?.name || 'Cabaña'} (${c.check_in} a ${c.check_out})`)
+        .join('\n');
+      
+      const confirmForce = window.confirm(
+        `🚨 ¡ALERTA CRÍTICA DE CONFLICTO DE RESERVAS!\n\n` +
+        `Existen reservas activas registradas para el periodo seleccionado:\n\n` +
+        `${conflictMsg}\n\n` +
+        `Si procedes, se registrará el cierre de todas formas, pero el PMS inyectará un banner rojo animado de alerta intensa hasta que canceles o reubiques esas reservas.\n\n` +
+        `¿Deseas forzar la creación del cierre?`
+      );
+
+      if (!confirmForce) {
+        setUploading(false);
+        return;
+      }
+    }
+
+    // 2. Registro del cierre en base de datos
+    const { error } = await supabase
+      .from('cabin_closures')
+      .insert([{
+        cabin_id: targetCabinId,
+        start_date,
+        end_date,
+        reason
+      }]);
+
+    setUploading(false);
+    if (error) {
+      alert('Error al crear el cierre: ' + error.message);
+    } else {
+      setIsCreatingClosure(false);
+      setClosureForm({
+        cabin_id: '',
+        start_date: '',
+        end_date: '',
+        reason: 'Vacaciones'
+      });
+      fetchClosures();
+    }
+  };
+
+  const handleDeleteClosure = async (id: string) => {
+    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar este cierre y reactivar la disponibilidad de la cabaña?');
+    if (!confirmDelete) return;
+
+    const { error } = await supabase
+      .from('cabin_closures')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al eliminar el cierre: ' + error.message);
+    } else {
+      fetchClosures();
+    }
+  };
 
   const handleEdit = (cabin: Cabin) => {
     setEditingId(cabin.id);
@@ -905,6 +1038,154 @@ export default function AdminCabanasPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SECCIÓN PREMIUM: CIERRES Y BLOQUEOS TEMPORALES (PARCIAL Y TOTAL)         */}
+      {/* ========================================================================= */}
+      <div className="border-t border-gray-100 pt-10 mt-10 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              ⚙️ Cierres y Bloqueos de Cabañas
+            </h2>
+            <p className="text-gray-500">Desactiva alojamientos por vacaciones o mantenciones bloqueando reservas automáticas.</p>
+          </div>
+          <button
+            onClick={() => setIsCreatingClosure(!isCreatingClosure)}
+            className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2"
+          >
+            {isCreatingClosure ? '✕ Cerrar Panel' : '➕ Crear Nuevo Cierre'}
+          </button>
+        </div>
+
+        {isCreatingClosure && (
+          <div className="bg-amber-50/50 p-6 rounded-[24px] border border-amber-100 shadow-sm animate-fade-in-up">
+            <h3 className="text-lg font-bold text-amber-900 mb-4">🚫 Configurar Cierre Temporal</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cabaña a Afectar</label>
+                <select
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm font-semibold"
+                  value={closureForm.cabin_id}
+                  onChange={e => setClosureForm({ ...closureForm, cabin_id: e.target.value })}
+                >
+                  <option value="">🚫 CIERRE TOTAL (Todas las cabañas)</option>
+                  {cabins.map(c => (
+                    <option key={c.id} value={c.id}>🏡 {c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Inicio</label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                  value={closureForm.start_date}
+                  onChange={e => setClosureForm({ ...closureForm, start_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Término</label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                  value={closureForm.end_date}
+                  onChange={e => setClosureForm({ ...closureForm, end_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Motivo o Descripción</label>
+                <input
+                  placeholder="Ej. Mantención anual, Vacaciones"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                  value={closureForm.reason}
+                  onChange={e => setClosureForm({ ...closureForm, reason: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setIsCreatingClosure(false)}
+                className="px-6 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50"
+                disabled={uploading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateClosure}
+                disabled={uploading}
+                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-lg disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading ? 'Registrando...' : 'Establecer Cierre'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {loadingClosures ? (
+          <div className="text-center py-6 text-gray-400">Cargando cierres...</div>
+        ) : closures.length === 0 ? (
+          <div className="bg-gray-50/50 border border-dashed border-gray-200 p-8 rounded-3xl text-center text-gray-500">
+            🌳 No hay cierres activos o programados en el sistema. Todos los alojamientos están disponibles.
+          </div>
+        ) : (
+          <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <th className="p-4">Cabaña</th>
+                    <th className="p-4">Periodo de Bloqueo</th>
+                    <th className="p-4">Motivo / Cierre</th>
+                    <th className="p-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 text-sm text-gray-700">
+                  {closures.map((c) => {
+                    const isTotal = !c.cabin_id;
+                    return (
+                      <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-4 font-semibold">
+                          {isTotal ? (
+                            <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full uppercase">
+                              🚫 Cierre Total (Todas)
+                            </span>
+                          ) : (
+                            <span className="text-gray-900 font-bold">🏡 {c.cabin?.name}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span className="font-semibold text-gray-900">
+                            {new Date(c.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                          <span className="text-gray-400 mx-2">hasta</span>
+                          <span className="font-semibold text-gray-900">
+                            {new Date(c.end_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded mr-2">
+                            🗂️ {c.reason}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDeleteClosure(c.id)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          >
+                            Quitar Bloqueo
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

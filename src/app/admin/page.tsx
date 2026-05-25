@@ -25,6 +25,7 @@ export default function AdminDashboard() {
     totalRevenue: 0,
   });
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  const [closureConflicts, setClosureConflicts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -82,7 +83,17 @@ export default function AdminDashboard() {
 
     const rawBookings = (bookingsData as any) || [];
 
-    // Lógica de detección de conflictos (overbooking)
+    // Cargar cierres temporales
+    const { data: closuresData } = await supabase
+      .from('cabin_closures')
+      .select(`
+        *,
+        cabin:cabins(name)
+      `);
+
+    const activeClosures = closuresData || [];
+
+    // Lógica de detección de conflictos (overbooking entre reservas)
     const bookingsWithConflicts = rawBookings.map((b: Booking) => {
       const conflict = rawBookings.find((other: Booking) => {
         if (other.id === b.id) return false;
@@ -95,12 +106,39 @@ export default function AdminDashboard() {
       return { ...b, isConflict: !!conflict };
     });
 
+    // Lógica de detección de colisiones de cierres temporales con reservas activas
+    const closureConflictsList: any[] = [];
+    rawBookings.forEach((b: Booking) => {
+      if (b.status === 'Cancelada') return;
+
+      const matchingClosure = activeClosures.find((c: any) => {
+        const bIn = new Date(b.check_in);
+        const bOut = new Date(b.check_out);
+        const cIn = new Date(c.start_date);
+        const cOut = new Date(c.end_date);
+
+        // Cruce de fecha inclusivo para cierres
+        const dateOverlap = bIn <= cOut && bOut >= cIn;
+        const cabinMatches = !c.cabin_id || c.cabin_id === b.cabin_id;
+
+        return dateOverlap && cabinMatches;
+      });
+
+      if (matchingClosure) {
+        closureConflictsList.push({
+          booking: b,
+          closure: matchingClosure
+        });
+      }
+    });
+
     setStats({
       bookingsCount: bookingsCount || 0,
       activeCabins: cabinsCount || 0,
       totalRevenue: revenue,
     });
     setUpcomingBookings(bookingsWithConflicts);
+    setClosureConflicts(closureConflictsList);
     setLoading(false);
   }
 
@@ -241,6 +279,39 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-bold text-gray-900">Bienvenido al Dashboard</h2>
         <p className="text-gray-500">Esto es lo que está pasando en Rancho Carmelitas.</p>
       </div>
+
+      {closureConflicts.length > 0 && (
+        <div className="bg-red-50 border-2 border-red-200 p-6 rounded-[24px] shadow-lg animate-pulse">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl animate-bounce">🚨</div>
+            <div className="flex-1 space-y-2">
+              <h3 className="text-lg font-bold text-red-800 uppercase tracking-wide">
+                ALERTA CRÍTICA: Hay {closureConflicts.length} Reservas en Conflicto con Cierres Temporales
+              </h3>
+              <p className="text-red-700 text-sm font-semibold">
+                Existen reservas activas que colisionan con periodos en los que las cabañas han sido declaradas cerradas/desactivadas. Por favor, reubica las reservas afectadas o ajusta los cierres temporales de inmediato:
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-xs text-red-600 font-bold">
+                {closureConflicts.map((c, idx) => (
+                  <li key={idx} className="hover:text-red-900 transition-colors">
+                    Huésped: <Link href={`/admin/reservas?id=${c.booking.id}`} className="underline decoration-dashed hover:decoration-solid font-extrabold text-red-700 hover:text-red-950">
+                      {c.booking.guest_name}
+                    </Link> en <span className="font-extrabold">{c.booking.cabin?.name}</span> para las fechas del <span className="underline">{c.booking.check_in} al {c.booking.check_out}</span> (Motivo de cierre: "{c.closure.reason}")
+                  </li>
+                ))}
+              </ul>
+              <div className="pt-2">
+                <Link
+                  href="/admin/reservas"
+                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md"
+                >
+                  ⚙️ Gestionar y Reubicar Reservas
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tarjetas de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

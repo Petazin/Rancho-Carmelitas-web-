@@ -115,3 +115,67 @@
 - Se modificó la Landing Page pública (`src/app/page.tsx`) para consultar de manera dinámica y reactiva los datos del Hero banner y la Galería de Momentos en Supabase.
 - Se inyectaron lógicas defensivas robustas basadas en bloques `try-catch` y fallbacks en `src/app/page.tsx` para evitar que la Landing pública se caiga si el usuario no ha ejecutado el script SQL en Supabase, utilizando de forma transparente y automática las fotos físicas locales en `/public/gallery` y textos por defecto.
 - Se actualizaron de manera consistente `CHANGELOG.md` y `GEMINI.md` a la versión [0.9.4] en español.
+[2026-05-25 10:55:00] Actividad de Antigravity:
+- A solicitud directa del usuario en el chat, se inicia el servidor de desarrollo de Next.js ejecutando el comando de shell `npm run dev` para levantar el PMS localmente en http://localhost:3000.
+[2026-05-25 13:16:00] Actividad de Antigravity:
+- Se implementaron enlaces directos e interactivos a las reservas en conflicto en los banners de alerta crítica del Dashboard (`src/app/admin/page.tsx`) y del panel de Reservas (`src/app/admin/reservas/page.tsx`), acelerando los tiempos de reacción del administrador.
+- Se implementó la vista centralizada de reservas en conflicto en el panel de reservas (`src/app/admin/reservas/page.tsx`) a través de un sistema premium de pestañas (Tabs) con diseño Stitch UI.
+- Se inyectó una pestaña dedicada `"⚠️ Reservas en Conflicto"` que muestra de forma reactiva e interactiva un contador animado y pulsante con la cantidad de reservas en colisión por cierres temporales o duplicidad/overbooking en tiempo real.
+- Se rediseñó la barra de filtros activa (`bookingIdFilter`) para desglosar detalladamente el huésped, cabaña y rango de fechas que se está visualizando en lugar de un aviso genérico.
+- Se integró un selector dinámico (dropdown select) Rancho Stitch UI dentro de la barra que lee todos los conflictos activos de Rancho Carmelitas, permitiendo al administrador alternar instantáneamente el filtro entre diferentes reservas afectadas o remover el filtro mediante "Mostrar Todas".
+- Se corrigió el refresco reactivo automático de colisiones tras ediciones o confirmaciones; ahora tras procesar `saveEdit`, `updateStatus`, `confirmPaymentAndBooking` o `confirmCancelation` (incluso desde el modal multicanal de cancelación) se invoca `fetchBookings()` inmediatamente, lo que limpia y desvanece de inmediato los banners superiores de alerta del Dashboard y Reservas.
+- Se actualizaron los archivos de documentación del proyecto: `CHANGELOG.md` y `GEMINI.md` a la versión [1.0.1] para mantener máxima visibilidad y consistencia técnica en español.
+[2026-05-25 13:52:00] Actividad de Antigravity:
+- Se creó el script SQL `src/lib/setup_audit_logs.sql` para inicializar la tabla de auditoría `audit_logs` con índices y políticas de RLS restrictivas, y asociar triggers de PostgreSQL automáticos en `bookings`, `cabins`, `cabin_closures` y `profiles`.
+- Se desarrolló el panel premium interactivo en `/admin/auditoria` (`src/app/admin/auditoria/page.tsx`) con un Timeline y desgloses avanzados comparativos de cambios JSON (diff) y exportación a JSON.
+- Se agregó el acceso a la Bitácora de Auditoría en el Sidebar lateral de administradores (`src/app/admin/layout.tsx`).
+- Se rediseñó la pantalla de gestión de equipo en `/admin/usuarios` (`src/app/admin/usuarios/page.tsx`) incorporando un sistema de pestañas y una matriz visual de Roles y Permisos dinámicos.
+- Se actualizaron en español los archivos de control y seguimiento técnico: `GEMINI.md`, `CHANGELOG.md` y `agent_activity.log` correspondientes a la versión [1.1.0].
+[2026-05-25 14:12:00] Actividad de Antigravity:
+- Se refinaró y extendió el motor inteligente de traducción a lenguaje natural `getNaturalLanguageExplanation` en la Bitácora de Auditoría (`src/app/admin/auditoria/page.tsx`).
+- Se implementó la carga dinámica de cabañas en memoria mediante `cabinsMap` para resolver nombres de cabañas reales a partir de sus IDs en tiempo real tanto para reservas como para bloqueos temporales.
+- Se adaptaron de forma ultra-precisa las narraciones de eventos según el módulo:
+  - **Cierres/Bloqueos (`cabin_closures`):** Distingue de forma inteligente cierres totales de cierres de cabañas específicas, detallando el motivo, rango de fechas y acciones de alta, edición y levantamiento/eliminación (Ej: *"🔓 Claudio Milanolo levantó y eliminó el bloqueo..."*).
+  - **Reservas (`bookings`):** Identifica huéspedes, cabañas y detalla de manera fluida ingresos de nuevas reservas, ediciones generales, eliminaciones de reservas o cambios específicos en el estado de la reserva (Ej: *"🔄 Claudio Milanolo cambió el estado de la reserva de 'Huésped' a 'Confirmada'..."*).
+  - **Perfiles (`profiles`):** Narra de forma natural la creación de cuentas de equipo, ediciones de datos personales, asignaciones y cambios específicos de roles de seguridad (staff, admin, etc.) y revocaciones de accesos.
+  - **Cabañas (`cabins`):** Explicita creaciones, bajas y cambios de estado operativo de las cabañas (Disponible / Fuera de servicio).
+- Se actualizó detalladamente el `CHANGELOG.md` para reflejar con absoluta precisión este release premium.
+- Se dejó la aplicación local Next.js compilando limpiamente y lista para QA final.
+[2026-05-25 14:24:00] Actividad de Antigravity:
+- Se identificó un desajuste operacional en el pipeline de invitaciones de Supabase Auth: las invitaciones creaban la cuenta en Auth de manera exitosa pero la inserción automática en la tabla `public.profiles` no gatillaba de inmediato si no se completaba el registro del lado del cliente, impidiendo visualizar el correo y contacto al instante en el PMS.
+- Se reestructuró el endpoint API `src/app/api/admin/users/route.ts`:
+  - Se implementó un guardado manual (`upsert`) del perfil del usuario invitado directamente en la tabla `profiles` tras una invitación exitosa, forzando la sincronización de `email`, `full_name` y `role` de inmediato.
+  - Se programó un interceptor inteligente de errores que detecta si el usuario ya existe en Supabase Auth. Si es así, gatilla automáticamente una re-invitación de seguridad (`inviteUserByEmail`) y re-sincroniza el perfil de forma reactiva.
+- Se rediseñó el panel de equipo en `src/app/admin/usuarios/page.tsx`:
+  - Se añadió la columna **"Contacto"** en la tabla de Miembros, visualizando el correo electrónico de cada colaborador.
+  - Se integró un botón interactivo Stitch UI de **"Reenviar"** con ícono de sobre de correo. Este botón invoca de forma transparente el endpoint POST para re-enviar la invitación de forma inmediata en caliente ante cualquier problema de recepción del cliente.
+  - Se añadieron alertas de confirmación fluidas y manejo de estado.
+- Se actualizó el `CHANGELOG.md` documentando esta mejora técnica bajo la versión `1.1.0`.
+[2026-05-25 14:38:00] Actividad de Antigravity:
+- Se detectó que a pesar del upsert reactivo en el POST, los usuarios históricos y perfiles en Supabase no tenían su correo electrónico sincronizado si la invitación original provenía puramente de Auth sin completar el registro.
+- Se implementó un método **GET** en el backend en `src/app/api/admin/users/route.ts`:
+  - Utiliza `supabaseAdmin` para listar todos los perfiles de `public.profiles`.
+  - Obtiene en caliente y con privilegios administrativos la lista completa de usuarios de autenticación mediante `supabaseAdmin.auth.admin.listUsers()`.
+  - Realiza un cruce dinámico (join) en memoria asociando de forma infalible el `email` y `phone` (teléfono celular) reales registrados en Auth con cada perfil público, inyectándolos en el response.
+- Se re-direccionó el método `fetchUsuarios()` en `src/app/admin/usuarios/page.tsx` para consumir desde esta nueva API GET enriquecida en caliente, garantizando que **todos los datos de contacto (email y celular) aparezcan siempre** de forma inmediata.
+- Se integró el soporte para **Celular / Teléfono de Contacto**:
+  - Se añadió la variable de estado `invitePhone` y el campo de input correspondiente en el modal de invitaciones Rancho Stitch UI.
+  - Se modificó la llamada POST del backend y la acción de reenvío `handleResendInvite` para capturar, propagar y persistir el número telefónico en Supabase.
+  - Se actualizó el diseño de la columna de Contacto en la tabla, organizando con elegancia el correo y el celular mediante íconos interactivos Stitch UI.
+- Se actualizó el `CHANGELOG.md` detallando esta evolución.
+[2026-05-25 18:40:00] Actividad de Antigravity:
+- Se implementó la UI completa para las acciones de edición, bloqueo y eliminación de usuarios en la tabla de miembros en `src/app/admin/usuarios/page.tsx`:
+  - Se inyectaron botones Stitch UI de "Editar", "Bloquear" y "Desbloquear" (con lógica condicional en base a `user.is_blocked` y el identificador de sesión `currentUserId` de Supabase).
+  - Se añadió un badge premium de estado `🔒 BANEADO` en la tabla para los usuarios con suspensión activa, mostrando interactivamente el motivo detallado en un tooltip al pasar el cursor y como texto descriptivo.
+  - Se programó y maquetó el modal de edición (`EditModal`) al pie del archivo para actualizar el Nombre Completo, Correo Electrónico (editable en Supabase Auth con confirmación automática), Celular/Teléfono de Contacto y Rol en caliente del colaborador.
+  - Se programó y maquetó el modal de bloqueo (`BlockModal`) al pie del archivo para solicitar y validar un motivo obligatorio de bloqueo que se propaga nativamente a Supabase Auth y a la tabla de perfiles.
+  - Se habilitó la llamada de eliminación física y definitiva a la API DELETE para todos los usuarios del Rancho excepto la propia cuenta que tiene la sesión activa actual (evitando accidentes de auto-eliminación o auto-bloqueo).
+  - Se inyectó un fallback descriptivo premium en la columna de contacto en caso de que el usuario histórico no tenga número celular registrado, guiando visualmente al administrador a completarlo mediante la edición.
+  - Se corrigió de forma defensiva la llamada del backend para desacoplar el estado de baneo de la base de datos SQL (`profiles.banned_until` y `profiles.block_reason`), la cual no existía en el esquema del cliente, evitando el error de caché de esquema. Ahora la suspensión y el motivo se persisten y consultan de forma 100% nativa y robusta a través del motor Supabase Auth (`ban_duration` y metadatos del usuario) sin requerir modificaciones SQL físicas del cliente.
+- Se actualizaron de manera integrada los archivos de registro y documentación del proyecto: `CHANGELOG.md` y `GEMINI.md` de acuerdo con las reglas de usuario.
+[2026-05-25 19:20:00] Actividad de Antigravity:
+- Se registraron y prepararon las operaciones de control de versiones Git para respaldar las evoluciones del PMS de Rancho Carmelitas a GitHub:
+  - Comando: `git status` para auditar el árbol de trabajo.
+  - Comando: `git add .` para preparar los archivos de código, esquemas e historial actualizados.
+  - Comando: `git commit -m "feat(users): gestión avanzada de equipo con edición de contacto, bloqueo nativo Supabase Auth y trazabilidad robusta en bitácora de auditoría"`
+  - Comando: `git push` para sincronizar y desplegar la versión final hacia el repositorio oficial en GitHub.

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Booking {
   id: string;
@@ -121,6 +122,8 @@ const getBookingBreakdown = (booking: Booking) => {
 
 function ReservasContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [closures, setClosures] = useState<any[]>([]);
+  const [closureConflicts, setClosureConflicts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [plataformas, setPlataformas] = useState<any[]>([]);
   
@@ -189,8 +192,12 @@ function ReservasContent() {
     }
   }, [editingBooking, editForm.cabin_id]);
 
+  const [existingClosuresForSelectedCabin, setExistingClosuresForSelectedCabin] = useState<any[]>([]);
+
   async function fetchCabinOcupancy(cabinId: string, excludeBookingId?: string) {
     setLoadingCabinOcupancy(true);
+    
+    // Cargar reservas activas
     let query = supabase
       .from('bookings')
       .select('check_in, check_out')
@@ -201,8 +208,16 @@ function ReservasContent() {
       query = query.neq('id', excludeBookingId);
     }
 
-    const { data } = await query;
-    setExistingBookingsForSelectedCabin(data || []);
+    const { data: bookingsData } = await query;
+    
+    // Cargar cierres temporales
+    const { data: closuresData } = await supabase
+      .from('cabin_closures')
+      .select('cabin_id, start_date, end_date, reason')
+      .or(`cabin_id.eq.${cabinId},cabin_id.is.null`);
+
+    setExistingBookingsForSelectedCabin(bookingsData || []);
+    setExistingClosuresForSelectedCabin(closuresData || []);
     setLoadingCabinOcupancy(false);
   }
 
@@ -227,6 +242,17 @@ function ReservasContent() {
     });
   };
 
+  const isDateClosedAdmin = (dateStr: string) => {
+    return existingClosuresForSelectedCabin.some(c => {
+      return dateStr >= c.start_date && dateStr <= c.end_date;
+    });
+  };
+
+  const getClosureReasonAdmin = (dateStr: string) => {
+    const closure = existingClosuresForSelectedCabin.find(c => dateStr >= c.start_date && dateStr <= c.end_date);
+    return closure ? closure.reason : '';
+  };
+
   const isDateInSelectedRangeAdmin = (dateStr: string) => {
     const checkIn = createForm.check_in;
     const checkOut = createForm.check_out;
@@ -237,7 +263,7 @@ function ReservasContent() {
   };
 
   const handleDateClickAdmin = (dateStr: string) => {
-    if (isDateBookedAdmin(dateStr)) return; // Ignorar ocupados
+    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return; // Ignorar ocupados y cerrados
 
     const checkIn = createForm.check_in;
     const checkOut = createForm.check_out;
@@ -253,7 +279,7 @@ function ReservasContent() {
         // Clic en el mismo día
         handleCreateFormChange({ check_in: '', check_out: '' });
       } else {
-        // Verificar solapamiento en el medio
+        // Verificar solapamiento en el medio (reservas o cierres)
         const inDate = new Date(checkIn);
         const outDate = new Date(dateStr);
         let hasOverlap = false;
@@ -264,6 +290,17 @@ function ReservasContent() {
             if (inDate < bOut && outDate > bIn) {
                 hasOverlap = true;
                 break;
+            }
+        }
+
+        if (!hasOverlap) {
+            for (const c of existingClosuresForSelectedCabin) {
+                const cIn = new Date(c.start_date);
+                const cOut = new Date(c.end_date);
+                if (inDate <= cOut && outDate >= cIn) {
+                    hasOverlap = true;
+                    break;
+                }
             }
         }
 
@@ -295,6 +332,8 @@ function ReservasContent() {
         
         const isPast = dateStr < todayStr;
         const booked = isDateBookedAdmin(dateStr);
+        const closed = isDateClosedAdmin(dateStr);
+        const closureReason = closed ? getClosureReasonAdmin(dateStr) : '';
         const isCheckIn = createForm.check_in === dateStr;
         const isCheckOut = createForm.check_out === dateStr;
         const inRange = isDateInSelectedRangeAdmin(dateStr);
@@ -305,6 +344,8 @@ function ReservasContent() {
             cellClasses += "text-gray-300 hover:bg-gray-50"; // Permitir pasado por ser reserva manual de administrador
         } else if (booked) {
             cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (closed) {
+            cellClasses += "bg-gray-105 text-gray-400 line-through cursor-not-allowed border border-dashed border-gray-300";
         } else if (isCheckIn || isCheckOut) {
             cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
         } else if (inRange) {
@@ -323,9 +364,7 @@ function ReservasContent() {
             rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
         }
 
-        // Permitimos seleccionar fechas pasadas porque el administrador puede querer registrar una reserva histórica.
-        // Pero no permitimos seleccionar fechas ocupadas.
-        const isSelectable = !booked;
+        const isSelectable = !booked && !closed;
 
         days.push(
             <div key={`day-admin-${d}`} className="relative py-1 px-0.5">
@@ -336,6 +375,7 @@ function ReservasContent() {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
+                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
                 >
                   {d}
                 </button>
@@ -372,13 +412,15 @@ function ReservasContent() {
             <div className="grid grid-cols-7 gap-y-1">
                 {days}
             </div>
-            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100">
+            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Reservado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado</span>
             </div>
         </div>
     );
   };
+
 
   const isDateInSelectedRangeEditAdmin = (dateStr: string) => {
     const checkIn = editForm.check_in;
@@ -390,7 +432,7 @@ function ReservasContent() {
   };
 
   const handleDateClickEditAdmin = (dateStr: string) => {
-    if (isDateBookedAdmin(dateStr)) return; // Ignorar ocupados
+    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return; // Ignorar ocupados y cerrados
 
     const checkIn = editForm.check_in;
     const checkOut = editForm.check_out;
@@ -406,7 +448,7 @@ function ReservasContent() {
         // Clic en el mismo día
         handleEditFormChange({ check_in: '', check_out: '' });
       } else {
-        // Verificar solapamiento en el medio
+        // Verificar solapamiento en el medio (reservas o cierres)
         const inDate = new Date(checkIn);
         const outDate = new Date(dateStr);
         let hasOverlap = false;
@@ -417,6 +459,17 @@ function ReservasContent() {
             if (inDate < bOut && outDate > bIn) {
                 hasOverlap = true;
                 break;
+            }
+        }
+
+        if (!hasOverlap) {
+            for (const c of existingClosuresForSelectedCabin) {
+                const cIn = new Date(c.start_date);
+                const cOut = new Date(c.end_date);
+                if (inDate <= cOut && outDate >= cIn) {
+                    hasOverlap = true;
+                    break;
+                }
             }
         }
 
@@ -448,6 +501,8 @@ function ReservasContent() {
         
         const isPast = dateStr < todayStr;
         const booked = isDateBookedAdmin(dateStr);
+        const closed = isDateClosedAdmin(dateStr);
+        const closureReason = closed ? getClosureReasonAdmin(dateStr) : '';
         const isCheckIn = editForm.check_in === dateStr;
         const isCheckOut = editForm.check_out === dateStr;
         const inRange = isDateInSelectedRangeEditAdmin(dateStr);
@@ -458,6 +513,8 @@ function ReservasContent() {
             cellClasses += "text-gray-300 hover:bg-gray-50"; // Permitir pasado por ser reserva manual de administrador
         } else if (booked) {
             cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (closed) {
+            cellClasses += "bg-gray-105 text-gray-400 line-through cursor-not-allowed border border-dashed border-gray-300";
         } else if (isCheckIn || isCheckOut) {
             cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
         } else if (inRange) {
@@ -476,7 +533,7 @@ function ReservasContent() {
             rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
         }
 
-        const isSelectable = !booked;
+        const isSelectable = !booked && !closed;
 
         days.push(
             <div key={`day-edit-admin-${d}`} className="relative py-1 px-0.5">
@@ -487,6 +544,7 @@ function ReservasContent() {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
+                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
                 >
                   {d}
                 </button>
@@ -523,9 +581,10 @@ function ReservasContent() {
             <div className="grid grid-cols-7 gap-y-1">
                 {days}
             </div>
-            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100">
+            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Reservado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado</span>
             </div>
         </div>
     );
@@ -622,7 +681,7 @@ function ReservasContent() {
   }
 
   async function fetchBookings() {
-    const { data, error } = await supabase
+    const { data: bookingsData, error } = await supabase
       .from('bookings')
       .select(`
         *,
@@ -633,9 +692,50 @@ function ReservasContent() {
 
     if (error) {
       console.error('Error fetching bookings:', error);
-    } else {
-      setBookings(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Cargar cierres temporales
+    const { data: closuresData } = await supabase
+      .from('cabin_closures')
+      .select(`
+        *,
+        cabin:cabins (name)
+      `);
+
+    const activeBookings = bookingsData || [];
+    const activeClosures = closuresData || [];
+
+    // Calcular colisiones
+    const closureConflictsList: any[] = [];
+    activeBookings.forEach((b: Booking) => {
+      if (b.status === 'Cancelada') return;
+
+      const matchingClosure = activeClosures.find((c: any) => {
+        const bIn = new Date(b.check_in);
+        const bOut = new Date(b.check_out);
+        const cIn = new Date(c.start_date);
+        const cOut = new Date(c.end_date);
+
+        // Cruce de fecha inclusivo para cierres
+        const dateOverlap = bIn <= cOut && bOut >= cIn;
+        const cabinMatches = !c.cabin_id || c.cabin_id === b.cabin_id;
+
+        return dateOverlap && cabinMatches;
+      });
+
+      if (matchingClosure) {
+        closureConflictsList.push({
+          booking: b,
+          closure: matchingClosure
+        });
+      }
+    });
+
+    setBookings(activeBookings);
+    setClosures(activeClosures);
+    setClosureConflicts(closureConflictsList);
     setLoading(false);
   }
 
@@ -670,6 +770,7 @@ function ReservasContent() {
       alert('Error: ' + error.message);
     } else {
       setBookings(bookings.map(b => b.id === id ? { ...b, ...updatePayload } : b));
+      fetchBookings();
     }
   };
 
@@ -767,6 +868,7 @@ function ReservasContent() {
       setBookings(bookings.map(b => b.id === bookingToCancel.id ? { ...b, status: 'Cancelada', confirmed_at: undefined, confirmed_by: undefined } : b));
       setCancelModalOpen(false);
       setBookingToCancel(null);
+      fetchBookings();
     } catch (err: any) {
       alert('Error al cancelar la reserva: ' + err.message);
     } finally {
@@ -846,6 +948,7 @@ function ReservasContent() {
 
       setConfirmModalOpen(false);
       setBookingToConfirm(null);
+      fetchBookings();
     } catch (err: any) {
       alert('Error confirmando pago: ' + err.message);
     } finally {
@@ -884,7 +987,22 @@ function ReservasContent() {
 
   const saveEdit = async () => {
     if (!editingBooking) return;
-    
+
+    // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES AL EDITAR
+    const { data: cierresCol, error: cierresError } = await supabase
+      .from('cabin_closures')
+      .select('reason')
+      .or(`cabin_id.eq.${editForm.cabin_id},cabin_id.is.null`)
+      .lte('start_date', editForm.check_out)
+      .gte('end_date', editForm.check_in);
+
+    if (cierresError) throw cierresError;
+
+    if (cierresCol && cierresCol.length > 0) {
+      alert(`❌ Error Absoluto: No se puede guardar la modificación debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
+      return;
+    }
+
     const precioBaseOriginal = Number(editForm.precio_base) || 0;
     let calculatedDiscount = 0;
     let finalNotes = editForm.admin_notes;
@@ -957,13 +1075,30 @@ function ReservasContent() {
         : b
       ));
       setEditingBooking(null);
+      fetchBookings();
     }
   };
 
   const createBooking = async () => {
     setIsCreating(true);
     try {
-      // Validación rígida de exceso de capacidad
+      // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES
+      const { data: cierresCol, error: cierresError } = await supabase
+        .from('cabin_closures')
+        .select('reason')
+        .or(`cabin_id.eq.${createForm.cabin_id},cabin_id.is.null`)
+        .lte('start_date', createForm.check_out)
+        .gte('end_date', createForm.check_in);
+
+      if (cierresError) throw cierresError;
+
+      if (cierresCol && cierresCol.length > 0) {
+        alert(`❌ Error Absoluto: No se puede guardar la reserva debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
+        setIsCreating(false);
+        return;
+      }
+
+      // 2. VALIDACIÓN DE CAPACIDAD MÁXIMA
       const selectedCabin = availableCabins.find(c => c.id === createForm.cabin_id);
       const maxTotalGuests = selectedCabin ? (selectedCabin.capacity || 2) + (selectedCabin.max_extra_guests || 0) : 0;
       const totalGuestsRequested = Number(createForm.adults) + Number(createForm.children);
@@ -1107,13 +1242,47 @@ function ReservasContent() {
 
 
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#11d442]"></div>
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState<'todas' | 'conflictos'>('todas');
+
+  const checkHasClosureConflict = (b: Booking) => {
+    if (b.status === 'Cancelada') return false;
+    return closures.some((c: any) => {
+      const bIn = new Date(b.check_in);
+      const bOut = new Date(b.check_out);
+      const cIn = new Date(c.start_date);
+      const cOut = new Date(c.end_date);
+      const dateOverlap = bIn <= cOut && bOut >= cIn;
+      const cabinMatches = !c.cabin_id || c.cabin_id === b.cabin_id;
+      return dateOverlap && cabinMatches;
+    });
+  };
+
+  const checkHasOverbookingConflict = (b: Booking) => {
+    if (b.status === 'Cancelada') return false;
+    const startA = new Date(b.check_in);
+    const endA = new Date(b.check_out);
+    return bookings.some(other => {
+      if (other.id === b.id || other.status === 'Cancelada' || other.cabin_id !== b.cabin_id) return false;
+      const startB = new Date(other.check_in);
+      const endB = new Date(other.check_out);
+      return startA < endB && endA > startB;
+    });
+  };
+
+  const conflictiveBookingsCount = bookings.filter(b => checkHasClosureConflict(b) || checkHasOverbookingConflict(b)).length;
+
+  const getFilteredAndTabbedBookings = () => {
+    let result = bookings;
+    if (bookingIdFilter) {
+      result = bookings.filter(b => b.id === bookingIdFilter);
+    }
+    if (activeTab === 'conflictos') {
+      result = result.filter(b => checkHasClosureConflict(b) || checkHasOverbookingConflict(b));
+    }
+    return result;
+  };
+
+  const finalDisplayedBookings = getFilteredAndTabbedBookings();
 
   const selectedCabinForCreate = availableCabins.find(c => c.id === createForm.cabin_id);
   const maxTotalGuestsForCreate = selectedCabinForCreate ? (selectedCabinForCreate.capacity || 2) + (selectedCabinForCreate.max_extra_guests || 0) : 0;
@@ -1127,6 +1296,31 @@ function ReservasContent() {
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Reservas</h2>
           <p className="text-gray-500">Administra todas las reservaciones de Rancho Carmelitas.</p>
         </div>
+
+      {closureConflicts.length > 0 && (
+        <div className="w-full bg-red-50 border-2 border-red-200 p-6 rounded-[24px] shadow-lg animate-pulse mb-4">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl animate-bounce">🚨</div>
+            <div className="flex-1 space-y-2">
+              <h3 className="text-lg font-bold text-red-800 uppercase tracking-wide">
+                ALERTA CRÍTICA: Hay {closureConflicts.length} Reservas en Conflicto con Cierres Temporales
+              </h3>
+              <p className="text-red-700 text-sm font-semibold">
+                Existen reservas activas que colisionan con periodos en los que las cabañas han sido declaradas cerradas/desactivadas. Por favor, reubica las reservas afectadas o ajusta los cierres temporales de inmediato:
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-xs text-red-600 font-bold">
+                {closureConflicts.map((c, idx) => (
+                  <li key={idx} className="hover:text-red-950 transition-colors">
+                    Huésped: <Link href={`/admin/reservas?id=${c.booking.id}`} className="underline decoration-dashed hover:decoration-solid font-extrabold text-red-700 hover:text-red-950">
+                      {c.booking.guest_name}
+                    </Link> en <span className="font-extrabold">{c.booking.cabin?.name}</span> para las fechas del <span className="underline">{c.booking.check_in} al {c.booking.check_out}</span> (Motivo de cierre: "{c.closure.reason}")
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
         <button
           onClick={() => {
             const defaultCabin = availableCabins[0];
@@ -1161,26 +1355,89 @@ function ReservasContent() {
       </div>
 
       {bookingIdFilter && (
-        <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-3 duration-300 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
+        <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-top-3 duration-300 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-base font-bold text-blue-900">Filtro Activo por Reserva</p>
+                {(() => {
+                  const filteredBooking = bookings.find(b => b.id === bookingIdFilter);
+                  if (filteredBooking) {
+                    return (
+                      <p className="text-xs text-blue-700 font-medium">
+                        Mostrando a: <strong className="text-blue-950 font-extrabold">{filteredBooking.guest_name}</strong> en <strong className="text-blue-950 font-extrabold">{filteredBooking.cabin?.name || 'Cabaña'}</strong> ({new Date(filteredBooking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} al {new Date(filteredBooking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })})
+                      </p>
+                    );
+                  }
+                  return <p className="text-xs text-blue-600 font-medium">Mostrando la reserva seleccionada desde el Dashboard.</p>
+                })()}
+              </div>
             </div>
-            <div>
-              <p className="text-base font-bold text-blue-900">Filtro Activo por Reserva</p>
-              <p className="text-xs text-blue-600 font-medium">Mostrando únicamente la reserva seleccionada desde el Dashboard.</p>
-            </div>
+            <button 
+              onClick={clearFilter}
+              className="w-full md:w-auto px-5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 transition-all shadow-sm active:scale-95"
+            >
+              Mostrar Todas las Reservas
+            </button>
           </div>
-          <button 
-            onClick={clearFilter}
-            className="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 transition-all shadow-sm active:scale-95"
-          >
-            Mostrar Todas las Reservas
-          </button>
+
+          {/* Selector interactivo de reservas en conflicto para alternar rápidamente */}
+          {bookings.filter(b => checkHasClosureConflict(b) || checkHasOverbookingConflict(b)).length > 0 && (
+            <div className="pt-4 border-t border-blue-100 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <span className="text-xs font-bold text-blue-800 uppercase tracking-wider whitespace-nowrap">🔄 Alternar entre conflictos:</span>
+              <select
+                className="w-full sm:w-auto p-2.5 border border-blue-200 rounded-xl text-xs font-semibold text-blue-900 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                value={bookingIdFilter || ''}
+                onChange={e => {
+                  if (e.target.value === 'todas') {
+                    clearFilter();
+                  } else {
+                    router.push(`/admin/reservas?id=${e.target.value}`);
+                  }
+                }}
+              >
+                <option value="todas">Mostrar Todas</option>
+                {bookings
+                  .filter(b => checkHasClosureConflict(b) || checkHasOverbookingConflict(b))
+                  .map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.guest_name} - {b.cabin?.name || 'Cabaña'} ({b.check_in} al {b.check_out})
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Pestañas de Navegación del Panel de Reservas */}
+      <div className="flex border-b border-gray-200 gap-6">
+        <button
+          onClick={() => setActiveTab('todas')}
+          className={`pb-4 text-sm font-bold transition-all relative ${activeTab === 'todas' ? 'text-[#11d442]' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          Todas las Reservas
+          {activeTab === 'todas' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#11d442] rounded-full" />}
+        </button>
+        <button
+          onClick={() => setActiveTab('conflictos')}
+          className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'conflictos' ? 'text-red-600' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          <span>⚠️ Reservas en Conflicto</span>
+          {conflictiveBookingsCount > 0 && (
+            <span className="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-extrabold animate-pulse">
+              {conflictiveBookingsCount}
+            </span>
+          )}
+          {activeTab === 'conflictos' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full" />}
+        </button>
+      </div>
 
       <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -1196,14 +1453,14 @@ function ReservasContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredBookings.length === 0 ? (
+              {finalDisplayedBookings.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                     No se encontraron reservas registradas.
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((booking) => {
+                finalDisplayedBookings.map((booking) => {
                   const hoursElapsed = Math.floor((new Date().getTime() - new Date(booking.created_at).getTime()) / (1000 * 60 * 60));
                   const isExpired = booking.status === 'Pendiente' && hoursElapsed >= 24;
                   const conflict = getOverbookingConflict(booking);

@@ -21,26 +21,36 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
 
   // Estados para disponibilidad
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
+  const [existingClosures, setExistingClosures] = useState<any[]>([]);
   const [isAvailable, setIsAvailable] = useState(true);
   const [isChecking, setIsChecking] = useState(true);
 
   // Estado del calendario interactivo
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Obtener reservas existentes para la cabaña al montar
+  // Obtener reservas y cierres existentes para la cabaña al montar
   useEffect(() => {
-    async function fetchBookings() {
+    async function fetchData() {
       setIsChecking(true);
-      const { data } = await supabase
+      
+      // Cargar reservas
+      const { data: bookingsData } = await supabase
         .from('bookings')
         .select('check_in, check_out')
         .eq('cabin_id', cabinId)
         .neq('status', 'Cancelada');
       
-      setExistingBookings(data || []);
+      // Cargar cierres (individuales y totales)
+      const { data: closuresData } = await supabase
+        .from('cabin_closures')
+        .select('cabin_id, start_date, end_date, reason')
+        .or(`cabin_id.eq.${cabinId},cabin_id.is.null`);
+      
+      setExistingBookings(bookingsData || []);
+      setExistingClosures(closuresData || []);
       setIsChecking(false);
     }
-    fetchBookings();
+    fetchData();
   }, [cabinId]);
 
   // Validar solapamiento cada vez que cambian las fechas
@@ -50,35 +60,53 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
       return;
     }
 
-    if (existingBookings.length === 0) {
-      setIsAvailable(true);
-      return;
-    }
-
     const checkOverlap = () => {
       const selectedIn = new Date(checkIn);
       const selectedOut = new Date(checkOut);
 
+      // Validar reservas en conflicto
       for (const b of existingBookings) {
         const bookedIn = new Date(b.check_in);
         const bookedOut = new Date(b.check_out);
         
-        // Verifica intersección: (StartA < EndB) y (EndA > StartB)
         if (selectedIn < bookedOut && selectedOut > bookedIn) {
           return false;
         }
       }
+
+      // Validar cierres en conflicto (individuales o totales)
+      for (const c of existingClosures) {
+        const closureIn = new Date(c.start_date);
+        const closureOut = new Date(c.end_date);
+        
+        // El cierre dura todo el día de inicio y de término inclusive
+        if (selectedIn <= closureOut && selectedOut >= closureIn) {
+          return false;
+        }
+      }
+
       return true;
     };
 
     setIsAvailable(checkOverlap());
-  }, [checkIn, checkOut, existingBookings]);
+  }, [checkIn, checkOut, existingBookings, existingClosures]);
 
 
   const isDateBooked = (dateStr: string) => {
     return existingBookings.some(b => {
       return dateStr >= b.check_in && dateStr < b.check_out;
     });
+  };
+
+  const isDateClosed = (dateStr: string) => {
+    return existingClosures.some(c => {
+      return dateStr >= c.start_date && dateStr <= c.end_date;
+    });
+  };
+
+  const getClosureReason = (dateStr: string) => {
+    const closure = existingClosures.find(c => dateStr >= c.start_date && dateStr <= c.end_date);
+    return closure ? closure.reason : '';
   };
 
   const isDateInSelectedRange = (dateStr: string) => {
@@ -89,7 +117,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   };
 
   const handleDateClick = (dateStr: string) => {
-    if (isDateBooked(dateStr)) return; // Ignorar ocupados
+    if (isDateBooked(dateStr) || isDateClosed(dateStr)) return; // Ignorar ocupados y cerrados
 
     if (!checkIn || (checkIn && checkOut)) {
       // Nueva selección de inicio
@@ -103,7 +131,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         // Clic en el mismo día, ignorar o reiniciar
         setCheckIn(null);
       } else {
-        // Verificar si hay fechas ocupadas en el medio del rango
+        // Verificar si hay fechas ocupadas o cerradas en el medio del rango
         const inDate = new Date(checkIn);
         const outDate = new Date(dateStr);
         let hasOverlap = false;
@@ -117,8 +145,19 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             }
         }
 
+        if (!hasOverlap) {
+            for (const c of existingClosures) {
+                const cIn = new Date(c.start_date);
+                const cOut = new Date(c.end_date);
+                if (inDate <= cOut && outDate >= cIn) {
+                    hasOverlap = true;
+                    break;
+                }
+            }
+        }
+
         if (hasOverlap) {
-            // El rango cruza una reserva existente. Reseteamos el checkIn a esta nueva fecha
+            // El rango cruza una reserva existente o cierre. Reseteamos el checkIn a esta nueva fecha
             setCheckIn(dateStr);
         } else {
             setCheckOut(dateStr);
@@ -126,6 +165,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
       }
     }
   };
+
 
   const renderCalendar = () => {
     const year = currentDate.getFullYear();
@@ -145,6 +185,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         
         const isPast = dateStr < todayStr;
         const booked = isDateBooked(dateStr);
+        const closed = isDateClosed(dateStr);
+        const closureReason = closed ? getClosureReason(dateStr) : '';
         const isCheckIn = checkIn === dateStr;
         const isCheckOut = checkOut === dateStr;
         const inRange = isDateInSelectedRange(dateStr);
@@ -155,6 +197,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             cellClasses += "text-gray-300 cursor-not-allowed";
         } else if (booked) {
             cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
+        } else if (closed) {
+            cellClasses += "bg-gray-100 text-gray-400 line-through cursor-not-allowed border border-dashed border-gray-300";
         } else if (isCheckIn || isCheckOut) {
             cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
         } else if (inRange) {
@@ -173,8 +217,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
         }
 
-        // Check if full booked range (prevents selecting)
-        const isSelectable = !isPast && !booked;
+        // Check if full booked/closed range (prevents selecting)
+        const isSelectable = !isPast && !booked && !closed;
 
         days.push(
             <div key={d} className="relative py-1 px-0.5">
@@ -185,6 +229,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
+                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
                 >
                   {d}
                 </button>
@@ -223,7 +268,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             </div>
             <div className="flex gap-4 mt-4 text-[10px] font-bold uppercase text-gray-500 justify-center">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#11d442]"></span> Seleccionado</span>
-                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-100 border border-red-200"></span> Ocupado</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-100 border border-red-200"></span> Reservado</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado</span>
             </div>
         </div>
     );
@@ -406,6 +452,24 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
           <span className="text-gray-400">Haz clic en el calendario arriba para elegir tu rango de estancia</span>
         ) : isAvailable ? (
           <span className="text-gray-400">No se hará ningún cargo aún</span>
+        ) : (checkIn && checkOut && existingClosures.some(c => {
+            const closureIn = new Date(c.start_date);
+            const closureOut = new Date(c.end_date);
+            const selectedIn = new Date(checkIn);
+            const selectedOut = new Date(checkOut);
+            return selectedIn <= closureOut && selectedOut >= closureIn;
+          })) ? (
+          <span className="text-red-500 font-semibold animate-pulse">
+            ⚠️ Cierre Temporal: Esta cabaña no está disponible en las fechas seleccionadas por: "{
+              existingClosures.find(c => {
+                const closureIn = new Date(c.start_date);
+                const closureOut = new Date(c.end_date);
+                const selectedIn = new Date(checkIn);
+                const selectedOut = new Date(checkOut);
+                return selectedIn <= closureOut && selectedOut >= closureIn;
+              })?.reason || 'Mantención'
+            }".
+          </span>
         ) : (
           <span className="text-red-500 font-medium">⚠️ Alguna de las fechas en tu rango ya fue reservada.</span>
         )}
