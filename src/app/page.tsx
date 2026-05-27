@@ -1,6 +1,8 @@
 import React from "react";
 import { CabinCard } from "@/components/ui/CabinCard";
 import { supabase } from "@/lib/supabase";
+import { SocialSection } from "@/components/ui/SocialSection";
+import { Logo } from "@/components/ui/Logo";
 
 export default async function Home() {
   
@@ -18,7 +20,8 @@ export default async function Home() {
   let heroSettings = {
     hero_title: 'Escapa a la naturaleza, con total comodidad.',
     hero_subtitle: 'Descubre nuestras exclusivas cabañas totalmente equipadas en el corazón de Pullally, Papudo. Tu refugio perfecto entre el bosque y el mar.',
-    hero_bg_url: '/gallery/hero.png'
+    hero_bg_url: '/gallery/hero.png',
+    logo_url: ''
   };
 
   try {
@@ -81,7 +84,8 @@ export default async function Home() {
       {/* Header / Navbar */}
       <header className="sticky top-0 z-50 w-full glass-effect border-b border-gray-200/50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <Logo className="w-10 h-10 rounded-full object-cover border border-gray-200/50 shadow-sm" logoUrl={heroSettings.logo_url} />
             <span className="text-xl font-bold tracking-tight text-gray-900">
               Rancho<span className="text-[#11d442]">Carmelitas</span>
             </span>
@@ -89,6 +93,7 @@ export default async function Home() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="#cabins" className="hover:text-[#11d442] transition-colors">Cabañas</a>
             <a href="#gallery" className="hover:text-[#11d442] transition-colors">Galería</a>
+            <a href="#location-social" className="hover:text-[#11d442] transition-colors">Ubicación</a>
             <a href="#rules" className="hover:text-[#11d442] transition-colors">Reglas</a>
             <a href="/admin" className="hover:text-[#11d442] transition-colors text-gray-400">Admin</a>
           </nav>
@@ -110,7 +115,11 @@ export default async function Home() {
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/80 to-black/30 z-10" />
           
-          <div className="relative z-20 text-center px-4 max-w-4xl mx-auto mt-16 hover-lift">
+          <div className="relative z-20 text-center px-4 max-w-4xl mx-auto mt-16 hover-lift flex flex-col items-center justify-center">
+            <Logo 
+              className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white/20 shadow-2xl mb-8 hover:scale-[1.05] transition-transform duration-500 bg-white/10 backdrop-blur-sm" 
+              logoUrl={heroSettings.logo_url} 
+            />
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight leading-tight">
               {formattedTitle}
             </h1>
@@ -132,7 +141,8 @@ export default async function Home() {
         {/* Cabins Section with DB Data */}
         <section id="cabins" className="py-24 bg-surface">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
+            <div className="text-center mb-16 flex flex-col items-center justify-center">
+              <Logo className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-gray-200/50 shadow-md mb-4 hover:scale-105 transition-transform duration-300" logoUrl={heroSettings.logo_url} />
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">Nuestras Cabañas</h2>
               <p className="text-gray-500 max-w-2xl mx-auto text-lg">
                 Espacios diseñados para tu confort. Cabañas de madera con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.
@@ -164,7 +174,8 @@ export default async function Home() {
 
         {/* Gallery Section */}
         <section id="gallery" className="py-24 bg-white border-t border-gray-100">
-          <div className="container mx-auto px-4 text-center">
+          <div className="container mx-auto px-4 text-center flex flex-col items-center justify-center">
+            <Logo className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-gray-200/50 shadow-md mb-4 hover:scale-105 transition-transform duration-300" logoUrl={heroSettings.logo_url} />
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">Galería de Momentos</h2>
             <p className="text-gray-500 mb-12 max-w-2xl mx-auto">Vistas reales de nuestro entorno, piscina y confortables interiores.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -185,7 +196,7 @@ export default async function Home() {
         <section className="py-12 bg-white border-y border-gray-100">
           <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-8 opacity-80 grayscale hover:grayscale-0 transition-all">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-[#11d442]/10 rounded-full flex items-center justify-center text-[#11d442] font-bold text-xl">R</div>
+              <Logo className="w-16 h-16 rounded-full object-cover border border-[#11d442]/30 shadow-sm" logoUrl={heroSettings.logo_url} />
               <div>
                 <h4 className="font-bold text-gray-900">Servicio Turístico Registrado</h4>
                 <p className="text-sm text-gray-500">Vigencia hasta Enero 2026 • Registro № 71034</p>
@@ -198,11 +209,17 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Ubicación y Comunidad en Redes Sociales */}
+        <SocialSection />
+
         {/* Rules Section */}
         <section id="rules" className="py-24 bg-surface border-t border-gray-100">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto bg-white p-12 rounded-[32px] shadow-sm border border-gray-100">
-              <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">Reglas de Convivencia</h2>
+              <div className="flex flex-col items-center justify-center mb-8">
+                <Logo className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-gray-200/50 shadow-md mb-4 hover:scale-105 transition-transform duration-300" logoUrl={heroSettings.logo_url} />
+                <h2 className="text-3xl font-bold text-center text-gray-900">Reglas de Convivencia</h2>
+              </div>
               <ul className="space-y-4 text-gray-600">
                 <li className="flex items-start gap-3">
                   <span className="text-[#11d442] mt-1">✓</span>
@@ -230,12 +247,16 @@ export default async function Home() {
       <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
         <div className="container mx-auto px-4 text-center text-sm">
           <div className="flex flex-col items-center justify-center gap-6">
-            <span className="text-2xl font-bold tracking-tight text-white">
-              Rancho<span className="text-[#11d442]">Carmelitas</span>
-            </span>
-            <div className="flex gap-4">
-              <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" className="hover:text-white transition-colors">Instagram</a>
-              <a href="https://www.facebook.com/rancho.c.pullally/" target="_blank" className="hover:text-white transition-colors">Facebook</a>
+            <div className="flex items-center gap-3">
+              <Logo className="w-14 h-14 rounded-full object-cover border border-zinc-800 shadow-sm hover:scale-105 transition-transform duration-300" logoUrl={heroSettings.logo_url} />
+              <span className="text-2xl font-bold tracking-tight text-white">
+                Rancho<span className="text-[#11d442]">Carmelitas</span>
+              </span>
+            </div>
+            <div className="flex gap-6">
+              <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a>
+              <a href="https://www.facebook.com/rancho.c.pullally?mibextid=ZbWKwL" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a>
+              <a href="https://maps.app.goo.gl/6W1fhgChaMWaQzbK8" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Google Maps</a>
             </div>
             <p>© {new Date().getFullYear()} Rancho Carmelitas. Todos los derechos reservados.</p>
           </div>

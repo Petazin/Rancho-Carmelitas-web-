@@ -1,5 +1,110 @@
 # Changelog - Rancho Carmelitas
 
+## [1.2.6] - 2026-05-27
+
+### Corregido / Mejorado (Registro de Bloqueo en Auditoría v1.2.6)
+
+- **Detección Dinámica de banned_until en Auditoría:** Modificación en la función `getNaturalLanguageExplanation` dentro de `src/app/admin/auditoria/page.tsx` para interceptar si la propiedad `banned_until` en la tabla pública `profiles` sufre modificaciones durante un `UPDATE`.
+- **Normalización Defensiva Coalescente:** Se inyectó coalescencia nula (`|| null`) en la comparación de `banned_until` para normalizar los valores vacíos de baneo (`null` y `undefined`). Esto neutraliza de raíz los falsos positivos de reactivación/desbloqueo al actualizar perfiles históricos que no contenían explícitamente esa clave en su estructura anterior.
+- **Íconos y Explicación Contextualizada:** Si se suspende y bloquea a un colaborador de pruebas, se traduce a lenguaje natural detallando al administrador operador, el usuario bloqueado y el motivo del bloqueo (`block_reason`) con el ícono `🔒`. Si se desbloquea al usuario, se ilustra su reactivación con el ícono `🔓`.
+
+## [1.2.5] - 2026-05-27
+
+### Corregido / Mejorado (Hotfix Definitivo de Reactividad en Check-In v1.2.5)
+
+- **Inyección Reactiva Inmediata en Check-In:** Modificación en la función `handleAddPmsPayment` en `reservas/page.tsx` para inyectar localmente y en caliente el nuevo pago registrado directamente en el array `booking_payments` de la reserva seleccionada para Check-In (`selectedBookingForCheckIn`), además de la de pagos múltiples. Esto garantiza que el modal de Check-In re-renderice instantáneamente el saldo pendiente a `$0` (`✓ Pagado 100%`) y active al segundo el botón `"🚗 Completar Check-In & Entregar Cabaña"` en color verde Rancho sin forzar cierres de modal ni esperas asíncronas de red.
+- **Simplificación del onClick:** Eliminación de la consulta redundante de red a Supabase en el callback del botón azul `"✓ Registrar Pago de Saldo"` en el modal de Check-In, delegando la reactividad al flujo centralizado y optimizado de `handleAddPmsPayment`.
+
+## [1.2.4] - 2026-05-27
+
+### Corregido / Mejorado (Hotfix de Reactividad en Check-In v1.2.4)
+
+- **Consulta en Caliente de Supabase:** Intento preliminar de solucionar el bug de reactividad diferida en el Check-in mediante la consulta en caliente a Supabase de la reserva específica (`freshBooking`) en el `onClick` del botón azul del Check-in, que posteriormente se mejoró y simplificó en la v1.2.5 con la inyección local directa.
+
+## [1.2.3] - 2026-05-27
+
+### Añadido / Mejorado (Sincronización Total de Cobros y Botones Transformables v1.2.3)
+
+- **Auditoría Cruzada de Pagos Rápidos:** Modificación del flujo de confirmación rápida de fila (`confirmPaymentAndBooking`) para registrar de forma directa el abono de bienvenida en la tabla relacional `booking_payments`. Esto unifica el origen de los datos y asegura que el panel de historial y transacciones (`💳 Pagos`) liste y sume este pago inicial de forma automática, manteniendo consistencia absoluta.
+- **Sugerencia de Faltante en Modal Rápido:** Rediseño del modal de confirmación rápida de fila para calcular el abono previo acumulado (restando registros de `booking_payments`) y sugerir exactamente el monto faltante necesario para alcanzar el 50% de la tarifa total de la reserva, pre-llenando el formulario reactivo al instante de abrirse.
+- **Botón Reactivo Transformable (Monto Inteligente):** Reemplazo del botón estático de pagos múltiples por un IIFE reactivo. En reservas pendientes, si el monto a abonar ingresado + abonos previos es menor al 50%, el botón permanece azul como `"✓ Registrar Abono"`. Si se alcanza o supera el 50% mínimo, el botón cambia dinámicamente en caliente a color verde oficial y su texto muta a `"✓ Registrar y Confirmar Reserva"`, gatillando la confirmación, auditoría y despacho de correos en un único paso al hacer clic.
+
+## [1.2.2] - 2026-05-27
+
+### Añadido / Mejorado (Control de Abonos, Auto-Confirmación y Sugerencias de Pago v1.2.2)
+
+- **Auto-Confirmación Inteligente al 50% de Abonos:** Incorporación de lógica dentro de `handleAddPmsPayment` en `reservas/page.tsx` para verificar reactivamente si el abono total acumulado (abonos anteriores + abono nuevo) alcanza o supera el 50% de la tarifa total de la reserva pendiente. Si se cumple este umbral, el sistema actualiza automáticamente el estado de la reserva a `'Confirmada'`, asocia los metadatos de auditoría de confirmación en Supabase y realiza una llamada desatendida y asíncrona al endpoint de correo `/api/send-payment-confirmation` para notificar al huésped sobre su reserva definitiva.
+- **Banner Dinámico de Sugerencia del 50% en Modal de Pagos:** Diseño de un banner de información de Stitch UI (`bg-orange-50`) inyectado en el modal de pagos múltiples (`paymentsModalOpen`). Muestra de forma destacada el 50% requerido del total y ofrece botones rápidos de pre-llenado interactivos de un solo clic que calculan el 50% exacto o el saldo faltante necesario para alcanzar dicho umbral en reservas en estado `'Pendiente'`.
+- **Botón Manual de Confirmación en Fila:** Adición del botón visual `✓ Confirmar` en las acciones de fila para reservas en estado `'Pendiente'`, permitiendo desplegar de forma interactiva el modal de confirmación estándar y abonos iniciales de manera manual ante excepciones de negocio.
+
+## [1.2.1] - 2026-05-27
+
+### Añadido / Mejorado (Mejoras de Control de Negocio y UX v1.2.1)
+
+- **Localización Chilena de Moneda Estricta (es-CL):** Normalización total de la visualización de montos y dinero en toda la plataforma (cotizador público `BookingForm`, cotizador de confirmación `CheckoutForm`, panel operativo PMS `reservas/page.tsx` y Dashboard administrativo `page.tsx`). Reemplazo estricto de `.toLocaleString()` y `$amount` manuales por el helper centralizado `formatMoney(amount)` para forzar punto (`.`) para miles y coma (`,`) para decimales de forma independiente del idioma del navegador del usuario.
+- **Formateo y Autocompletado Reactivo de RUT:** Integración del helper `formatRut` en todos los inputs de RUT de la plataforma. Formatea dinámicamente y reactivamente a medida que se digita en los campos de checkout (Titular y Facturación Empresa) y del PMS (modal de creación manual, formulario de edición inline, y modal operativo de Check-in).
+- **Cotizador con Edades de Niños Individuales:** Sustitución de la caja de texto única para las edades de los niños en `CheckoutForm.tsx` por inputs numéricos individuales dinámicos y obligatorios correspondientes a la cantidad exacta de niños seleccionados. Las edades son serializadas en un string separado por comas (ej. `"10, 8, 4"`) al persistirse en `children_ages` para mantener el 100% de compatibilidad con la base de datos de Supabase sin migraciones disruptivas.
+- **Transparencia en Huéspedes Adicionales y Tarifas:** Incorporación de un banner informativo Stitch UI premium en color naranja suave (`bg-orange-50/60`) en la página pública de detalles de cabaña (`src/app/cabins/[id]/page.tsx`) y en el cotizador de reservas (`BookingForm.tsx`). Detalla claramente la capacidad base, el máximo de adicionales permitidos y el valor exacto del recargo por huésped adicional por noche, previniendo malos entendidos comerciales.
+- **Nomenclatura y Código de Colores Consistente en Dashboard:** Actualización de la función `getStatusColor` y de los badges de la tabla *"Próximas Llegadas Inminentes"* en el Dashboard (`src/app/admin/page.tsx`). Traduce los estados a español nativo y normaliza los badges según la nomenclatura y colores del ciclo de vida del PMS (Pendiente `🟡`, Confirmada `🟠`, En Cabaña `🟢`, Completada `🔵`, Cancelada `🔴`).
+- **Unificación de Estado "pending" a Español:** Corrección de la inserción de reservas nativas en `CheckoutForm.tsx` para registrarse directamente en español con el estado `'Pendiente'` en la base de datos, manteniendo retrocompatibilidad visual robusta.
+- **Visibilidad Extrema del Teléfono en PMS:** Resaltado de alta legibilidad en el teléfono del cliente dentro de la tabla de reservas con un badge premium azul con ícono de llamada (`📞`), facilitando el cierre de tratos por parte de los recepcionistas.
+- **Hotfix de Referencias en Checkout (`CheckoutForm.tsx`):** Corrección del error de ejecución de `ReferenceError: confirmEmail is not defined` mediante la inyección del estado `confirmEmail` y `guestPhone` que se habían omitido accidentalmente en los estados de React, restaurando la estabilidad del 100% de la experiencia de reserva.
+
+## [1.2.0] - 2026-05-27
+
+### Añadido / Mejorado (Sistema PMS Unificado de Operaciones v1.2.0 - Fase 2)
+
+- **Gestión Unificada de Pagos Múltiples:** Desacoplamiento total del flujo de pagos en una tabla relacional `booking_payments`, permitiendo recibir múltiples abonos en diferentes monedas/medios (transferencia, cash, tarjeta) con desglose en tiempo real y soporte para subir comprobantes físicos directamente a Supabase Storage.
+- **Historial e Histórico de Transacciones (Timeline):** Visualización interactiva premium (Línea de tiempo Stitch UI) en un modal dedicado a pagos para inspeccionar todos los abonos, referencias y comprobantes cargados, con soporte de fallbacks retrocompatibles automáticos para abonos históricos preexistentes.
+- **Check-In Operativo Restrictivo y Defensivo:** Flujo asistido mediante el botón `🚗 Registrar Check-In` para reservas confirmadas. Valida y completa de forma obligatoria la ficha del huésped (RUT, Patente, Nacionalidad, Preferencias, Cumpleaños) y restringe de forma estricta el check-in si existe algún cobro pendiente. Permite registrar el pago del saldo pendiente ahí mismo de forma fluida. Al completar, actualiza la cabaña a `Ocupada` y el estado de reserva a `checkin`.
+- **Check-Out Físico Asistido:** Flujo guiado por el botón `🔑 Registrar Check-Out` para huéspedes en estadía. Requiere que el recepcionista corrobore físicamente la recepción de llaves y la inspección general de la cabaña, con captura de notas/daños y actualización automática del alojamiento a `Necesita Aseo` y la reserva a `checkout`.
+- **Panel de Limpieza y Housekeeping Activo:** Módulo premium e interactivo inyectado en la página de Gestión de Cabañas (`src/app/admin/cabanas/page.tsx`). Si alguna cabaña requiere aseo, se despliega una tarjeta de alerta Stitch UI roja pulsante, permitiendo al personal de aseo pulsar `🧼 Registrar Aseo Terminado` para restablecer asíncronamente el estado a `Disponible`.
+- **Reportabilidad Financiera y Contabilidad SII:** Pestaña premium `"📊 Reporte Financiero & SII"` en el panel de reservas con filtros por Año y Mes. Realiza el cálculo matemático en caliente del Ingreso Bruto, el IVA Recaudado para declaración tributaria ante el SII (19% sobre reservas con factura), comisiones pagadas a canales (Airbnb/Booking) y la comisión de Rancho Carmelitas, determinando el Ingreso Neto final a transferir al dueño.
+
+## [1.1.5] - 2026-05-27
+
+### Añadido / Mejorado (Eliminación Segura de Cabañas con Validación de Reservas y Rol v1.1.5)
+
+- **Eliminación Defensiva de Cabañas en el PMS:** Implementación del botón "Eliminar" en la sección de administración de cabañas (`src/app/admin/cabanas/page.tsx`), inyectado con estilo Stitch UI rojo, bordes limpios y un ícono interactivo de papelera.
+- **Restricción Estricta por Rol (RBAC):** El botón "Eliminar" y la funcionalidad asociada están condicionados y restringidos de forma única para usuarios que posean el rol de administrador (`profiles.role = 'admin'`).
+- **Validación en Caliente de Reservas Futuras:** Al invocar la acción de eliminación, el sistema realiza una consulta directa en caliente a la tabla `bookings` de Supabase para buscar reservas activas en curso o a futuro (donde `check_out >= HOY` y el estado no sea `'Cancelada'`).
+- **Bloqueo Informativo de Seguridad:** Si se detectan reservas conflictivas, la eliminación se detiene de forma definitiva y se despliega una alerta descriptiva al administrador que lista cada uno de los huéspedes y las fechas correspondientes para que proceda a cancelarlas o reubicarlas antes de dar de baja el alojamiento.
+- **Bitácora de Auditoría Automática (Trace Trail):** Al realizar una eliminación permitida, el trigger de PostgreSQL `audit_cabins_trigger` registra de forma transparente y sin interacción humana una entrada de tipo `DELETE` en la tabla `audit_logs`, resguardando el registro anterior en formato JSONB e identificando plenamente al administrador ejecutor.
+- **Ajuste de Redondeo Inteligente a la Decena:** A petición del usuario, se modificó el algoritmo de redondeo automático hacia abajo para que aplique sobre la decena (múltiplo de 10) en lugar de los miles. Esta mejora de precisión se propagó transparentemente al cotizador de clientes (`BookingForm.tsx`), al formulario de confirmación final (`CheckoutForm.tsx`) y al cotizador interno de reservas manuales en el PMS (`reservas/page.tsx`).
+
+## [1.1.4] - 2026-05-25
+
+### Añadido / Mejorado (Sección Premium "Ubicación y Comunidad" e Integración de Logo v1.1.4)
+
+- **Evolución y Jerarquía Visual de Marca (Branding Hierarchy):** Se implementó un sistema de escala visual para el logotipo oficial en la landing page pública, consagrando la dedicación al arte y la marca del Rancho. Se estructuró en tres niveles jerárquicos:
+  *   **Logo Grande (Protagonista / Pieza de Arte):** Inyección majestuosa del logotipo con un tamaño de `w-32` a `w-40` (`w-40 h-40` en pantallas grandes) como elemento central en el **Hero Section**, justo encima del título principal de bienvenida. Cuenta con bordes semitransparentes en cristal, sombras profundas tridimensionales y micro-interacciones de escala al pasar el cursor, brindando un impacto visual espectacular de resort de primer nivel.
+  *   **Logos Medianos (Identidad de Sección):** Rediseño de las cabeceras de las secciones clave (Nuestras Cabañas, Galería de Momentos y Reglas de Convivencia) ampliando el isotipo a un tamaño de `w-24` a `w-28` con sombras medias y sutiles efectos de escala dinámicos, permitiendo apreciar nítidamente los detalles artísticos del logo.
+  *   **Logos Sutiles (Identificación y Respaldo):** Se conservó el logo en tamaños discretos en el Navbar (`w-10`) para un scroll no invasivo, en la tarjeta de SERNATUR (`w-16`) como sello de confianza, y en el Footer (`w-14`) para el cierre de página.
+- **Script Local de Descarga Auxiliar:** Se conservó el script de Node.js [`download-logo.js`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/download-logo.js) para descargar de manera inicial el logo oficial de redes como respaldo local en `public/logo.png`.
+- **Nuevo Componente Reutilizable `SocialSection`:** Creación de un componente paramétrico y autónomo en `src/components/ui/SocialSection.tsx`, diseñado con iconos SVG nativos optimizados para maximizar el rendimiento de carga y el SEO.
+- **Google Maps Interactivo Integrado:** Incorporación de un mapa responsivo y estable de Google Maps centrado con precisión en "Rancho Carmelitas Cabañas, Pullally, Papudo, Chile", integrado mediante iframe con estilos adaptados al modo claro y oscuro del sitio.
+- **Tarjetas Sociales Estilizadas en Stitch UI:** Diseño asimétrico y sumamente interactivo para las cuentas oficiales de Instagram (`@ranchocarmelitas`) y Facebook (`rancho.c.pullally`). Cuentan con micro-animaciones al pasar el cursor (`hover-lift`), bordes decorativos dinámicos degradados y un feed visual simulado utilizando fotos reales de las cabañas y piscinas del Rancho Carmelitas.
+- **Optimización de Metadatos de SEO:** Ajuste estructural en `src/app/layout.tsx` reemplazando los títulos genéricos de Next.js por metadatos altamente descriptivos y optimizados para buscadores: *"Rancho Carmelitas • Exclusivas Cabañas en Pullally, Papudo"*, incluyendo una descripción cautivadora y palabras clave.
+- **Navegación e Integración de Anclajes:** Inyección de enlaces fluidos y consistentes de redes sociales y ubicación física en el Header/Navbar superior ("Ubicación" apuntando a `#location-social`) y en el Footer general del sitio.
+
+## [1.1.3] - 2026-05-25
+
+### Añadido / Mejorado (Comisión de Administración por Defecto Autogestionable v1.1.3)
+
+- **Parámetro Global de Comisión:** Incorporación de la clave de configuración global `default_admin_commission` en el panel de Configuraciones Globales (`/admin/configuraciones`), permitiendo a los administradores parametrizar y actualizar el porcentaje por defecto en Supabase.
+- **Auto-relleno Inteligente en Reservas Manuales:** Al abrir el modal de nueva reserva manual en el PMS, el campo `admin_comision_porcentaje` se inicializa dinámicamente con el porcentaje por defecto cargado asíncronamente desde Supabase.
+- **Flexibilidad de Edición Individual:** El recepcionista conserva la libertad absoluta de modificar o sobrescribir manualmente el porcentaje en esa reserva individual si se acuerda una tarifa o trato preferencial, respetando y persistiendo el valor personalizado directamente en `bookings.admin_comision_porcentaje`.
+
+## [1.1.2] - 2026-05-25
+
+### Añadido / Mejorado (Ficha de Registro de Huésped y Vehículo - Check-in v1.1.2)
+
+- **Ficha Detalle en Tabla de Reservas:** Integración premium debajo de la información de contacto de una tarjeta fluida Stitch UI. Despliega al instante el RUT o Pasaporte (`🪪`), la Patente/Matrícula del Vehículo (`🚗`), la Nacionalidad/Ciudad de Origen (`🌎`), la Fecha de Nacimiento formateada en español (`🎂`), y las Preferencias u Observaciones del Huésped (`✨`), proporcionando una visibilidad completa de la ficha de Check-in al recepcionista.
+- **Edición en Caliente en Formulario Inline:** Inyección de los 5 inputs de registro en el formulario de edición inline del PMS administrativo. Esto permite al recepcionista capturar, completar o corregir en caliente la patente, el RUT o las observaciones del huésped en el momento del Check-in o en cualquier punto del hospedaje previo al check-out.
+- **Modal de Creación Manual Enriquecido:** Adición de la tarjeta de inputs *"🪪 Ficha de Registro de Huésped (Check-in Anticipado)"* en el modal de reservas manuales externas del PMS, asegurando que el recepcionista pueda capturar estos datos cruciales al crear reservas administrativas.
+- **Reseteo Seguro de Formulario:** Inclusión de lógica segura de reseteo (`guest_rut`, `vehicle_plate`, `guest_nationality`, `guest_preferences`, `guest_birthdate` a cadena vacía `''`) al abrir el modal de creación y tras guardar la reserva en la base de datos de Supabase.
+- **Persistencia Transparente en Supabase:** Sincronización y persistencia garantizada en la tabla nuclear `bookings` de Supabase, actualizando el estado reactivo en caliente de React al momento de guardar.
+
 ## [1.1.1] - 2026-05-25
 
 ### Añadido / Mejorado (Gestión Avanzada, Edición y Bloqueo Nativo de Usuarios v1.1.1)

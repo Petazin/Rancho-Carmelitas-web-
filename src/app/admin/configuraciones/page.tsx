@@ -17,6 +17,7 @@ const SETTING_KEYS = [
   { key: 'company_address', label: 'Dirección', placeholder: 'Ej: Camino Los Álamos 123, Región del Maule', hint: 'Dirección física del rancho.' },
   { key: 'company_phone', label: 'Teléfono de Contacto', placeholder: 'Ej: +56 9 8765 4321', hint: 'Teléfono que verá el cliente en el correo.' },
   { key: 'company_email', label: 'Email de Contacto', placeholder: 'Ej: contacto@ranchocarmelitas.cl', hint: 'Email visible en los correos (no necesariamente el de envío).' },
+  { key: 'default_admin_commission', label: 'Comisión de Administración por Defecto (%)', placeholder: 'Ej: 10', hint: 'Porcentaje de comisión administrativa aplicado por defecto al crear reservas manuales.' },
 ];
 
 export default function AdminConfiguracionesPage() {

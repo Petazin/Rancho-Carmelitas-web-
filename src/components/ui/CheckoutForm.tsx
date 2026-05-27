@@ -6,6 +6,33 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 
+const formatMoney = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null) return '$0';
+  const formatted = new Intl.NumberFormat('es-CL', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount);
+  return `$${formatted}`;
+};
+
+const formatRut = (rut: string) => {
+  let clean = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (clean.length === 0) return '';
+  clean = clean.slice(0, 9);
+  if (clean.length === 1) return clean;
+  const dv = clean.slice(-1);
+  const body = clean.slice(0, -1);
+  let formattedBody = '';
+  if (body.length > 6) {
+    formattedBody = body.replace(/^(\d{1,2})(\d{3})(\d{3})$/, '$1.$2.$3');
+  } else if (body.length > 3) {
+    formattedBody = body.replace(/^(\d{1,3})(\d{3})$/, '$1.$2');
+  } else {
+    formattedBody = body;
+  }
+  return `${formattedBody}-${dv}`;
+};
+
 interface CheckoutFormProps {
   cabin: any;
   checkoutData: {
@@ -39,8 +66,16 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
   const [guestEmail, setGuestEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
-  const [childrenAges, setChildrenAges] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+  const [childrenAges, setChildrenAges] = useState('');
+  const [individualAges, setIndividualAges] = useState<string[]>(Array(children).fill(''));
+  
+  // Nuevos campos de robustez de huéspedes (Fase 2)
+  const [guestRut, setGuestRut] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [guestNationality, setGuestNationality] = useState('');
+  const [guestPreferences, setGuestPreferences] = useState('');
+  const [guestBirthdate, setGuestBirthdate] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -48,8 +83,8 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
   // Cálculos reactivos
   const iva = requiresInvoice ? totalBase * 0.19 : 0;
   const totalConImpuestosRaw = totalBase + iva;
-  // Redondear siempre hacia abajo a 1000
-  const totalConImpuestos = Math.floor(totalConImpuestosRaw / 1000) * 1000;
+  // Redondear siempre hacia abajo a la decena (múltiplo de 10)
+  const totalConImpuestos = Math.floor(totalConImpuestosRaw / 10) * 10;
   const descuentoRedondeo = totalConImpuestosRaw - totalConImpuestos;
   const abono = totalConImpuestos * 0.5;
   const restante = totalConImpuestos - abono;
@@ -60,9 +95,9 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
     setErrorMsg('');
 
     try {
-      // 1. VALIDACIÓN DE CONTACTO
-      if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
-        setErrorMsg('Por favor completa todos los datos de contacto obligatorios (Nombre, Correo y Teléfono).');
+      // 1. VALIDACIÓN DE CONTACTO E IDENTIFICACIÓN
+      if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim() || !guestRut.trim()) {
+        setErrorMsg('Por favor completa todos los datos de contacto e identificación obligatorios (Nombre, RUT/Pasaporte, Correo y Teléfono).');
         setIsLoading(false);
         return;
       }
@@ -120,6 +155,11 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             guest_name: guestName,
             guest_email: guestEmail,
             guest_phone: guestPhone,
+            guest_rut: guestRut,
+            vehicle_plate: vehiclePlate || null,
+            guest_nationality: guestNationality || null,
+            guest_preferences: guestPreferences || null,
+            guest_birthdate: guestBirthdate || null,
             check_in: checkIn,
             check_out: checkOut,
             adults,
@@ -130,7 +170,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             requires_invoice: requiresInvoice,
             total_price: totalConImpuestos,
             extra_guests_cost: extraCostTotal,
-            status: 'pending'
+            status: 'Pendiente'
           }
         ])
         .select();
@@ -205,6 +245,18 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                 <p className="text-xs text-gray-500 mt-1">Sólo mayores de 18 años.</p>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">RUT o Pasaporte del Titular (*)</label>
+                <input 
+                  type="text" 
+                  className="input-premium w-full" 
+                  placeholder="Ej. 12.345.678-9" 
+                  required 
+                  value={guestRut}
+                  onChange={(e) => setGuestRut(formatRut(e.target.value))}
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico (*)</label>
                 <input 
                   type="email" 
@@ -274,19 +326,103 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             </div>
 
             {hasChildren && (
-              <div className="pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Edades de los {children} niño{children !== 1 ? 's' : ''} (*)</label>
-                <input 
-                  type="text" 
-                  className="input-premium w-full" 
-                  placeholder="Ej: 3, 5 y 8 años" 
-                  required 
-                  value={childrenAges}
-                  onChange={(e) => setChildrenAges(e.target.value)}
+              <div className="pt-5 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 space-y-4">
+                <label className="block text-sm font-bold text-gray-900 uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
+                  <span>👶 Edades individuales de los {children} niño{children !== 1 ? 's' : ''} (*)</span>
+                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-bold uppercase">Edad Requerida</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-gray-50/60 p-4 rounded-2xl border border-gray-150">
+                  {Array.from({ length: children }).map((_, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <label className="block text-[10px] font-bold text-gray-550 uppercase text-[9px]">Niño {idx + 1} (*)</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        max="17"
+                        className="input-premium w-full text-xs font-semibold bg-white" 
+                        placeholder="Ej. 6" 
+                        required 
+                        value={individualAges[idx] || ''}
+                        onChange={(e) => {
+                          const newAges = [...individualAges];
+                          newAges[idx] = e.target.value;
+                          setIndividualAges(newAges);
+                          setChildrenAges(newAges.filter(a => a !== '').join(', '));
+                        }}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ficha de Registro y Check-in Anticipado (Fase 2) */}
+            <div className="pt-6 border-t border-gray-100 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-[#11d442]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Ficha de Registro y Check-in Anticipado (Opcional)
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">Completa estos datos para agilizar el ingreso a tu llegada a las cabañas del Rancho.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                    🚗 Patente / Matrícula Vehículo
+                  </label>
+                  <input 
+                    type="text" 
+                    className="input-premium w-full text-sm" 
+                    placeholder="Ej. AB-CD-12 o JWT-45" 
+                    value={vehiclePlate}
+                    onChange={(e) => setVehiclePlate(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                    🌎 Nacionalidad / Ciudad
+                  </label>
+                  <input 
+                    type="text" 
+                    className="input-premium w-full text-sm" 
+                    placeholder="Ej. Chilena o Santiago" 
+                    value={guestNationality}
+                    onChange={(e) => setGuestNationality(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                    🎂 Fecha de Nacimiento
+                  </label>
+                  <input 
+                    type="date" 
+                    className="input-premium w-full text-sm appearance-none bg-no-repeat bg-[right_1rem_center]" 
+                    value={guestBirthdate}
+                    onChange={(e) => setGuestBirthdate(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                  ✨ Preferencias, Alergias u Observaciones Especiales
+                </label>
+                <textarea 
+                  className="input-premium w-full text-sm h-20 resize-none py-2" 
+                  placeholder="Ej. Requiero cama adicional, alérgico al gluten, viajo con mascota, etc." 
+                  value={guestPreferences}
+                  onChange={(e) => setGuestPreferences(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
-            )}
+            </div>
 
             <div className="pt-4 border-t border-gray-100">
               <label className="block text-sm font-medium text-gray-700 mb-2">Fechas Seleccionadas</label>
@@ -328,7 +464,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                       placeholder="Ej. 76.123.456-K" 
                       required={requiresInvoice}
                       value={invoiceRut}
-                      onChange={(e) => setInvoiceRut(e.target.value)}
+                      onChange={(e) => setInvoiceRut(formatRut(e.target.value))}
                       disabled={isLoading}
                     />
                   </div>
@@ -423,25 +559,25 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
 
             <div className="space-y-3 text-sm text-gray-700 mb-6 pb-6 border-b border-gray-100">
               <div className="flex justify-between">
-                <span>${cabin.price.toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''}</span>
-                <span>${(cabin.price * nights).toLocaleString()}</span>
+                <span>{formatMoney(cabin.price)} x {nights} noche{nights > 1 ? 's' : ''}</span>
+                <span>{formatMoney(cabin.price * nights)}</span>
               </div>
               {extraGuests > 0 && (
                 <div className="flex justify-between text-orange-600">
                   <span>+{extraGuests} adicionales</span>
-                  <span>${Math.round(extraCostTotal).toLocaleString()}</span>
+                  <span>{formatMoney(extraCostTotal)}</span>
                 </div>
               )}
               {requiresInvoice && (
                 <div className="flex justify-between text-gray-500">
                   <span>IVA (19%)</span>
-                  <span>${iva.toLocaleString()}</span>
+                  <span>{formatMoney(iva)}</span>
                 </div>
               )}
               {descuentoRedondeo > 0 && (
                 <div className="flex justify-between text-[#11d442] font-semibold text-xs animate-in fade-in">
                   <span>Descuento por redondeo</span>
-                  <span>-${Math.round(descuentoRedondeo).toLocaleString()}</span>
+                  <span>-{formatMoney(descuentoRedondeo)}</span>
                 </div>
               )}
             </div>
@@ -449,17 +585,17 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-lg font-bold text-gray-900">
                 <span>Total Reserva</span>
-                <span>${totalConImpuestos.toLocaleString()}</span>
+                <span>{formatMoney(totalConImpuestos)}</span>
               </div>
 
               <div className="bg-[#11d442]/10 rounded-xl p-4 border border-[#11d442]/20">
                 <div className="flex justify-between items-center text-[#11d442] font-bold mb-1">
                   <span>Abono requerido hoy (50%)</span>
-                  <span>${abono.toLocaleString()}</span>
+                  <span>{formatMoney(abono)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm text-gray-600">
                   <span>Pago restante al Check-in</span>
-                  <span>${restante.toLocaleString()}</span>
+                  <span>{formatMoney(restante)}</span>
                 </div>
               </div>
             </div>

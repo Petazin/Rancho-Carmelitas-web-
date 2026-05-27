@@ -30,6 +30,7 @@ export default function AdminLandingPage() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([]);
   const [newHeroBgFile, setNewHeroBgFile] = useState<File | null>(null);
+  const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
 
   // Estados editables locales para textos de Hero
   const [editTitle, setEditTitle] = useState('');
@@ -88,12 +89,13 @@ export default function AdminLandingPage() {
 
     setSavingSettings(true);
     let finalBgUrl = settings.hero_bg_url;
+    let finalLogoUrl = settings.logo_url || '';
 
     try {
       // Subir nueva imagen del Hero si está seleccionada
       if (newHeroBgFile) {
         const fileExt = newHeroBgFile.name.split('.').pop();
-        const fileName = `hero_bg_${Math.random()}.${fileExt}`;
+        const fileName = `hero_bg_${Date.now()}.${fileExt}`;
         const filePath = `landing/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
@@ -110,6 +112,26 @@ export default function AdminLandingPage() {
         finalBgUrl = publicUrl;
       }
 
+      // Subir nueva imagen del Logo si está seleccionada
+      if (newLogoFile) {
+        const fileExt = newLogoFile.name.split('.').pop();
+        const fileName = `logo_${Date.now()}.${fileExt}`;
+        const filePath = `landing/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('cabin-images')
+          .upload(filePath, newLogoFile);
+
+        if (uploadError) {
+          throw new Error(`Fallo al subir Logo del Rancho: ${uploadError.message}`);
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('cabin-images')
+          .getPublicUrl(filePath);
+        finalLogoUrl = publicUrl;
+      }
+
       // Upsert en la tabla landing_settings
       const { error: upsertError } = await supabase
         .from('landing_settings')
@@ -117,7 +139,8 @@ export default function AdminLandingPage() {
           id: 1,
           hero_title: editTitle,
           hero_subtitle: editSubtitle,
-          hero_bg_url: finalBgUrl
+          hero_bg_url: finalBgUrl,
+          logo_url: finalLogoUrl
         });
 
       if (upsertError) {
@@ -126,6 +149,7 @@ export default function AdminLandingPage() {
 
       alert('¡Configuración de Landing guardada exitosamente!');
       setNewHeroBgFile(null);
+      setNewLogoFile(null);
       fetchData();
     } catch (err: any) {
       alert('Error al guardar configuración: ' + err.message);
@@ -312,52 +336,109 @@ export default function AdminLandingPage() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <label className="block text-xs font-bold text-gray-500 uppercase">Fondo del Banner</label>
-            <p className="text-[10px] text-gray-400">📐 **Recomendado: 1920x1080 px (16:9)**. Imagen panorámica de alta calidad.</p>
-            
-            <div className="flex flex-col items-center justify-center">
-              {newHeroBgFile ? (
-                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border-2 border-[#11d442] shadow-sm group">
-                  <img src={URL.createObjectURL(newHeroBgFile)} alt="Preview Fondo" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-0 w-full bg-[#11d442] text-white text-[9px] text-center font-bold py-0.5">NUEVO BANNER</span>
-                  <button 
-                    onClick={() => setNewHeroBgFile(null)}
-                    type="button"
-                    className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
-                  >
-                    ✕ Cancelar Selección
-                  </button>
-                </div>
-              ) : settings.hero_bg_url ? (
-                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
-                  <img src={settings.hero_bg_url} alt="Fondo Actual" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-0 w-full bg-gray-900/80 text-white text-[8px] text-center font-semibold py-0.5">Fondo Actual</span>
-                  <button 
-                    type="button"
-                    className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
-                  >
-                    ✕ Cambiar Fondo
+          <div className="space-y-6">
+            {/* Fondo del Banner */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-gray-500 uppercase">Fondo del Banner</label>
+              <p className="text-[10px] text-gray-400">📐 **Recomendado: 1920x1080 px (16:9)**. Imagen panorámica de alta calidad.</p>
+              
+              <div className="flex flex-col items-center justify-center">
+                {newHeroBgFile ? (
+                  <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border-2 border-[#11d442] shadow-sm group">
+                    <img src={URL.createObjectURL(newHeroBgFile)} alt="Preview Fondo" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 w-full bg-[#11d442] text-white text-[9px] text-center font-bold py-0.5">NUEVO BANNER</span>
+                    <button 
+                      onClick={() => setNewHeroBgFile(null)}
+                      type="button"
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                    >
+                      ✕ Cancelar Selección
+                    </button>
+                  </div>
+                ) : settings.hero_bg_url ? (
+                  <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+                    <img src={settings.hero_bg_url} alt="Fondo Actual" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 w-full bg-gray-900/80 text-white text-[8px] text-center font-semibold py-0.5">Fondo Actual</span>
+                    <button 
+                      type="button"
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                    >
+                      ✕ Cambiar Fondo
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={e => e.target.files && e.target.files.length > 0 && setNewHeroBgFile(e.target.files[0])}
+                      />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full aspect-[16/9] rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#11d442] transition-colors bg-gray-50/50">
+                    <span className="text-2xl text-gray-400">🌌</span>
+                    <span className="text-[10px] text-gray-500 font-bold mt-1">Subir Imagen Fondo</span>
                     <input 
                       type="file"
                       accept="image/*"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="hidden"
                       onChange={e => e.target.files && e.target.files.length > 0 && setNewHeroBgFile(e.target.files[0])}
                     />
-                  </button>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Logo Oficial del Rancho */}
+            <div className="space-y-3 pt-4 border-t border-gray-50">
+              <label className="block text-xs font-bold text-gray-500 uppercase text-gray-800">Logo Oficial del Rancho</label>
+              <p className="text-[10px] text-gray-400">📐 **Recomendado: Aspecto 1:1 (cuadrado)**. Se mostrará de forma circular en Header y Footer.</p>
+              
+              <div className="flex items-center gap-4">
+                {newLogoFile ? (
+                  <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-[#11d442] shadow-sm group">
+                    <img src={URL.createObjectURL(newLogoFile)} alt="Preview Logo" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 w-full bg-[#11d442] text-white text-[8px] text-center font-bold py-0.5">NUEVO</span>
+                    <button 
+                      onClick={() => setNewLogoFile(null)}
+                      type="button"
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
+                    >
+                      ✕ Quitar
+                    </button>
+                  </div>
+                ) : settings.logo_url ? (
+                  <div className="relative w-20 h-20 rounded-full overflow-hidden border border-gray-200 shadow-sm group">
+                    <img src={settings.logo_url} alt="Logo Actual" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 w-full bg-gray-900/80 text-white text-[8px] text-center font-semibold py-0.5">Actual</span>
+                    <button 
+                      type="button"
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
+                    >
+                      ✕ Cambiar
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={e => e.target.files && e.target.files.length > 0 && setNewLogoFile(e.target.files[0])}
+                      />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#11d442] transition-colors bg-gray-50/50">
+                    <span className="text-xl text-gray-400">🏷️</span>
+                    <span className="text-[9px] text-gray-500 font-bold mt-1">Subir Logo</span>
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => e.target.files && e.target.files.length > 0 && setNewLogoFile(e.target.files[0])}
+                    />
+                  </label>
+                )}
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Identidad Visual</p>
+                  <p className="text-[10px] text-gray-400">Administra el isotipo/logo principal.</p>
                 </div>
-              ) : (
-                <label className="w-full aspect-[16/9] rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#11d442] transition-colors bg-gray-50/50">
-                  <span className="text-2xl text-gray-400">🌌</span>
-                  <span className="text-[10px] text-gray-500 font-bold mt-1">Subir Imagen Fondo</span>
-                  <input 
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => e.target.files && e.target.files.length > 0 && setNewHeroBgFile(e.target.files[0])}
-                  />
-                </label>
-              )}
+              </div>
             </div>
           </div>
         </div>

@@ -36,6 +36,21 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
     amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada"] 
   };
 
+  const baseCapacity = cabin.capacity || 2;
+  const maxExtra = cabin.max_extra_guests || 0;
+  const pricePerNight = cabin.price_per_night || 0;
+  const surchargePct = cabin.extra_guest_surcharge_percentage || 100;
+  const pricePerPerson = pricePerNight / baseCapacity;
+  const surchargePerExtraPerson = pricePerPerson * (surchargePct / 100);
+
+  const formatMoney = (amount: number) => {
+    const formatted = new Intl.NumberFormat('es-CL', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+    return `$${formatted}`;
+  };
+
   if (!cabin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -92,13 +107,40 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
                   <svg className="w-6 h-6 text-[#11d442]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  <span className="text-lg font-medium">{cabin.capacity} Huéspedes max.</span>
+                  <span className="text-lg font-medium">{cabin.capacity} Huéspedes base {maxExtra > 0 ? `(+${maxExtra} Adicionales)` : ''}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
                   <svg className="w-6 h-6 text-[#11d442]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                   <span className="text-lg font-medium">{cabin.bedrooms} Habitaciones</span>
+                </div>
+              </div>
+
+              {/* Bloque de Capacidad y Tarifas Adicionales Transparentes */}
+              <div className="mb-10 p-6 rounded-2xl bg-orange-50/60 border border-orange-100 shadow-sm animate-in fade-in">
+                <h3 className="text-sm font-bold text-orange-950 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  📣 Políticas de Capacidad y Huéspedes Adicionales
+                </h3>
+                <div className="text-xs text-orange-850 space-y-2.5 leading-relaxed">
+                  <p>
+                    • Esta cabaña cuenta con una capacidad base de <strong className="text-orange-950 font-extrabold">{baseCapacity} huéspedes</strong> incluida en la tarifa por noche de <strong className="text-orange-950 font-extrabold">{formatMoney(pricePerNight)}</strong>.
+                  </p>
+                  {maxExtra > 0 ? (
+                    <>
+                      <p>
+                        • Se permite alojar un máximo de <strong className="text-orange-950 font-extrabold">{maxExtra} personas adicionales</strong> pagando un recargo por persona por noche.
+                      </p>
+                      <div className="bg-white/70 p-3.5 rounded-xl border border-orange-250/50 font-bold text-xs text-orange-900 mt-2 flex items-center justify-between flex-wrap gap-2 shadow-inner">
+                        <span className="text-[13px] tracking-wide text-orange-950">Recargo por Huésped Adicional:</span>
+                        <strong className="text-orange-950 font-extrabold text-base bg-orange-100 px-3 py-1 rounded-lg border border-orange-250 shadow-sm">{formatMoney(surchargePerExtraPerson)} / noche</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <p>
+                      • No se admiten huéspedes adicionales sobre la capacidad base estipulada.
+                    </p>
+                  )}
                 </div>
               </div>
 

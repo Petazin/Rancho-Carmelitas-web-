@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
+const formatMoney = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null) return '$0';
+  const formatted = new Intl.NumberFormat('es-CL', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount);
+  return `$${formatted}`;
+};
+
 interface Booking {
   id: string;
   guest_name: string;
@@ -144,10 +153,19 @@ export default function AdminDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'confirmada': return 'bg-green-100 text-green-700';
-      case 'pendiente': return 'bg-yellow-100 text-yellow-700';
-      case 'cancelada': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'pendiente':
+      case 'pending':
+        return 'bg-yellow-50 text-yellow-750 border-yellow-150';
+      case 'confirmada':
+        return 'bg-orange-50 text-orange-750 border-orange-150';
+      case 'checkin':
+        return 'bg-green-50 text-green-750 border-green-150';
+      case 'checkout':
+        return 'bg-blue-50 text-blue-750 border-blue-150';
+      case 'cancelada':
+        return 'bg-red-50 text-red-750 border-red-150';
+      default:
+        return 'bg-gray-55 text-gray-750 border-gray-150';
     }
   };
 
@@ -353,7 +371,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
             <p className="text-gray-500 text-sm font-medium">Ingresos Históricos</p>
-            <h3 className="text-3xl font-bold text-gray-900 mt-1">${stats.totalRevenue.toLocaleString()}</h3>
+            <h3 className="text-3xl font-bold text-gray-900 mt-1">{formatMoney(stats.totalRevenue)}</h3>
           </div>
         </div>
       </div>
@@ -424,9 +442,29 @@ export default function AdminDashboard() {
                           {new Date(booking.check_in).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold ${getStatusColor(booking.status || 'Pendiente')}`}>
-                            {booking.status || 'Pendiente'}
-                          </span>
+                          {(() => {
+                            const status = booking.status || 'Pendiente';
+                            const colorClasses = getStatusColor(status);
+                            let displayLabel = status;
+                            
+                            if (status.toLowerCase() === 'pending' || status.toLowerCase() === 'pendiente') {
+                              displayLabel = '🟡 Pendiente';
+                            } else if (status.toLowerCase() === 'confirmada') {
+                              displayLabel = '🟠 Confirmada';
+                            } else if (status.toLowerCase() === 'checkin') {
+                              displayLabel = '🟢 En Cabaña';
+                            } else if (status.toLowerCase() === 'checkout') {
+                              displayLabel = '🔵 Completada';
+                            } else if (status.toLowerCase() === 'cancelada') {
+                              displayLabel = '🔴 Cancelada';
+                            }
+
+                            return (
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border transition-all ${colorClasses} ${status.toLowerCase() === 'checkin' ? 'animate-pulse' : ''}`}>
+                                {displayLabel}
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))

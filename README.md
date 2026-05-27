@@ -10,10 +10,19 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
 
 ## Características Principales
 
-*   **Página de Inicio y Reservas (Cliente):** Experiencia de usuario inmersiva con vista detallada de cabañas y un formulario de reserva rápido.
+*   **Página de Inicio y Reservas (Cliente):** Experiencia de usuario inmersiva con vista detallada de cabañas, formulario de reserva rápido y sección premium de Ubicación y Comunidad (Google Maps interactivo, e integración estética de Instagram y Facebook con micro-animaciones Stitch UI). Incorpora visualización 100% transparente de capacidad base y recargo por huésped adicional con banners Stitch UI premium (`bg-orange-50/60`).
+*   **Cotizador y Checkout Inteligente:** Formulario interactivo con desglose financiero exacto en tiempo real, edades de niños individualizadas y obligatorias según la cantidad seleccionada para un cálculo óptimo, y soporte de autocompletado reactivo de RUT chileno en inputs.
 *   **PMS / Panel de Administración:**
     *   Gestión centralizada de múltiples reservas en calendario.
-    *   Módulo de Check-in Rápido y Prevención de conflictos.
+    *   **Localización y Normalización de Dinero Global (es-CL):** Consistencia regional del 100% con punto para miles y coma para decimales mediante helper `formatMoney(amount)` centralizado.
+    *   **Autocompletado de RUT Reactivo:** Formateador de RUT reactivo en la edición inline, creación manual y en el modal de Check-In del PMS.
+    *   **Gestión Unificada de Pagos Múltiples:** Soporte de abonos parciales y combinados almacenados en la tabla relacional `booking_payments`, con timeline de transacciones y subida de comprobantes. Incluye **Sugerencia Dinámica del 50%** interactiva con botón de pre-llenado (calculando montos faltantes) y **Auto-Confirmación Inteligente**, que promueve la reserva al estado `'Confirmada'` automáticamente al alcanzar o superar el 50% acumulado, enviando el correo definitivo. El botón de pagos muta en caliente a color verde y texto `"✓ Registrar y Confirmar Reserva"` al alcanzar el 50% de abono acumulado en reservas pendientes.
+    *   **Check-In Defensivo y Restrictivo:** Registro obligatorio de ficha del huésped con bloqueo de estancia si existe saldo pendiente por liquidar. Habilita un botón directo de confirmación manual `✓ Confirmar` en las reservas pendientes que calcula y sugiere de forma dinámica el abono faltante exacto para cubrir el 50% (restando abonos previos) e inserta el pago rápida de forma unificada en `booking_payments`.
+    *   **Hotfix Definitivo de Reactividad en Check-In (v1.2.5):** Inyección de abonos registrados en caliente y en tiempo real directamente en la ficha del Check-In local (`selectedBookingForCheckIn`), permitiendo que el saldo pendiente baje a `$0` al instante y active de inmediato el botón `"🚗 Completar Check-In & Entregar Cabaña"` sin forzar cierres de modal ni consultas asíncronas de red diferidas.
+    *   **Registro de Bloqueo en Auditoría (v1.2.6):** Identificación y traducción dinámica a lenguaje natural de eventos de bloqueo (`🔒`) y desbloqueo (`🔓`) de colaboradores en el Trace Trail, exponiendo al administrador operador, el usuario afectado y el motivo de suspensión ingresado.
+    *   **Check-Out Físico Asistido:** Auditoría de entrega de llaves, inspección de cabañas y registro automático de notas o desperfectos.
+    *   **Módulo Activo de Housekeeping:** Panel interactivo en tiempo real para que el personal de limpieza marque aseos completados, liberando el estado de la cabaña.
+    *   **Reportes Financieros & SII:** Panel interactivo para el cálculo asíncrono de Ingreso Bruto, IVA (19% sobre reservas con factura), comisiones de canales de venta (Airbnb/Booking.com), comisión de Rancho Carmelitas e Ingreso Neto final liquidado al dueño.
     *   **Gestión Multi-Media (Supabase Storage):** Subida de galerías por bloque y amenidades interactivas.
     *   **Galería de Imágenes Premium:** Integración de recursos visuales personalizados basados en la identidad real del Rancho.
     *   Control de roles (Admin/Guest) y control de accesos RBAC para Staff.
@@ -21,6 +30,7 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
     *   **Ficha de Liquidación Interna Privada:** Desglose interactivo en tiempo real del pago neto estimado al dueño, excluido de los correos transaccionales por privacidad.
     *   **Creación Manual de Reservas:** Formulario premium de registro con previsualización financiera reactiva en tiempo real.
     *   **Cierres y Bloqueos Temporales (Parcial / Total):** Módulo administrativo autogestionable para declarar periodos de cierre por mantención o vacaciones del Rancho. Bloquea de forma estricta reservas en el cliente y el PMS e inyecta alertas rojas prioritarias ante colisiones con reservas activas.
+    *   **Visualización Homologada de Estados en Dashboard:** Agenda del calendario y listado de Llegadas Inminentes en español nativo con badges homologados de colores del ciclo de vida del PMS. Resaltado de alta legibilidad para el teléfono del cliente (`📞`).
 
 
 *   **Correos de Confirmación (Resend):** Envíos automatizados al huésped con el desglose del cobro de plataforma y el comprobante oficial de pago, protegiendo los datos confidenciales de administración.

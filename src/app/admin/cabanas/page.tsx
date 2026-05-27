@@ -56,10 +56,28 @@ export default function AdminCabanasPage() {
     reason: 'Vacaciones'
   });
 
+  const [userProfile, setUserProfile] = useState<{ id: string; role: string } | null>(null);
+
   useEffect(() => {
     fetchCabins();
     fetchClosures();
+    getUserProfile();
   }, []);
+
+  async function getUserProfile() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (!error && data) {
+        setUserProfile(data);
+      }
+    }
+  }
 
   async function fetchCabins() {
     const { data, error } = await supabase
@@ -427,6 +445,91 @@ export default function AdminCabanasPage() {
     }
   };
 
+  const handleDeleteCabin = async (cabin: Cabin) => {
+    // 1. Verificar rol de administrador
+    if (userProfile?.role !== 'admin') {
+      alert('Acceso Denegado: Solo los usuarios con rol Administrador pueden eliminar cabañas.');
+      return;
+    }
+
+    // 2. Confirmación previa
+    const confirmDelete = window.confirm(
+      `⚠️ ¿Estás completamente seguro de que deseas eliminar permanentemente la cabaña "${cabin.name}"?\n\n` +
+      `Esta acción no se puede deshacer, y eliminará de forma automática todos los bloqueos temporales asociados.`
+    );
+    if (!confirmDelete) return;
+
+    setUploading(true);
+
+    try {
+      // 3. Consultar si existen reservas futuras o en curso (check_out >= hoy)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { data: futureBookings, error: bookingError } = await supabase
+        .from('bookings')
+        .select('id, guest_name, check_in, check_out, status')
+        .eq('cabin_id', cabin.id)
+        .neq('status', 'Cancelada')
+        .gte('check_out', todayStr);
+
+      if (bookingError) {
+        throw new Error('Error al validar reservas futuras: ' + bookingError.message);
+      }
+
+      if (futureBookings && futureBookings.length > 0) {
+        const bookingsList = futureBookings
+          .map(b => `- ${b.guest_name} (${b.check_in} al ${b.check_out}) [Estado: ${b.status}]`)
+          .join('\n');
+        
+        alert(
+          `🚨 NO SE PUEDE ELIMINAR LA CABAÑA\n\n` +
+          `La cabaña "${cabin.name}" tiene reservas activas programadas en el futuro o en curso:\n\n` +
+          `${bookingsList}\n\n` +
+          `Para poder eliminar esta cabaña, debes cambiar el estado de estas reservas a "Cancelada" o reubicarlas primero.`
+        );
+        setUploading(false);
+        return;
+      }
+
+      // 4. Proceder a eliminar de Supabase
+      const { error: deleteError } = await supabase
+        .from('cabins')
+        .delete()
+        .eq('id', cabin.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      alert(`✅ Cabaña "${cabin.name}" eliminada exitosamente.`);
+      fetchCabins();
+    } catch (err: any) {
+      console.error('Error al eliminar cabaña:', err);
+      alert('Error al intentar eliminar la cabaña: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCompleteCleaning = async (cabinId: string) => {
+    setUploading(true);
+    try {
+      const { error } = await supabase
+        .from('cabins')
+        .update({ housekeeping_status: 'Disponible' })
+        .eq('id', cabinId);
+
+      if (error) throw error;
+
+      alert('Limpieza registrada con éxito. La cabaña vuelve a figurar como Disponible.');
+      fetchCabins();
+    } catch (err: any) {
+      console.error('Error al registrar limpieza:', err);
+      alert('Error al registrar limpieza: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando cabañas...</div>;
 
   return (
@@ -444,6 +547,49 @@ export default function AdminCabanasPage() {
           Nueva Cabaña
         </button>
       </div>
+
+      {/* ========================================================================= */}
+      {/* SECCIÓN OPERATIVA: AUDITORÍA DE ASEO Y HOUSEKEEPING (PMS FASE 2)          */}
+      {/* ========================================================================= */}
+      {(() => {
+        const dirtyCabins = cabins.filter(c => c.housekeeping_status === 'Necesita Aseo');
+        if (dirtyCabins.length === 0) return null;
+
+        return (
+          <div className="bg-red-50/50 p-6 rounded-[24px] border border-red-100 shadow-md space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-start gap-4">
+              <div className="text-3xl animate-bounce">🧼</div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-red-900 uppercase tracking-wider font-sans">
+                  Auditoría de Limpieza Requerida ({dirtyCabins.length})
+                </h3>
+                <p className="text-xs text-red-700 font-semibold leading-relaxed">
+                  Las siguientes cabañas han completado Check-Out o han sido marcadas para mantención/aseo físico. El personal de aseo debe registrar la finalización del servicio para reactivar su disponibilidad pública:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+              {dirtyCabins.map(cabin => (
+                <div key={cabin.id} className="bg-white p-4 rounded-2xl border border-red-100 flex justify-between items-center shadow-sm">
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">🏡 {cabin.name}</p>
+                    <span className="inline-block mt-1 text-[9px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                      🧼 Necesita Aseo
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleCompleteCleaning(cabin.id)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                  >
+                    🧼 Registrar Limpia
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {isCreating && (
         <div className="bg-blue-50/50 p-6 rounded-[24px] border border-blue-100 shadow-sm animate-fade-in-up">
@@ -1002,6 +1148,16 @@ export default function AdminCabanasPage() {
                   >
                     {cabin.is_active ? '● Activa' : '○ Inactiva'}
                   </button>
+                  {cabin.housekeeping_status && (
+                    <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full border ${
+                      cabin.housekeeping_status === 'Disponible' ? 'bg-green-50 text-green-700 border-green-200' :
+                      cabin.housekeeping_status === 'Ocupada' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      cabin.housekeeping_status === 'Necesita Aseo' ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
+                      'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}>
+                      🧹 {cabin.housekeeping_status}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -1028,12 +1184,27 @@ export default function AdminCabanasPage() {
                   </button>
                 </>
               ) : (
-                <button 
-                  onClick={() => handleEdit(cabin)}
-                  className="px-6 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
-                >
-                  Editar Ajustes
-                </button>
+                <>
+                  <button 
+                    onClick={() => handleEdit(cabin)}
+                    className="px-6 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    Editar Ajustes
+                  </button>
+                  {userProfile?.role === 'admin' && (
+                    <button 
+                      onClick={() => handleDeleteCabin(cabin)}
+                      disabled={uploading}
+                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-650 border border-red-100 rounded-xl text-sm font-bold hover:shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      title="Eliminar esta cabaña permanentemente"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

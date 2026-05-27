@@ -240,6 +240,18 @@ export default function AuditoriaPage() {
       if (log.action === 'UPDATE') {
         const oldRole = log.old_data?.role;
         const newRole = log.new_data?.role;
+        const oldBanned = log.old_data?.banned_until || null;
+        const newBanned = log.new_data?.banned_until || null;
+        const motivo = log.new_data?.block_reason || 'Sin motivo especificado';
+
+        if (oldBanned !== newBanned) {
+          if (newBanned) {
+            return `🔒 ${autor} suspendió y bloqueó al usuario "${usuario}" de forma permanente debido a: "${motivo}" (${fecha}).`;
+          } else {
+            return `🔓 ${autor} reactivó y desbloqueó al usuario "${usuario}" en el sistema (${fecha}).`;
+          }
+        }
+
         if (oldRole !== newRole && newRole) {
           return `🛡️ ${autor} actualizó el rol de seguridad de "${usuario}" de "${oldRole}" a "${newRole}" (${fecha}).`;
         }

@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 
+const formatMoney = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null) return '$0';
+  const formatted = new Intl.NumberFormat('es-CL', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount);
+  return `$${formatted}`;
+};
+
 interface BookingFormProps {
   cabin: any;
   cabinId: string;
@@ -298,8 +307,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
     const outDate = new Date(checkOut);
     nights = Math.max(1, Math.ceil((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24)));
     totalEstimadoRaw = nights * finalPricePerNight;
-    // Redondear siempre hacia abajo a 1000
-    totalEstimado = Math.floor(totalEstimadoRaw / 1000) * 1000;
+    // Redondear siempre hacia abajo a la decena (múltiplo de 10)
+    totalEstimado = Math.floor(totalEstimadoRaw / 10) * 10;
     descuentoRedondeo = totalEstimadoRaw - totalEstimado;
   }
 
@@ -309,7 +318,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   return (
     <div className="sticky top-24 bg-white rounded-3xl premium-shadow p-8 border border-gray-100">
       <div className="flex items-end gap-2 mb-6">
-        <span className="text-3xl font-bold text-gray-900">${cabin.price}</span>
+        <span className="text-3xl font-bold text-gray-900">{formatMoney(cabin.price)}</span>
         <span className="text-gray-500 mb-1">/ noche</span>
       </div>
 
@@ -323,6 +332,21 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
           className="fixed inset-0 z-40" 
           onClick={() => { setIsOpenAdults(false); setIsOpenChildren(false); }}
         />
+      )}
+
+      {maxExtraGuests > 0 && (
+        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 text-xs text-orange-900 mb-6 space-y-1.5 animate-in fade-in shadow-sm">
+          <p className="font-bold flex items-center gap-1.5 text-orange-950 text-[13px]">
+            <span>ℹ️ Capacidad y Huéspedes Adicionales</span>
+          </p>
+          <p className="leading-relaxed font-medium">
+            Esta cabaña tiene una capacidad base de <strong className="text-orange-950">{cabin.capacity} huéspedes</strong> y admite hasta <strong className="text-orange-950">{maxExtraGuests} huéspedes adicionales</strong>.
+          </p>
+          <p className="pt-1.5 border-t border-orange-200/50 font-semibold text-orange-950 flex justify-between items-center text-[12px]">
+            <span>Valor por adicional:</span>
+            <span className="bg-orange-100 text-orange-850 px-2 py-0.5 rounded-lg border border-orange-200">{formatMoney(surchargePerExtraPerson)} / noche</span>
+          </p>
+        </div>
       )}
 
       <div className="border border-gray-200 rounded-2xl mb-6 bg-white shadow-sm ring-1 ring-gray-900/5 relative z-50">
@@ -410,24 +434,24 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
 
       <div className="mb-6 space-y-2 text-sm text-gray-600">
         <div className="flex justify-between">
-          <span>${cabin.price.toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''}</span>
-          <span>${(cabin.price * nights).toLocaleString()}</span>
+          <span>{formatMoney(cabin.price)} x {nights} noche{nights > 1 ? 's' : ''}</span>
+          <span>{formatMoney(cabin.price * nights)}</span>
         </div>
         {extraGuests > 0 && (
           <div className="flex justify-between text-orange-600">
-            <span>+{extraGuests} adicionales (${Math.round(extraCostPerNight).toLocaleString()} x {nights} noche{nights > 1 ? 's' : ''})</span>
-            <span>${Math.round(extraCostPerNight * nights).toLocaleString()}</span>
+            <span>+{extraGuests} adicionales ({formatMoney(extraCostPerNight)} x {nights} noche{nights > 1 ? 's' : ''})</span>
+            <span>{formatMoney(extraCostPerNight * nights)}</span>
           </div>
         )}
         {descuentoRedondeo > 0 && (
           <div className="flex justify-between text-[#11d442] font-semibold text-xs animate-in fade-in">
             <span>Descuento por redondeo</span>
-            <span>-${Math.round(descuentoRedondeo).toLocaleString()}</span>
+            <span>-{formatMoney(descuentoRedondeo)}</span>
           </div>
         )}
         <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
           <span>Total</span>
-          <span>${totalEstimado.toLocaleString()}</span>
+          <span>{formatMoney(totalEstimado)}</span>
         </div>
       </div>
 
