@@ -294,3 +294,13 @@
 - Se actualizó detalladamente la documentación oficial en `GEMINI.md` y `CHANGELOG.md` en español para la versión [1.2.6].
 - Se removió limpiamente el script de diagnóstico del espacio de trabajo ejecutando el comando de shell `Remove-Item scratch_diagnostico.js`.
 - Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad, exceptuando las ejecuciones autorizadas y documentadas explícitamente por el usuario en el chat.
+[2026-05-27 20:01:00] Actividad de Antigravity:
+- A solicitud del propietario del sistema, se ejecutó un reinicio total de base de datos de prueba para comenzar el ingreso de datos reales e históricos.
+- Se presentó un plan estructurado al usuario con 4 preguntas de confirmación de alcance. El usuario confirmó: eliminar cabañas, landing, canales de venta, bitácora, reservas, pagos y bloqueos; preservar únicamente `profiles` (usuarios).
+- Se diseñó y ejecutó el script `scratch_reset_db.js` con el cliente admin de Supabase, eliminando de forma segura e irreversible los datos de prueba de 7 tablas.
+- Se corrigió en caliente el error de tipo UUID en la tabla `plataformas` y se re-ejecutó la limpieza de forma exitosa.
+- Verificación final de conteos post-reinicio confirmó 0 filas en todas las tablas limpiadas y 2 filas intactas en `profiles`.
+- La tabla `landing_settings` fue restaurada a valores por defecto del Hero Banner.
+- Se removió limpiamente el script temporal `scratch_reset_db.js`.
+- Se actualizaron `CHANGELOG.md` (versión 1.3.0) y `GEMINI.md` reflejando el estado actual del sistema.
+- Comandos de shell ejecutados con autorización explícita del propietario: `node scratch_reset_db.js`, corrección inline con `node -e`, y `Remove-Item scratch_reset_db.js`.

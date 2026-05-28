@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.0] - 2026-05-27
+
+### Reinicio Operacional (Inicio de Datos Reales)
+
+- **Reinicio Total de Base de Datos de Prueba:** Se eliminaron de forma irreversible y confirmada por el propietario todos los datos de prueba del sistema. Las tablas limpiadas son: `bookings`, `booking_payments`, `cabin_closures`, `cabins`, `plataformas`, `audit_logs` y `landing_gallery`. La tabla `landing_settings` fue restaurada a sus valores por defecto del Hero Banner.
+- **Preservación de Usuarios:** La tabla `profiles` con los **2 usuarios** registrados del equipo fue preservada completamente e intacta.
+- **Estado:** El sistema queda en estado cero, listo para el ingreso de datos históricos reales del Rancho Carmelitas.
+
 ## [1.2.6] - 2026-05-27
 
 ### Corregido / Mejorado (Registro de Bloqueo en Auditoría v1.2.6)

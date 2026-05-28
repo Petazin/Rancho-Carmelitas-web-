@@ -117,4 +117,4 @@ El sistema ahora soporta:
   - **Normalización Defensiva Coalescente:** Saneamiento de comparación de baneo utilizando `|| null` para evitar falsos positivos de reactivación/desbloqueo al actualizar perfiles que no contaban con la clave en su registro anterior.
   - **Íconos y Explicación Contextualizada:** Si se bloquea un colaborador, se traduce a lenguaje natural destacando al administrador operador, el usuario baneado, y el motivo del bloqueo (`block_reason`) con el ícono `🔒`. Si se desbloquea, se ilustra la reactivación en el Rancho con el ícono `🔓`.
 
-Próximos pasos: **Validación Operativa y Sincronización en Git con el Usuario** (Verificar el correcto funcionamiento de las mejoras aplicadas en local y estructurar el roadmap de las siguientes fases).
+Próximos pasos: **Ingreso de Datos Reales (v1.3.0+)** — La base de datos fue reiniciada exitosamente eliminando todos los datos de prueba (reservas, pagos, cabañas, plataformas, auditoría y galería). Los **2 usuarios del equipo** se preservaron intactos. El sistema está en estado cero, listo para el ingreso de cabañas reales, canales de venta reales y reservas históricas reales del Rancho Carmelitas.
