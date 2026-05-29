@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.3] - 2026-05-29
+
+### Añadido / Mejorado (Ampliación de Auditoría Completa en Lenguaje Natural v1.3.3)
+
+- **Triggers de Auditoría Extendida en Supabase:** Creación y despliegue del script de migración SQL `schema_update_auditoria_completa.sql` que asocia el trigger `process_audit_logging()` a las tablas restantes del sistema que carecían de auditoría: `landing_settings` (logotipo y textos del Hero), `landing_gallery` (imágenes de la galería), `settings` (variables de configuración del negocio como WhatsApp, RUT y correos) y `plataformas` (canales de venta externos y comisiones). Esto garantiza que absolutamente cualquier cambio de contenido realizado en el PMS y la página pública quede registrado con precisión milimétrica.
+- **Explicaciones Dinámicas en Lenguaje Natural en Español:** Actualización completa del timeline y el inspector en la sección de Auditoría (`src/app/admin/auditoria/page.tsx`). Se programó soporte nativo para estas cuatro tablas dentro de la función `getNaturalLanguageExplanation(log)`, interpretando campos específicos y generando descripciones fluidas y explicativas en español de los cambios visuales, subida/eliminación de fotos, cambios de logotipo, reordenamiento de galería, y alteraciones en las variables comerciales globales.
+- **Filtros Adicionales de Auditoría:** Incorporación de las nuevas tablas al selector de filtros del Timeline de Auditoría, facilitando la auditoría y depuración en caliente por parte de los administradores.
+
 ## [1.3.2] - 2026-05-29
 
 ### Añadido / Mejorado (Despliegue Exitoso en Vercel & Vinculación de Dominio v1.3.2)

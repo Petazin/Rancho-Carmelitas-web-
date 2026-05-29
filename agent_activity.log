@@ -325,3 +325,9 @@
 - Se guio al usuario para comprobar el estado del despliegue en producción en la URL directa de Vercel (`rancho-carmelitas-hgnssqcnc-claudios-projects-40c4eb1c.vercel-dns-017.com` que luego se mapeará a su versión de despliegue), confirmando que la aplicación web de Rancho Carmelitas está 100% funcional y visible en la nube.
 - Se actualizaron de forma unificada los archivos documentales obligatorios: `CHANGELOG.md` (versión 1.3.2) y `GEMINI.md` reflejando el despliegue e integración en producción.
 - Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.
+[2026-05-29 18:10:00] Actividad de Antigravity:
+- Se creó el script SQL de migración `schema_update_auditoria_completa.sql` para asociar los triggers de auditoría en Supabase.
+- Se modificó la interfaz del panel de auditoría administrativa en `src/app/admin/auditoria/page.tsx` para agregar filtros y explicaciones en lenguaje natural detalladas en español para las tablas `landing_settings`, `landing_gallery`, `settings` y `plataformas`.
+- Se actualizaron en español los archivos de control y seguimiento del proyecto: `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.3.3].
+- Se preparó y propuso el flujo de control de versiones Git para sincronizar el código consolidado hacia GitHub (`git status`, `git add .`, `git commit` y `git push`), gatillando el despliegue automático del release en producción en Vercel.
+- Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.

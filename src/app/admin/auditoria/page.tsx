@@ -260,6 +260,105 @@ export default function AuditoriaPage() {
       return `👤 ${autor} revocó el acceso y eliminó el perfil del usuario "${usuario}" con rol de "${rol}" (${fecha}).`;
     }
 
+    if (log.table_name === 'landing_settings') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      if (log.action === 'INSERT') {
+        return `✨ ${autor} inicializó la configuración de diseño visual de la Landing Page (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const oldLogo = log.old_data?.logo_url;
+        const newLogo = log.new_data?.logo_url;
+        const oldHero = log.old_data?.hero_title;
+        const newHero = log.new_data?.hero_title;
+        const oldBg = log.old_data?.hero_bg_url;
+        const newBg = log.new_data?.hero_bg_url;
+
+        if (oldLogo !== newLogo) {
+          return `🎨 ${autor} actualizó el logotipo oficial de Rancho Carmelitas a: "${newLogo || 'sin logo'}" (${fecha}).`;
+        }
+        if (oldHero !== newHero || log.old_data?.hero_subtitle !== log.new_data?.hero_subtitle) {
+          return `🎨 ${autor} modificó los textos del banner principal (Hero) a: "${newHero}" (${fecha}).`;
+        }
+        if (oldBg !== newBg) {
+          return `🎨 ${autor} actualizó la imagen de fondo del banner principal (Hero) (${fecha}).`;
+        }
+        return `🎨 ${autor} actualizó la configuración de diseño visual y de la Landing Page (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó la configuración de diseño visual de la Landing Page (${fecha}).`;
+    }
+
+    if (log.table_name === 'landing_gallery') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const altText = data?.alt_text || 'Foto sin título descriptivo';
+      if (log.action === 'INSERT') {
+        return `📸 ${autor} subió y agregó una nueva foto a la galería de momentos ("${altText}") (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const oldOrder = log.old_data?.order_index;
+        const newOrder = log.new_data?.order_index;
+        if (oldOrder !== newOrder) {
+          return `📸 ${autor} reordenó una foto de la galería del orden ${oldOrder} al ${newOrder} (${fecha}).`;
+        }
+        return `📸 ${autor} actualizó el texto descriptivo o datos de una foto en la galería a: "${altText}" (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó una foto de la galería de momentos ("${altText}") (${fecha}).`;
+    }
+
+    if (log.table_name === 'settings') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const key = data?.key || '';
+      const val = data?.value || '';
+
+      const labels: Record<string, string> = {
+        whatsapp_number: 'el número de WhatsApp',
+        company_name: 'el nombre de la empresa',
+        company_rut: 'el RUT de la empresa',
+        company_address: 'la dirección de la empresa',
+        company_phone: 'el teléfono de contacto',
+        company_email: 'el email de contacto',
+        default_admin_commission: 'la comisión de administración por defecto'
+      };
+
+      const label = labels[key] || `la variable "${key}"`;
+
+      if (log.action === 'INSERT') {
+        return `⚙️ ${autor} agregó la variable de configuración "${key}" con el valor "${val}" (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const displayVal = key === 'default_admin_commission' ? `${val}%` : `"${val}"`;
+        return `⚙️ ${autor} actualizó ${label} del sistema a: ${displayVal} (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó la variable de configuración "${key}" (${fecha}).`;
+    }
+
+    if (log.table_name === 'plataformas') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const nombre = data?.nombre || 'canal desconocido';
+      const comision = data?.comision_porcentaje !== undefined ? `${data.comision_porcentaje}%` : 'N/A';
+
+      if (log.action === 'INSERT') {
+        return `🔌 ${autor} integró y habilitó el canal de venta "${nombre}" con una comisión de ${comision} (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const oldCom = log.old_data?.comision_porcentaje;
+        const newCom = log.new_data?.comision_porcentaje;
+        const oldNom = log.old_data?.nombre;
+        const newNom = log.new_data?.nombre;
+
+        if (oldCom !== newCom && oldNom !== newNom) {
+          return `🔌 ${autor} renombró el canal a "${newNom}" y cambió su comisión a ${newCom}% (${fecha}).`;
+        }
+        if (oldCom !== newCom) {
+          return `🔌 ${autor} actualizó la comisión del canal "${nombre}" del ${oldCom}% al ${newCom}% (${fecha}).`;
+        }
+        if (oldNom !== newNom) {
+          return `🔌 ${autor} cambió el nombre comercial del canal "${oldNom}" a "${newNom}" (${fecha}).`;
+        }
+        return `🔌 ${autor} actualizó los datos del canal de venta "${nombre}" (${fecha}).`;
+      }
+      return `🔌 ${autor} removió y deshabilitó el canal de venta "${nombre}" del sistema (${fecha}).`;
+    }
+
     return `🔗 ${autor} realizó una acción de tipo ${log.action} en el módulo ${log.table_name} (${fecha}).`;
   };
 
@@ -300,6 +399,10 @@ export default function AuditoriaPage() {
             <option value="cabins">cabins (Cabañas)</option>
             <option value="cabin_closures">cabin_closures (Bloqueos)</option>
             <option value="profiles">profiles (Usuarios/Perfiles)</option>
+            <option value="landing_settings">landing_settings (Hero y Logo)</option>
+            <option value="landing_gallery">landing_gallery (Galería)</option>
+            <option value="settings">settings (Configuraciones)</option>
+            <option value="plataformas">plataformas (Canales y Comisiones)</option>
           </select>
         </div>
 
