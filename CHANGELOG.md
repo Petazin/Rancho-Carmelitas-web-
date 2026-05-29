@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.2] - 2026-05-29
+
+### Añadido / Mejorado (Despliegue Exitoso en Vercel & Vinculación de Dominio v1.3.2)
+
+- **Puesta en Marcha en Vercel:** Compilación e integración exitosa del pipeline de Vercel en base al commit `3ec5989`. La aplicación se encuentra en línea y 100% operativa en su URL directa.
+- **Configuración DNS de Producción:** Vinculación exitosa del dominio propio `ranchocarmelitas.com` en Vercel. Se configuraron en el proveedor de dominios (Dominios Chile) el registro tipo `A` apuntando a la IP Anycast regional `216.198.79.1` y el subdominio `www` tipo `CNAME` apuntando a la dirección de validación delegada `3f849c1cb6125e21.vercel-dns-017.com`.
+- **Propagación y Certificado SSL:** Los registros DNS fueron validados con éxito a nivel global por los servidores DNS de Google (`8.8.8.8`). Vercel generó y activó automáticamente el certificado de seguridad SSL (HTTPS), asegurando una conexión segura y cifrada para todos los usuarios.
+
 ## [1.3.1] - 2026-05-29
 
 ### Corregido / Mejorado (Hotfix de Build de Producción en Vercel v1.3.1)

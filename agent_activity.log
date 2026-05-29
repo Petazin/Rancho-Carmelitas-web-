@@ -315,3 +315,13 @@
 - Se actualizaron de forma unificada los archivos documentales `CHANGELOG.md` (versión 1.3.1) y `GEMINI.md` reflejando los hotfixes de compilación y manteniendo la trazabilidad.
 - Se registraron las actividades de Antigravity en este archivo de control.
 - No se han ejecutado comandos de compilación locales de forma autónoma por directivas de seguridad global.
+[2026-05-29 17:30:00] Actividad de Antigravity:
+- Se implementó el soporte y acompañamiento técnico para el Despliegue en Producción y Conexión de Dominio (Versión 1.3.2).
+- Se auditó el panel de Vercel identificando un proyecto duplicado (`rancho-carmelitas-web-4w8r`) y se guio al usuario para su eliminación segura, manteniendo únicamente el proyecto oficial `rancho-carmelitas-web`.
+- Se guio al usuario en la configuración de la Zona DNS en su proveedor (Dominios Chile) agregando los registros requeridos por Vercel para producción:
+  * Registro tipo `A` apuntando a la IP Anycast regional `216.198.79.1`.
+  * Registro tipo `CNAME` para el subdominio `www` apuntando a la dirección de validación delegada `3f849c1cb6125e21.vercel-dns-017.com`.
+- Se guio al usuario para diagnosticar la propagación de DNS local en Chile (donde el ISP Movistar resolvía a `127.0.0.1` de forma temporal debido al registro nuevo de hoy), forzando consultas contra el servidor público de Google (`8.8.8.8`) y validando que a nivel global las IPs y CNAMEs de Vercel ya resuelven de forma 100% exitosa.
+- Se guio al usuario para comprobar el estado del despliegue en producción en la URL directa de Vercel (`rancho-carmelitas-hgnssqcnc-claudios-projects-40c4eb1c.vercel-dns-017.com` que luego se mapeará a su versión de despliegue), confirmando que la aplicación web de Rancho Carmelitas está 100% funcional y visible en la nube.
+- Se actualizaron de forma unificada los archivos documentales obligatorios: `CHANGELOG.md` (versión 1.3.2) y `GEMINI.md` reflejando el despliegue e integración en producción.
+- Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.
