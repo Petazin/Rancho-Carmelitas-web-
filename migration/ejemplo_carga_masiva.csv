@@ -1,0 +1,6 @@
+cabana_nombre;huesped_nombre;huesped_rut;huesped_email;huesped_telefono;check_in;check_out;adults;children;children_ages;precio_total;monto_abonado;metodo_pago;canal_venta;requiere_factura;notas;estado
+Cabaña 5;Empresa ERE;;;;2026-05-04;2026-05-14;2;0;;560000;560000;Transferencia;Directo;SI;Factura nº 82. Estancia larga de empresa.;checkout
+Cabaña 1;Constanza Soto;;;;2026-05-09;2026-05-10;2;0;;70000;70000;Efectivo;Directo;NO;Salida el 10. Pago directo en efectivo.;checkout
+Cabaña 1;Broyan Rojas;;;;2026-05-16;2026-05-17;2;0;;70000;70000;Transferencia;Directo;NO;Salida el 17. Pago registrado directamente.;checkout
+Cabaña 1;Empresa ERE;;;;2026-05-24;2026-05-26;2;0;;60000;60000;Transferencia;Directo;SI;Factura nº 83. Salida el 26.;checkout
+Cabaña 2;Juan Pérez;12.345.678-9;juan.perez@email.com;+56987654321;2026-05-10;2026-05-15;2;1;8;350000;175000;Transferencia;Booking.com;NO;Reserva de ejemplo con datos completos. Abono inicial del 50%.;confirmada

@@ -22,6 +22,7 @@ interface Cabin {
   amenities: string[];
   max_extra_guests: number;
   extra_guest_surcharge_percentage: number;
+  housekeeping_status?: string;
 }
 
 export default function AdminCabanasPage() {
@@ -153,7 +154,10 @@ export default function AdminCabanasPage() {
     const conflicts = await checkForBookingConflicts(targetCabinId, start_date, end_date);
     if (conflicts.length > 0) {
       const conflictMsg = conflicts
-        .map(c => `- ${c.guest_name} en ${c.cabin?.name || 'Cabaña'} (${c.check_in} a ${c.check_out})`)
+        .map(c => {
+          const cabinObj = Array.isArray(c.cabin) ? c.cabin[0] : (c.cabin as any);
+          return `- ${c.guest_name} en ${cabinObj?.name || 'Cabaña'} (${c.check_in} a ${c.check_out})`;
+        })
         .join('\n');
       
       const confirmForce = window.confirm(

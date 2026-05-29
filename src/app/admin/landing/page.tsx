@@ -8,6 +8,7 @@ interface LandingSettings {
   hero_title: string;
   hero_subtitle: string;
   hero_bg_url: string;
+  logo_url?: string;
 }
 
 interface LandingGalleryItem {

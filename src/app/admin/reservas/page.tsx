@@ -2582,7 +2582,7 @@ function ReservasContent() {
                             <>
                               <button
                                 type="button"
-                                onClick={() => saveEdit(booking.id)}
+                                onClick={() => saveEdit()}
                                 className="px-3 py-1.5 bg-[#11d442] hover:bg-[#0fb337] text-white font-bold rounded-xl text-xs shadow transition-all active:scale-95 cursor-pointer"
                               >
                                 💾 Guardar
@@ -3159,7 +3159,7 @@ function ReservasContent() {
                       <input 
                         type="number"
                         className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm focus:outline-none"
-                        value={createForm.discount_value === 0 || createForm.discount_value === '0' || createForm.discount_value === '' ? '' : createForm.discount_value}
+                        value={createForm.discount_value === '0' || createForm.discount_value === '' ? '' : createForm.discount_value}
                         placeholder="0"
                         min="0"
                         onChange={e => setCreateForm({...createForm, discount_value: e.target.value === '' ? '' : e.target.value})}

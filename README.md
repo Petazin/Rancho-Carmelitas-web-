@@ -61,6 +61,28 @@ Sigue estos pasos para arrancar el entorno en tu computadora:
     ```
 5.  Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la página de inicio. El código maestro de la landing page se encuentra en `src/app/page.tsx`.
 
+## Carga Masiva e Importación Histórica (v1.3.0)
+
+El sistema cuenta con un módulo de migración seguro en `migration/` diseñado para cargar registros históricos (desde 2023 en adelante) provenientes de planillas Excel de control diario de arriendos.
+
+El proceso traduce el formato diario horizontal del Excel clásico en registros relacionales tabulares verticales aptos para bases de datos relacionales, admitiendo la ausencia de datos opcionales (RUT, email, teléfono, edades de niños) típicos del historial.
+
+### Estructura de Archivos
+*   [`plantilla_carga_masiva.csv`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/plantilla_carga_masiva.csv): Archivo base vacío delimitado por punto y coma (`;`), óptimo para ser rellenado por el usuario y abrirse en Excel de Windows sin problemas de codificación.
+*   [`ejemplo_carga_masiva.csv`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/ejemplo_carga_masiva.csv): Ejemplo real rellenado en base a los arriendos diarios del Excel histórico de origen, sirviendo como guía para el mapeo.
+*   [`importador.js`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/importador.js): Script administrativo robusto en Node.js que lee el archivo CSV, realiza validaciones estrictas y carga secuencialmente las cabañas, plataformas, reservas e historial de pagos directo a Supabase.
+
+### Instrucciones de Ejecución
+Para importar tus datos históricos reales:
+1. Completa tus datos en `migration/plantilla_carga_masiva.csv` (puedes apoyarte en `ejemplo_carga_masiva.csv`).
+2. Abre la terminal de Windows en el directorio `rancho-carmelitas-web`.
+3. Ejecuta el script importador indicando tu archivo CSV:
+   ```bash
+   node migration/importador.js migration/plantilla_carga_masiva.csv
+   ```
+4. El script procesará cada reserva, creará automáticamente las cabañas y canales de venta si no existen en la base de datos, y te mostrará un reporte detallado al terminar.
+
 ## Repositorio
 
 - **GitHub:** [https://github.com/Petazin/Rancho-Carmelitas-Web](https://github.com/Petazin/Rancho-Carmelitas-Web)
+

@@ -1,12 +1,28 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.1] - 2026-05-29
+
+### Corregido / Mejorado (Hotfix de Build de Producción en Vercel v1.3.1)
+
+- **Error de Tipado en Acceso a Cabaña de Reserva:** Corrección del error de TypeScript en `src/app/admin/cabanas/page.tsx:156` donde el tipo de `c.cabin` inferido por la consulta de Supabase era tratado estrictamente como un array de objetos (`{ name: any; }[]`) en lugar de un objeto plano. Se introdujo una comprobación segura (`Array.isArray(c.cabin) ? c.cabin[0] : (c.cabin as any)`) que extrae de forma defensiva el primer elemento del array si existe, o utiliza la aserción de tipo si es un objeto simple, neutralizando el fallo de compilación estática y habilitando que el pipeline de Vercel complete el build exitosamente.
+- **Falta de Propiedad en Interfaz Cabin:** Corrección del error de compilación en `src/app/admin/cabanas/page.tsx:558` donde la verificación del estado de aseo de housekeeping (`housekeeping_status === 'Necesita Aseo'`) fallaba porque la propiedad `housekeeping_status` no estaba declarada en la interfaz estática `Cabin`. Se agregó `housekeeping_status?: string` en la declaración de la interfaz de TypeScript, erradicando el error estático de compilación de producción.
+- **Falta de Propiedad logo_url en Interfaz LandingSettings:** Corrección del error de compilación en `src/app/admin/landing/page.tsx:92` donde el guardado del Hero Banner fallaba porque la propiedad `logo_url` no estaba definida en la interfaz estática `LandingSettings`. Se añadió `logo_url?: string` en la declaración de la interfaz de TypeScript, neutralizando el fallo de compilación.
+- **Firma de Argumentos en saveEdit:** Corrección de la llamada en `src/app/admin/reservas/page.tsx:2585` donde el botón de guardar invocaba `saveEdit(booking.id)` pasando una clave de ID que la función no requiere, puesto que lee y actualiza a partir del estado de React `editingBooking`. Se removió el argumento innecesario de la llamada (`saveEdit()`), erradicando el fallo de compilación.
+- **Inconsistencia de Tipos en Valor de Descuento:** Corrección del error de compilación en `src/app/admin/reservas/page.tsx:3162` debido a la comparación estricta del string `createForm.discount_value` con el valor numérico `0`. Se removió la comparación numérica sin overlap (`=== 0`), manteniendo las comparaciones exclusivas de string (`=== '0' || === ''`), satisfaciendo las restricciones de TypeScript.
+- **Saneamiento de database.types.ts:** Corrección de un fallo crítico del compilador provocado por la corrupción del archivo `src/lib/database.types.ts`. El archivo contenía texto residual de instalación de `npx` ("Need to install the following packages...") y estaba guardado en codificación UTF-16 LE generada por PowerShell. Se sobrescribió con una estructura de tipos TypeScript válida en UTF-8, erradicando el error estático de sintaxis.
+
 ## [1.3.0] - 2026-05-27
 
-### Reinicio Operacional (Inicio de Datos Reales)
+### Reinicio Operacional y Carga Masiva (Inicio de Datos Reales)
 
 - **Reinicio Total de Base de Datos de Prueba:** Se eliminaron de forma irreversible y confirmada por el propietario todos los datos de prueba del sistema. Las tablas limpiadas son: `bookings`, `booking_payments`, `cabin_closures`, `cabins`, `plataformas`, `audit_logs` y `landing_gallery`. La tabla `landing_settings` fue restaurada a sus valores por defecto del Hero Banner.
 - **Preservación de Usuarios:** La tabla `profiles` con los **2 usuarios** registrados del equipo fue preservada completamente e intacta.
-- **Estado:** El sistema queda en estado cero, listo para el ingreso de datos históricos reales del Rancho Carmelitas.
+- **Módulo de Carga Masiva e Importación Histórica:** 
+  - **Plantilla CSV del Historial:** Creación de [`plantilla_carga_masiva.csv`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/plantilla_carga_masiva.csv) delimitada por punto y coma (`;`), lista para rellenarse con datos reales y compatible de forma nativa con Excel de Windows.
+  - **Archivo de Ejemplo:** Creación de [`ejemplo_carga_masiva.csv`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/ejemplo_carga_masiva.csv) con datos basados en el Excel real de origen (ej. Empresa ERE, Constanza Soto, Broyan Rojas) que ilustra cómo mapear el control diario a registros relacionales históricos tabulares.
+  - **Script de Importación Inteligente:** Creación de [`importador.js`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/migration/importador.js) que lee el CSV, normaliza formatos de fecha y RUT chileno, crea dinámicamente las cabañas y canales de venta faltantes, inserta de forma segura las reservas y registra los pagos históricos acumulados en la tabla relacional `booking_payments` usando Supabase.
+- **Estado:** El sistema queda en estado cero y con el motor de carga masiva listo para recibir todo el historial de reservas de Rancho Carmelitas (2023-2026).
+
 
 ## [1.2.6] - 2026-05-27
 
