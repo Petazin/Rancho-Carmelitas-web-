@@ -4,6 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { SocialSection } from "@/components/ui/SocialSection";
 import { Logo } from "@/components/ui/Logo";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   
   // Extraemos las cabañas desde Supabase y las ordenamos por precio

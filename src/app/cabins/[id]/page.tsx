@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { BookingForm } from "@/components/ui/BookingForm";
 import { CabinDetailTabs } from "@/components/ui/CabinDetailTabs";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CabinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   

@@ -1,5 +1,12 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.5] - 2026-05-30
+
+### Corregido / Mejorado (Hotfix de Renderizado Dinámico en Tiempo Real v1.3.5)
+
+- **Soporte de Autogestión Inmediata en el Home:** Se inyectó la directiva `export const dynamic = 'force-dynamic';` al inicio de la Landing Page pública (`src/app/page.tsx`). Esto fuerza a Next.js a desactivar la compilación estática (SSG) de la página principal en Vercel, permitiendo realizar consultas en caliente y en tiempo real a Supabase en cada visita. De esta forma, cualquier cambio realizado por el administrador en `/admin/landing` (cambios en el lema, textos del Hero, logotipo del Rancho o fotos de la Galería de Momentos) se refleja de inmediato en `ranchocarmelitas.com` sin requerir reconstrucciones ni nuevos despliegues del sitio en la nube.
+- **Renderizado Dinámico en Detalles de Cabañas:** Se inyectó la misma directiva `export const dynamic = 'force-dynamic';` en la ruta dinámica pública de cabañas (`src/app/cabins/[id]/page.tsx`), garantizando que la disponibilidad de bloqueos por housekeeping, tarifas, adicionales y la pestaña de identidad local de Pullally muestren siempre información fresca y sin caché en producción.
+
 ## [1.3.4] - 2026-05-30
 
 ### Añadido / Mejorado (Cabañas Narrativas e Identidad de Pullally con Pestañas Dinámicas v1.3.4)

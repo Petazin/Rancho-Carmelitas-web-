@@ -342,3 +342,12 @@
 - A solicitud directa del usuario, se inició el proceso de control de versiones Git para preparar, consignar y subir los cambios a GitHub.
 - Se prepararon y propusieron secuencialmente las instrucciones de terminal: `git status`, `git add .`, `git commit -m "feat(cabins): implementar cabanas narrativas e identidad de Pullally con pestanas dinamicas (v1.3.4)"` y `git push origin master`.
 - Con esto, se consolida la versión [1.3.4] en el repositorio oficial y se gatilla el pipeline de despliegue automatizado en producción en Vercel.
+[2026-05-30 02:11:00] Actividad de Antigravity:
+- Se identificó y resolvió el bug de visualización de fotos autogestionables en producción en `ranchocarmelitas.com` (donde la landing page pública seguía mostrando la foto de fondo del fallback estático en lugar de la foto del jardín guardada por el usuario en Supabase).
+- Se diagnosticó que el problema se debe a la generación estática (SSG) de Next.js por defecto durante el build en Vercel, la cual cachea el HTML final.
+- Se implementó el **Hotfix de Renderizado Dinámico en Tiempo Real (Versión 1.3.5)**:
+  * Se inyectó `export const dynamic = 'force-dynamic';` en la landing page pública (`src/app/page.tsx`).
+  * Se inyectó `export const dynamic = 'force-dynamic';` en la página de detalles de cabaña (`src/app/cabins/[id]/page.tsx`).
+- Con esto, se fuerza a Next.js a realizar consultas dinámicas (SSR) en caliente en cada visita, logrando que los cambios del panel PMS (Hero banner, logotipo, galería, comisiones, bloqueos) impacten de forma **inmediata en el acto** sin requerir builds.
+- Se actualizaron en español los archivos documentales `GEMINI.md` y `CHANGELOG.md` a la versión [1.3.5].
+- Se prepararon y propusieron secuencialmente los comandos de Git para empaquetar, consignar y empujar el hotfix a GitHub (`git add . ; git commit -m "..." ; git push origin master`), gatillando el despliegue automático del release en producción en Vercel.
