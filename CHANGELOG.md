@@ -1,5 +1,16 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.4] - 2026-05-30
+
+### Añadido / Mejorado (Cabañas Narrativas e Identidad de Pullally con Pestañas Dinámicas v1.3.4)
+
+- **Campos Narrativos en Base de Datos:** Creación y despliegue del script de base de datos `schema_update_cabana_narrativa.sql` para inyectar cuatro nuevas columnas seguras en la tabla `cabins` de Supabase: `slogan` (lema/bajada poética), `origin_title` (título de sección de origen), `origin_description` (reseña histórica/local de conexión) y `fun_fact` (dato curioso destacado de Pullally).
+- **Módulo de Edición e Inserción Narrativa en el PMS:** Modificación integral del panel administrativo de cabañas (`src/app/admin/cabanas/page.tsx`) ampliando los formularios de creación y de edición inline para capturar y guardar de forma estructurada los lemas, reseñas y datos curiosos locales de cada cabaña, sincronizándose en tiempo real con Supabase.
+- **Componente de Cliente de Pestañas Dinámicas (Stitch UI):** Creación del componente interactivo `<CabinDetailTabs />` (`src/components/ui/CabinDetailTabs.tsx`) que divide de forma responsiva la información de la cabaña:
+  - **Pestaña 1: La Estadía:** Renderiza ordenadamente la descripción física tradicional, la galería secundaria de fotos y la lista de instalaciones/comodidades.
+  - **Pestaña 2: El Alma de la Cabaña:** Despliega con transiciones fluidas el Slogan en Serif itálico grande, el origen de su nombre y el recuadro estilizado crema cálida (`bg-[#fef9f3]`) del **Dato Curioso** con icono de bombilla (`💡`) sutilmente animado.
+- **Integración Modular en la Vista Pública:** Reemplazo de los bloques estáticos en el Server Component del detalle de cabaña (`src/app/cabins/[id]/page.tsx`) por el nuevo componente interactivo, manteniendo la tarjeta de reservas (`BookingForm`) 100% operativa e inalterada en su comportamiento de checkout.
+
 ## [1.3.3] - 2026-05-29
 
 ### Añadido / Mejorado (Ampliación de Auditoría Completa en Lenguaje Natural v1.3.3)

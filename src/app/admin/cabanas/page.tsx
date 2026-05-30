@@ -23,15 +23,19 @@ interface Cabin {
   max_extra_guests: number;
   extra_guest_surcharge_percentage: number;
   housekeeping_status?: string;
+  slogan?: string;
+  origin_title?: string;
+  origin_description?: string;
+  fun_fact?: string;
 }
 
 export default function AdminCabanasPage() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, image_url: string, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({ name: '', price: 0, capacity: 0, image_url: '', gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
+  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, image_url: string, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string}>({ name: '', price: 0, capacity: 0, image_url: '', gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '' });
   const [isCreating, setIsCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, image_url: string, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed'}>({
+  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, image_url: string, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string}>({
     name: '',
     price_per_night: 0,
     capacity: 2,
@@ -40,7 +44,11 @@ export default function AdminCabanasPage() {
     amenities: [],
     max_extra_guests: 0,
     extra_guest_surcharge_percentage: 100,
-    extra_surcharge_mode: 'percentage' as 'percentage' | 'fixed'
+    extra_surcharge_mode: 'percentage' as 'percentage' | 'fixed',
+    slogan: '',
+    origin_title: '¿Por qué este nombre?',
+    origin_description: '',
+    fun_fact: ''
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -227,7 +235,11 @@ export default function AdminCabanasPage() {
       amenities: cabin.amenities || [],
       max_extra_guests: cabin.max_extra_guests || 0,
       extra_guest_surcharge_percentage: cabin.extra_guest_surcharge_percentage || 100,
-      extra_surcharge_mode: 'percentage'
+      extra_surcharge_mode: 'percentage',
+      slogan: cabin.slogan || '',
+      origin_title: cabin.origin_title || '¿Por qué este nombre?',
+      origin_description: cabin.origin_description || '',
+      fun_fact: cabin.fun_fact || ''
     });
   };
 
@@ -291,7 +303,11 @@ export default function AdminCabanasPage() {
         description: editForm.description,
         amenities: editForm.amenities.length > 0 ? editForm.amenities : null,
         max_extra_guests: editForm.max_extra_guests,
-        extra_guest_surcharge_percentage: editForm.extra_guest_surcharge_percentage
+        extra_guest_surcharge_percentage: editForm.extra_guest_surcharge_percentage,
+        slogan: editForm.slogan || null,
+        origin_title: editForm.origin_title || '¿Por qué este nombre?',
+        origin_description: editForm.origin_description || null,
+        fun_fact: editForm.fun_fact || null
       })
       .eq('id', id);
 
@@ -327,7 +343,11 @@ export default function AdminCabanasPage() {
         amenities: createForm.amenities.length > 0 ? createForm.amenities : null,
         is_active: true,
         max_extra_guests: createForm.max_extra_guests,
-        extra_guest_surcharge_percentage: createForm.extra_guest_surcharge_percentage
+        extra_guest_surcharge_percentage: createForm.extra_guest_surcharge_percentage,
+        slogan: createForm.slogan || null,
+        origin_title: createForm.origin_title || '¿Por qué este nombre?',
+        origin_description: createForm.origin_description || null,
+        fun_fact: createForm.fun_fact || null
       }])
       .select('id')
       .single();
@@ -393,7 +413,7 @@ export default function AdminCabanasPage() {
 
     setUploading(false);
     setIsCreating(false);
-    setCreateForm({ name: '', price_per_night: 0, capacity: 2, image_url: '', description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage' });
+    setCreateForm({ name: '', price_per_night: 0, capacity: 2, image_url: '', description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '' });
     setSelectedFiles([]);
     setCoverFile(null);
     fetchCabins();
@@ -699,6 +719,55 @@ export default function AdminCabanasPage() {
               />
             </div>
             
+            {/* 🎭 Conexión e Identidad Local (Pullally) - Crear */}
+            <div className="md:col-span-5 p-5 bg-[#fef9f3]/60 rounded-3xl border border-orange-100 shadow-sm space-y-4">
+              <h4 className="text-sm font-bold text-orange-950 uppercase tracking-wider flex items-center gap-2">
+                🎭 Conexión e Identidad Local (Pullally)
+              </h4>
+              <p className="text-[11px] text-orange-800 font-medium">
+                Conecta esta cabaña con la historia, geografía o cultura de Pullally. Se desplegará en la pestaña interactiva de detalles de la cabaña.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Lema o Bajada</label>
+                  <input 
+                    placeholder="Ej: Un viaje en el tiempo"
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-sm" 
+                    value={createForm.slogan || ''} 
+                    onChange={e => setCreateForm({...createForm, slogan: e.target.value})}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título de la Reseña</label>
+                  <input 
+                    placeholder="Ej: ¿Por qué este nombre?"
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-sm" 
+                    value={createForm.origin_title || '¿Por qué este nombre?'} 
+                    onChange={e => setCreateForm({...createForm, origin_title: e.target.value})}
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reseña Histórica o Relación con Pullally</label>
+                  <textarea 
+                    placeholder="Describe por qué se llama así y qué relación tiene con Pullally..."
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-sm min-h-[80px]" 
+                    value={createForm.origin_description || ''} 
+                    onChange={e => setCreateForm({...createForm, origin_description: e.target.value})}
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">💡 Dato Curioso o Tip Local</label>
+                  <textarea 
+                    placeholder="Ej: ¡Imagina que hace un siglo todo este territorio era prácticamente el patio de un solo gran 'Palacio'!"
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-sm min-h-[60px]" 
+                    value={createForm.fun_fact || ''} 
+                    onChange={e => setCreateForm({...createForm, fun_fact: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+            
             <div className="md:col-span-5 mt-2">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Características y Comodidades (Selección Múltiple)</label>
               <div className="flex flex-wrap gap-2">
@@ -950,6 +1019,55 @@ export default function AdminCabanasPage() {
                     value={editForm.description} 
                     onChange={e => setEditForm({...editForm, description: e.target.value})}
                   />
+                </div>
+                
+                {/* 🎭 Conexión e Identidad Local (Pullally) - Editar */}
+                <div className="md:col-span-3 p-4 bg-[#fef9f3]/60 rounded-3xl border border-orange-100 shadow-sm space-y-4">
+                  <h4 className="text-xs font-bold text-orange-950 uppercase tracking-wider flex items-center gap-1.5">
+                    🎭 Conexión e Identidad Local (Pullally)
+                  </h4>
+                  <p className="text-[10px] text-orange-850 font-medium leading-relaxed">
+                    Personaliza la historia y atractivos de la localidad para esta cabaña. Se despliega en la sección interactiva pública.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Lema o Bajada</label>
+                      <input 
+                        placeholder="Ej: Un viaje en el tiempo"
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-xs" 
+                        value={editForm.slogan || ''} 
+                        onChange={e => setEditForm({...editForm, slogan: e.target.value})}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Título de la Reseña</label>
+                      <input 
+                        placeholder="Ej: ¿Por qué este nombre?"
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-xs" 
+                        value={editForm.origin_title || '¿Por qué este nombre?'} 
+                        onChange={e => setEditForm({...editForm, origin_title: e.target.value})}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Reseña Histórica de Pullally</label>
+                      <textarea 
+                        placeholder="Describe la relación con Pullally..."
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-xs min-h-[60px]" 
+                        value={editForm.origin_description || ''} 
+                        onChange={e => setEditForm({...editForm, origin_description: e.target.value})}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">💡 Dato Curioso Local</label>
+                      <textarea 
+                        placeholder="Escribe el dato curioso..."
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-300 text-xs min-h-[45px]" 
+                        value={editForm.fun_fact || ''} 
+                        onChange={e => setEditForm({...editForm, fun_fact: e.target.value})}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="md:col-span-3 mt-2">
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Comodidades (Selección Múltiple)</label>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import { BookingForm } from "@/components/ui/BookingForm";
+import { CabinDetailTabs } from "@/components/ui/CabinDetailTabs";
 
 export default async function CabinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,7 +34,11 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
     galleryUrls: cabinData.gallery_urls?.length ? cabinData.gallery_urls : ['/cabins/default.jpg'],
     price: cabinData.price_per_night,
     bedrooms: Math.ceil(cabinData.capacity / 2),
-    amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada"] 
+    amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada"],
+    slogan: cabinData.slogan,
+    origin_title: cabinData.origin_title,
+    origin_description: cabinData.origin_description,
+    fun_fact: cabinData.fun_fact
   };
 
   const baseCapacity = cabin.capacity || 2;
@@ -145,38 +150,7 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
               </div>
 
               <div className="mb-10">
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Sobre esta cabaña</h2>
-                <p className="text-gray-600 text-lg leading-relaxed">
-                  {cabin.description || 'Una hermosa cabaña lista para tu descanso.'}
-                </p>
-              </div>
-
-              {/* Galería Secundaria (Scroller horizontal) */}
-              {cabin.galleryUrls.length > 1 && (
-                <div className="mb-10">
-                  <h2 className="text-2xl font-bold mb-4 text-gray-900">Galería de Fotos</h2>
-                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x custom-scrollbar">
-                    {cabin.galleryUrls.slice(1).map((url: string, index: number) => (
-                      <div key={index} className="relative w-64 md:w-80 h-48 md:h-56 flex-shrink-0 snap-center rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                        <Image src={url} alt={`Vista ${index+2} de ${cabin.name}`} fill className="object-cover hover:scale-105 transition-transform duration-500" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h2 className="text-2xl font-bold mb-6 text-gray-900">Lo que ofrece este lugar</h2>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {cabin.amenities.map((item: string, index: number) => (
-                    <li key={index} className="flex items-center gap-3 text-gray-700">
-                      <svg className="w-5 h-5 text-[#11d442]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <CabinDetailTabs cabin={cabin} />
               </div>
             </div>
 

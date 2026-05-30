@@ -331,3 +331,14 @@
 - Se actualizaron en español los archivos de control y seguimiento del proyecto: `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.3.3].
 - Se preparó y propuso el flujo de control de versiones Git para sincronizar el código consolidado hacia GitHub (`git status`, `git add .`, `git commit` y `git push`), gatillando el despliegue automático del release en producción en Vercel.
 - Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.
+[2026-05-30 00:31:00] Actividad de Antigravity:
+- Se implementaron las Cabañas Narrativas e Identidad de Pullally con Pestañas Dinámicas (Versión 1.3.4).
+- Se creó el script SQL de base de datos `schema_update_cabana_narrativa.sql` para agregar las columnas `slogan`, `origin_title`, `origin_description` y `fun_fact` a la tabla `cabins`.
+- Se modificaron los formularios del PMS administrativo en `src/app/admin/cabanas/page.tsx` para capturar y actualizar los datos locales en Supabase.
+- Se creó el componente interactivo de pestañas `src/components/ui/CabinDetailTabs.tsx` y se integró en la página de detalle público `src/app/cabins/[id]/page.tsx` con un diseño de alta gama y micro-animaciones fluidas de Stitch UI.
+- Se actualizaron los archivos de documentación: `CHANGELOG.md` y `GEMINI.md` a la versión [1.3.4] en español.
+- A petición del usuario, se preparó y propuso el comando `npm run dev` para iniciar el servidor de desarrollo local y facilitar la prueba transparente de las nuevas características en caliente.
+[2026-05-30 01:57:00] Actividad de Antigravity:
+- A solicitud directa del usuario, se inició el proceso de control de versiones Git para preparar, consignar y subir los cambios a GitHub.
+- Se prepararon y propusieron secuencialmente las instrucciones de terminal: `git status`, `git add .`, `git commit -m "feat(cabins): implementar cabanas narrativas e identidad de Pullally con pestanas dinamicas (v1.3.4)"` y `git push origin master`.
+- Con esto, se consolida la versión [1.3.4] en el repositorio oficial y se gatilla el pipeline de despliegue automatizado en producción en Vercel.
