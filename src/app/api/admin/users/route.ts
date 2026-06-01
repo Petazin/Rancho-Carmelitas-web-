@@ -79,10 +79,13 @@ export async function POST(request: Request) {
       }
     );
 
+    const requestOrigin = new URL(request.url).origin;
+    const siteOrigin = requestOrigin.includes('localhost') ? requestOrigin : 'https://ranchocarmelitas.com';
+
     // 1. Invitar al usuario usando supabaseAdminLocal
     const { data: inviteData, error: inviteError } = await supabaseAdminLocal.auth.admin.inviteUserByEmail(email, {
       data: { full_name, role, phone },
-      redirectTo: `${new URL(request.url).origin}/login`,
+      redirectTo: `${siteOrigin}/login`,
     });
 
     // Si arroja error, puede ser porque ya existe
@@ -97,7 +100,7 @@ export async function POST(request: Request) {
           // Re-enviar invitación
           const { data: reinviteData, error: reinviteError } = await supabaseAdminLocal.auth.admin.inviteUserByEmail(email, {
             data: { full_name, role, phone },
-            redirectTo: `${new URL(request.url).origin}/login`,
+            redirectTo: `${siteOrigin}/login`,
           });
           
           if (reinviteError) throw reinviteError;

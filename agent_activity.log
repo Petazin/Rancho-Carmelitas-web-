@@ -351,3 +351,12 @@
 - Con esto, se fuerza a Next.js a realizar consultas dinámicas (SSR) en caliente en cada visita, logrando que los cambios del panel PMS (Hero banner, logotipo, galería, comisiones, bloqueos) impacten de forma **inmediata en el acto** sin requerir builds.
 - Se actualizaron en español los archivos documentales `GEMINI.md` y `CHANGELOG.md` a la versión [1.3.5].
 - Se prepararon y propusieron secuencialmente los comandos de Git para empaquetar, consignar y empujar el hotfix a GitHub (`git add . ; git commit -m "..." ; git push origin master`), gatillando el despliegue automático del release en producción en Vercel.
+[2026-06-01 11:30:00] Actividad de Antigravity:
+- Se implementó el Hotfix de Redirección Robusta de Invitaciones en Producción (Versión 1.3.6).
+- Se diagnosticó y corrigió el redireccionamiento erróneo del enlace de invitación de colaboradores de Supabase Auth (el cual redirigía a `http://localhost:3000` en producción).
+- Se modificó el endpoint de la API de administración de usuarios `src/app/api/admin/users/route.ts`:
+  * Se implementó una lógica defensiva en caliente (`siteOrigin`) que evalúa activamente si el flujo opera localmente (`localhost:3000`) o en la nube.
+  * Si la llamada ocurre en la nube (Vercel/Producción), fuerza explícitamente el uso de la URL de producción definitiva: `https://ranchocarmelitas.com` en el parámetro `redirectTo` enviado a Supabase Auth.
+- Se actualizaron de forma unificada los archivos documentales obligatorios: `CHANGELOG.md` (versión 1.3.6) y `GEMINI.md` reflejando este hotfix de redirección.
+- Se instruyó detalladamente al usuario para actualizar la "Site URL" y "Redirect URLs" en el panel de control de Supabase Auth para habilitar la redirección en la nube de forma segura.
+- Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.

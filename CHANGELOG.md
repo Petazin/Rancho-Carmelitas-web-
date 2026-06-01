@@ -1,5 +1,11 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.6] - 2026-06-01
+
+### Corregido / Mejorado (Hotfix de Redirección Robusta de Invitaciones en Producción v1.3.6)
+
+- **Redirección Defensiva de Invitación a Colaboradores:** Se implementó una lógica de origen defensiva (`siteOrigin`) en el endpoint API de administración de usuarios (`src/app/api/admin/users/route.ts`). El sistema ahora detecta de forma activa si el flujo opera en entorno local (`localhost:3000`) o en la nube. Si es en la nube, fuerza estrictamente el uso del dominio oficial de producción `https://ranchocarmelitas.com` en el parámetro `redirectTo` enviado a Supabase Auth. Esto previene de forma rígida que se generen enlaces de confirmación dirigidos al servidor local de desarrollo (`localhost:3000`) cuando las invitaciones o reenvíos de invitaciones son gestionados desde el panel en producción.
+
 ## [1.3.5] - 2026-05-30
 
 ### Corregido / Mejorado (Hotfix de Renderizado Dinámico en Tiempo Real v1.3.5)
