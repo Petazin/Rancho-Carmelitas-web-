@@ -149,7 +149,7 @@ export async function POST(request: Request) {
           }
 
           // Si no está confirmado (invitación pendiente), re-enviar invitación original de registro
-          const { data: reinviteData, error: reinviteError } = await supabaseAdminLocal.auth.inviteUserByEmail(email, {
+          const { data: reinviteData, error: reinviteError } = await supabaseAdminLocal.auth.admin.inviteUserByEmail(email, {
             data: { full_name, role, phone },
             redirectTo: `${siteOrigin}/login`,
           });

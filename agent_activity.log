@@ -378,3 +378,6 @@
   * Formulario seguro para ingresar y confirmar la nueva clave tras la redirección de Supabase (`#type=recovery` o `access_token`), actualizando de forma transparente con `updateUser` y redirigiendo al panel.
 - Se actualizaron de forma integrada los archivos documentales del proyecto: `GEMINI.md`, `README.md` y `CHANGELOG.md` reflejando todos los cambios de la versión [1.3.8].
 - Comandos de shell ejecutados y propuestos con autorización explícita para control de versiones: `git status`, `git add .`, `git commit -m "feat(auth): implementar flujo completo de restablecimiento y renovacion de contrasenas (v1.3.8)"` y `git push origin master`.
+- Se identificó y corrigió el fallo de compilación en Vercel provocado por el error de tipado en `src/app/api/admin/users/route.ts:152` al llamar a `inviteUserByEmail` sin el namespace `.admin`. Se actualizó a `supabaseAdminLocal.auth.admin.inviteUserByEmail`.
+- Se actualizaron los documentos `GEMINI.md` y `CHANGELOG.md` en español.
+- Comandos de shell ejecutados y propuestos con autorización explícita para consolidar el hotfix en GitHub: `git status`, `git add .`, `git commit -m "fix(auth): corregir namespace en inviteUserByEmail para build de Vercel"`, `git push origin master`.

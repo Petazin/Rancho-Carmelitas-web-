@@ -5,6 +5,7 @@
 ### Añadido / Mejorado (Flujo Completo de Restablecimiento y Renovación de Contraseñas v1.3.8)
 
 - **Acción Inteligente del Administrador:** Modificación de `/api/admin/users/route.ts` para que, en caso de pulsar "Reenviar" sobre un colaborador cuya cuenta de Supabase ya ha sido confirmada y está activa, envíe automáticamente un correo oficial de restablecimiento/renovación de contraseña utilizando `auth.resetPasswordForEmail` y retorne un mensaje explicativo al panel administrativo.
+- **Hotfix de Compilación de Producción en Vercel:** Se corrigió un error de tipado en `src/app/api/admin/users/route.ts:152` donde se invocaba `inviteUserByEmail` directamente sobre `supabaseAdminLocal.auth` en lugar del namespace administrador `supabaseAdminLocal.auth.admin.inviteUserByEmail`, resolviendo de inmediato el fallo en la nube de Vercel.
 - **Auditoría Trace Trail Enriquecida:** Actualización de `src/app/admin/auditoria/page.tsx` para interpretar los nuevos logs de auditoría manuales del backend:
   * Si la acción en perfiles es un reenvío de invitación, renderiza el timeline con `📩` y una descripción en lenguaje natural en español.
   * Si la acción es un envío de restablecimiento de contraseña, renderiza el timeline con `🔑` y una descripción detallada en español.

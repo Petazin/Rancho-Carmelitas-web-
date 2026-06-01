@@ -140,6 +140,7 @@ El sistema ahora soporta:
 
 - **Flujo Completo de Restablecimiento y Renovación de Contraseñas (Versión 1.3.8):** Implementación de una solución integral de 360 grados que otorga gobernanza a la administración y autonomía al colaborador:
   * **Acción Inteligente del Administrador:** En `/admin/usuarios`, al pulsar "Reenviar" sobre un colaborador con cuenta confirmada, el backend lo detecta y envía automáticamente un correo oficial de recuperación de clave.
+  * **Hotfix de Compilación de Producción en Vercel:** Se corrigió un error de tipado en `src/app/api/admin/users/route.ts:152` donde se invocaba `inviteUserByEmail` directamente sobre `supabaseAdminLocal.auth` en lugar del namespace administrador `supabaseAdminLocal.auth.admin.inviteUserByEmail`, resolviendo de inmediato el fallo en la nube de Vercel.
   * **Auto-servicio en Acceso:** Inyección de una interfaz premium interactiva de 3 vistas en `/login` (`src/app/login/page.tsx`):
     * **Inicio de Sesión Tradicional:** Incluye el nuevo botón interactivo "¿Olvidaste tu contraseña?".
     * **Solicitud de Recuperación:** Formulario para que el colaborador solicite su enlace de restauración de forma autónoma.
