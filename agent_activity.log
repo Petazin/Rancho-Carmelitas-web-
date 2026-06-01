@@ -360,3 +360,21 @@
 - Se actualizaron de forma unificada los archivos documentales obligatorios: `CHANGELOG.md` (versión 1.3.6) y `GEMINI.md` reflejando este hotfix de redirección.
 - Se instruyó detalladamente al usuario para actualizar la "Site URL" y "Redirect URLs" en el panel de control de Supabase Auth para habilitar la redirección en la nube de forma segura.
 - Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.
+[2026-06-01 11:40:00] Actividad de Antigravity:
+- Se creó el script SQL `schema_update_reinvite_audit.sql` para inyectar de forma defensiva la columna `updated_at` a la tabla `profiles` en Supabase.
+- Se modificaron los upserts del backend de Next.js en `src/app/api/admin/users/route.ts` para capturar y actualizar la marca de tiempo `updated_at` en invitaciones, reenvíos y ediciones.
+- Se actualizó el Timeline y visor comparativo en `src/app/admin/auditoria/page.tsx` para detectar cambios en `updated_at` e interpretarlos como un reenvío de invitación oficial en lenguaje natural en español con el icono `📩`, omitiendo a su vez el renderizado comparativo técnico de este campo en la UI.
+- Se actualizaron de forma integrada los archivos documentales técnicos: `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.3.7] en español.
+- Se diagnosticó y corrigió el bug de reenvío de invitación cuando el usuario ya completó el registro de forma definitiva (confirmado), lo cual arrojaba un error AuthApiError 422 en caliente. Se modificó `/src/app/api/admin/users/route.ts` para verificar `email_confirmed_at` en Supabase Auth y retornar una advertencia descriptiva y amigable en español.
+368: - Ningún comando de shell fue ejecutado autónomamente por directiva de control y seguridad.
+[2026-06-01 12:05:00] Actividad de Antigravity:
+- Se diseñó e implementó el Flujo Completo de Restablecimiento y Renovación de Contraseñas (Versión 1.3.8) con soporte administrativo y auto-servicio autónomo de colaboradores.
+- Se implementó la lógica inteligente en la API del backend (`src/app/api/admin/users/route.ts`) para que si un administrador solicita el reenvío a un colaborador con cuenta confirmada, el sistema envíe de forma automática un correo de restablecimiento de contraseña en caliente mediante Supabase Auth y devuelva un mensaje de éxito detallado.
+- Se enriqueció la bitácora de auditoría histórica (`src/app/admin/auditoria/page.tsx`), agregando soporte en el Trace Trail para identificar los nuevos logs de reenvío de invitaciones (`📩`) y solicitud de restablecimiento de claves (`🔑`), traduciendo estos eventos a lenguaje natural y claro en español.
+- Se actualizó el panel de gestión en el frontend (`src/app/admin/usuarios/page.tsx`) en el método `handleResendInvite` para renderizar en un `alert` el mensaje semántico y descriptivo exacto devuelto por la API del servidor.
+- Se rediseñó y evolucionó completamente la pantalla de acceso `/login` (`src/app/login/page.tsx`), creando una interfaz premium de Stitch UI con 3 vistas dinámicas:
+  * Formulario de inicio de sesión con el nuevo botón "¿Olvidaste tu contraseña?".
+  * Formulario para solicitar el enlace de restauración de forma autónoma (`resetPasswordForEmail`).
+  * Formulario seguro para ingresar y confirmar la nueva clave tras la redirección de Supabase (`#type=recovery` o `access_token`), actualizando de forma transparente con `updateUser` y redirigiendo al panel.
+- Se actualizaron de forma integrada los archivos documentales del proyecto: `GEMINI.md`, `README.md` y `CHANGELOG.md` reflejando todos los cambios de la versión [1.3.8].
+- Comandos de shell ejecutados y propuestos con autorización explícita para control de versiones: `git status`, `git add .`, `git commit -m "feat(auth): implementar flujo completo de restablecimiento y renovacion de contrasenas (v1.3.8)"` y `git push origin master`.

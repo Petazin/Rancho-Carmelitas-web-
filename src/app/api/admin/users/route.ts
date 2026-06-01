@@ -91,14 +91,65 @@ export async function POST(request: Request) {
     // Si arroja error, puede ser porque ya existe
     if (inviteError) {
       // Intentar re-invitar si el usuario ya existe y está pendiente
-      if (inviteError.message.includes('already registered') || inviteError.message.includes('already exists')) {
+      if (inviteError.message.includes('already registered') || inviteError.message.includes('already exists') || inviteError.status === 422) {
         // Encontrar al usuario existente
         const { data: searchUser } = await supabaseAdminLocal.auth.admin.listUsers();
         const existingUser = searchUser?.users?.find(u => u.email === email);
         
         if (existingUser) {
-          // Re-enviar invitación
-          const { data: reinviteData, error: reinviteError } = await supabaseAdminLocal.auth.admin.inviteUserByEmail(email, {
+          // Obtener perfil del administrador para auditoría manual
+          let adminProfile: any = null;
+          if (adminId) {
+            const { data } = await supabaseAdminLocal
+              .from('profiles')
+              .select('full_name, email, role')
+              .eq('id', adminId)
+              .single();
+            adminProfile = data;
+          }
+
+          // Verificar si el usuario ya confirmó su cuenta (registro definitivo)
+          const isConfirmed = !!existingUser.email_confirmed_at;
+          
+          if (isConfirmed) {
+            // El usuario ya existe y está activo: Enviar correo de restablecimiento de contraseña
+            const { error: resetError } = await supabaseAdminLocal.auth.resetPasswordForEmail(email, {
+              redirectTo: `${siteOrigin}/login`,
+            });
+            
+            if (resetError) throw resetError;
+
+            // Forzar actualización de updated_at en profiles
+            await supabaseAdminLocal
+              .from('profiles')
+              .upsert({
+                id: existingUser.id,
+                full_name,
+                role,
+                email: email,
+                phone: phone || null,
+                created_at: existingUser.created_at || new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+
+            // Registrar acción en la bitácora de auditoría de forma explícita
+            await supabaseAdminLocal.from('audit_logs').insert({
+              table_name: 'profiles',
+              record_id: existingUser.id,
+              action: 'UPDATE',
+              old_data: { email, full_name, role, status: 'confirmed', action_type: 'active' },
+              new_data: { email, full_name, role, status: 'confirmed', action_type: 'password_reset_sent' },
+              performed_by_id: adminId,
+              performed_by_email: adminProfile?.email || '',
+              performed_by_name: adminProfile?.full_name || '',
+              user_role: adminProfile?.role || 'admin'
+            });
+
+            return NextResponse.json({ success: true, message: 'El colaborador ya tiene una cuenta activa. Se le ha enviado automáticamente un correo oficial para restablecer o renovar su contraseña.' });
+          }
+
+          // Si no está confirmado (invitación pendiente), re-enviar invitación original de registro
+          const { data: reinviteData, error: reinviteError } = await supabaseAdminLocal.auth.inviteUserByEmail(email, {
             data: { full_name, role, phone },
             redirectTo: `${siteOrigin}/login`,
           });
@@ -114,12 +165,26 @@ export async function POST(request: Request) {
               role,
               email: email,
               phone: phone || null,
-              created_at: new Date().toISOString()
+              created_at: existingUser.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
             });
 
           if (profileError) throw profileError;
 
-          return NextResponse.json({ data: reinviteData, message: 'Invitación reenviada correctamente.' });
+          // Registrar la re-invitación en la bitácora de auditoría de forma explícita
+          await supabaseAdminLocal.from('audit_logs').insert({
+            table_name: 'profiles',
+            record_id: existingUser.id,
+            action: 'UPDATE',
+            old_data: { email, full_name, role, status: 'pending', action_type: 'invite_pending' },
+            new_data: { email, full_name, role, status: 'pending', action_type: 'invite_resent' },
+            performed_by_id: adminId,
+            performed_by_email: adminProfile?.email || '',
+            performed_by_name: adminProfile?.full_name || '',
+            user_role: adminProfile?.role || 'admin'
+          });
+
+          return NextResponse.json({ data: reinviteData, message: 'Invitación de registro reenviada correctamente.' });
         }
       }
       throw inviteError;
@@ -135,7 +200,8 @@ export async function POST(request: Request) {
           role,
           email: email,
           phone: phone || null,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
 
       if (profileError) {
@@ -248,7 +314,8 @@ export async function PUT(request: Request) {
         phone: phone || null,
         banned_until: is_blocked ? new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString() : null,
         block_reason: is_blocked ? (block_reason || 'Sin motivo') : null,
-        created_at: existingUser.created_at
+        created_at: existingUser.created_at,
+        updated_at: new Date().toISOString()
       });
 
     if (profileError) throw profileError;

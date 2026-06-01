@@ -115,11 +115,11 @@ export default function AuditoriaPage() {
         </div>
       );
     }
-    
-    // Para updates, encontrar y mostrar sólo los campos que realmente cambiaron
+        // Para updates, encontrar y mostrar sólo los campos que realmente cambiaron
     const changes: Record<string, { old: any; new: any }> = {};
     if (log.old_data && log.new_data) {
       Object.keys(log.new_data).forEach((key) => {
+        if (key === 'updated_at' || key === 'action_type' || key === 'status') return; // Excluir campos técnicos del diff
         const oldVal = log.old_data[key];
         const newVal = log.new_data[key];
         if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
@@ -242,6 +242,8 @@ export default function AuditoriaPage() {
         const newRole = log.new_data?.role;
         const oldBanned = log.old_data?.banned_until || null;
         const newBanned = log.new_data?.banned_until || null;
+        const oldUpdated = log.old_data?.updated_at || null;
+        const newUpdated = log.new_data?.updated_at || null;
         const motivo = log.new_data?.block_reason || 'Sin motivo especificado';
 
         if (oldBanned !== newBanned) {
@@ -255,6 +257,24 @@ export default function AuditoriaPage() {
         if (oldRole !== newRole && newRole) {
           return `🛡️ ${autor} actualizó el rol de seguridad de "${usuario}" de "${oldRole}" a "${newRole}" (${fecha}).`;
         }
+
+        // Detectar si fue un reenvío de invitación de correo o restablecimiento de contraseña vía action_type
+        if (log.new_data?.action_type === 'invite_resent') {
+          return `📩 ${autor} reenvió el correo de invitación al colaborador "${usuario}" con el rol de "${rol}" (${fecha}).`;
+        }
+        if (log.new_data?.action_type === 'password_reset_sent') {
+          return `🔑 ${autor} solicitó y envió un correo de restablecimiento de contraseña para el colaborador "${usuario}" con el rol de "${rol}" (${fecha}).`;
+        }
+
+        // Detectar si fue un reenvío de invitación de correo (retrocompatibilidad)
+        if (oldUpdated !== newUpdated && 
+            oldRole === newRole && 
+            log.old_data?.full_name === log.new_data?.full_name && 
+            log.old_data?.phone === log.new_data?.phone && 
+            log.old_data?.email === log.new_data?.email) {
+          return `📩 ${autor} reenvió el correo de invitación al colaborador "${usuario}" con el rol de "${rol}" (${fecha}).`;
+        }
+
         return `👤 ${autor} actualizó la información de perfil del usuario "${usuario}" (${fecha}).`;
       }
       return `👤 ${autor} revocó el acceso y eliminó el perfil del usuario "${usuario}" con rol de "${rol}" (${fecha}).`;

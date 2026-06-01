@@ -177,7 +177,7 @@ export default function UsuariosPage() {
       });
       const result = await response.json();
       if (result.error) throw new Error(result.error);
-      alert('📩 Invitación reenviada con éxito al correo: ' + email);
+      alert(result.message || '📩 Invitación de registro reenviada correctamente.');
     } catch (err: any) {
       alert('Error al reenviar invitación: ' + err.message);
     }

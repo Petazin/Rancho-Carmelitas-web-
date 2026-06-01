@@ -1,5 +1,27 @@
 # Changelog - Rancho Carmelitas
 
+## [1.3.8] - 2026-06-01
+
+### Añadido / Mejorado (Flujo Completo de Restablecimiento y Renovación de Contraseñas v1.3.8)
+
+- **Acción Inteligente del Administrador:** Modificación de `/api/admin/users/route.ts` para que, en caso de pulsar "Reenviar" sobre un colaborador cuya cuenta de Supabase ya ha sido confirmada y está activa, envíe automáticamente un correo oficial de restablecimiento/renovación de contraseña utilizando `auth.resetPasswordForEmail` y retorne un mensaje explicativo al panel administrativo.
+- **Auditoría Trace Trail Enriquecida:** Actualización de `src/app/admin/auditoria/page.tsx` para interpretar los nuevos logs de auditoría manuales del backend:
+  * Si la acción en perfiles es un reenvío de invitación, renderiza el timeline con `📩` y una descripción en lenguaje natural en español.
+  * Si la acción es un envío de restablecimiento de contraseña, renderiza el timeline con `🔑` y una descripción detallada en español.
+- **Mensajería Reactiva en el Panel de Miembros:** Actualización en `src/app/admin/usuarios/page.tsx` para que el alert despliegue el mensaje personalizado devuelto por el backend en lugar de un texto fijo genérico, permitiendo al administrador saber con precisión qué tipo de correo se envió.
+- **Interfaz de Auto-servicio en Acceso (`/login`):** Rediseño y evolución completa de `src/app/login/page.tsx` incorporando un sistema interactivo de 3 vistas fluidas con transiciones de diseño premium:
+  * **Vista 1 (Login Tradicional):** Añade el botón "¿Olvidaste tu contraseña?" que transiciona a la segunda vista.
+  * **Vista 2 (Solicitar Recuperación):** Formulario para ingresar el correo y recibir el enlace autogestionado de restauración mediante `resetPasswordForEmail`.
+  * **Vista 3 (Establecer Nueva Contraseña):** Se activa dinámicamente mediante `useEffect` al escuchar cambios de hash (`#type=recovery` o `access_token`) en la URL cuando el usuario regresa del enlace de Supabase. Permite ingresar y validar una nueva contraseña, actualizándola de forma segura en Supabase Auth mediante `supabase.auth.updateUser` y redirigiendo al panel administrativo.
+
+## [1.3.7] - 2026-06-01
+
+### Añadido / Mejorado (Auditoría de Reenvío de Invitaciones de Correo v1.3.7)
+
+- **Control Temporal en Base de Datos (`updated_at`):** Creación del script SQL `schema_update_reinvite_audit.sql` para inyectar de forma defensiva la columna `updated_at` a la tabla pública `profiles` en Supabase.
+- **Sincronización en Backend (Next.js API):** Modificación en la API de gestión de usuarios (`src/app/api/admin/users/route.ts`) para registrar y actualizar la marca de tiempo `updated_at` con la fecha actual del servidor cada vez que un administrador invita, reenvía una invitación de correo SMTP o actualiza los datos de un colaborador.
+- **Detección e Interpretación en Lenguaje Natural en el Timeline:** Actualización del panel de Auditoría (`src/app/admin/auditoria/page.tsx`) ampliando la función `getNaturalLanguageExplanation(log)` para identificar cambios exclusivos en el campo `updated_at` en `profiles`. Esto permite redactar fluidamente eventos con el icono de correo `📩` indicando de forma explícita que se reenvió la invitación al colaborador, al mismo tiempo que se excluyó este campo del diff técnico comparativo de campos modificados para evitar ruido visual en la UI.
+
 ## [1.3.6] - 2026-06-01
 
 ### Corregido / Mejorado (Hotfix de Redirección Robusta de Invitaciones en Producción v1.3.6)
