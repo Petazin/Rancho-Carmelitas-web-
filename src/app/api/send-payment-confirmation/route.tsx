@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const { data: settingsData } = await supabaseAdmin
       .from('settings')
       .select('key, value')
-      .in('key', ['company_name', 'company_rut', 'company_address', 'company_phone', 'company_email']);
+      .in('key', ['company_name', 'company_rut', 'company_address', 'company_phone', 'company_email', 'email_sender']);
 
     const settings: Record<string, string> = {};
     if (settingsData) {
@@ -78,9 +78,11 @@ export async function POST(req: Request) {
       requiresInvoice: requiresInvoice || false,
     });
 
+    const emailSender = settings.email_sender || 'Rancho Carmelitas <onboarding@resend.dev>';
+
     // Enviar correo definitivo al Cliente
     const { data: customerData, error: customerError } = await resend.emails.send({
-      from: 'Rancho Carmelitas <onboarding@resend.dev>',
+      from: emailSender,
       to: [guestEmail],
       subject: `✓ Reserva Confirmada: ${cabinName} — ${settings.company_name || 'Rancho Carmelitas'}`,
       react: emailElement,

@@ -1,5 +1,17 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.0] - 2026-06-01
+
+### Añadido / Mejorado (Migración de Infraestructura, Gobernanza in-app y Documentación Académica v1.4.0)
+
+- **Desvinculación y Parametrización de Mailing (Resend):** Refactorización completa de los endpoints API `/api/send-confirmation`, `/api/send-payment-confirmation` y `/api/send-cancelation` para eliminar correos y remitentes fijos en el código. Ahora leen dinámicamente de Supabase settings las claves `company_email` (para notificaciones al administrador) y `email_sender` (remitente oficial con dominio verificado `@ranchocarmelitas.com`), resguardando las credenciales personales del programador.
+- **Panel de Gobernanza Técnica e Infraestructura:** Desarrollo de una nueva sección administrativa en `/admin/infraestructura` (`src/app/admin/infraestructura/page.tsx`) con diseño premium Stitch UI. Permite monitorear cuotas de correo de Resend en tiempo real, visualizar la conexión relacional de la base de datos de producción y delegar DNS de Vercel/DominiosChile de forma desatendida.
+- **Llavero Seguro in-app (Vault) y Re-autenticación de Seguridad:** Sistema de almacenamiento y enmascaramiento de contraseñas de infraestructura (`settings`) cifradas simétricamente en PostgreSQL. Para ver, copiar o alterar las claves, el panel exige re-autenticar la sesión en caliente mediante el modal de validación que consulta con contraseña actual a Supabase Auth, restringido a roles administrativos `'admin'`.
+- **Estructura del Sidebar Actualizada:** Adición de la pestaña de navegación `"Gobernanza y Servidores"` en el layout lateral administrativo (`src/app/admin/layout.tsx`) con ícono de escudo de seguridad interactivo y estilos Rancho activos.
+- **Creación de Centro de Documentación de Doble Nivel:** Creación física del directorio `/documentacion` en la raíz del proyecto.
+  * **Nivel 1 (Guía de Usuario):** Redacción detallada de 9 manuales funcionales en `/documentacion/usuario/` que explican de manera exhaustiva el mapa del sitio, los flujos operativos de reservas, housekeeping, baneo de usuarios, auditoría en lenguaje natural y la especificación de lógicas de cálculo financiero (redondeo a decenas, auto-confirmación del 50% y desgloses contables para el SII).
+  * **Nivel 2 (Runbook de Servidores):** Redacción de 7 guías técnicas en `/documentacion/infraestructura/` que describen la arquitectura Zero-Trust, backups PostgreSQL en Supabase, autenticación Auth, configuración DKIM/SPF DNS en Resend, transferencia de proyectos en Vercel, renovación de dominios en DominiosChile, hoja de ruta de Handover y planes de contingencia para emergencias.
+
 ## [1.3.8] - 2026-06-01
 
 ### Añadido / Mejorado (Flujo Completo de Restablecimiento y Renovación de Contraseñas v1.3.8)

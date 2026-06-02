@@ -380,4 +380,13 @@
 - Comandos de shell ejecutados y propuestos con autorización explícita para control de versiones: `git status`, `git add .`, `git commit -m "feat(auth): implementar flujo completo de restablecimiento y renovacion de contrasenas (v1.3.8)"` y `git push origin master`.
 - Se identificó y corrigió el fallo de compilación en Vercel provocado por el error de tipado en `src/app/api/admin/users/route.ts:152` al llamar a `inviteUserByEmail` sin el namespace `.admin`. Se actualizó a `supabaseAdminLocal.auth.admin.inviteUserByEmail`.
 - Se actualizaron los documentos `GEMINI.md` y `CHANGELOG.md` en español.
-- Comandos de shell ejecutados y propuestos con autorización explícita para consolidar el hotfix en GitHub: `git status`, `git add .`, `git commit -m "fix(auth): corregir namespace en inviteUserByEmail para build de Vercel"`, `git push origin master`.
+- Comandos de shell ejecutados y propuestos con autorización explícita para consolidar el hotfix en GitHub: git status, git add ., git commit -m "fix(auth): corregir namespace en inviteUserByEmail para build de Vercel", git push origin master.
+[2026-06-01 20:32:00] Actividad de Antigravity:
+- Se inicia el proceso de verificación y sincronización del repositorio local y remoto (Git y GitHub) antes de proceder con el plan de infraestructura.
+- Se propone la ejecución de los comandos de inspección: `git fetch origin master`, `git status` y `git log -n 3 --oneline` para auditar el estado del código.
+[2026-06-01 21:00:00] Actividad de Antigravity:
+- Se ejecutó la Fase A de refactorización de los 3 endpoints API de correo de Resend para desacoplar el FROM y TO de datos estáticos y leer de settings dinámicamente.
+- Se implementó la Fase B con el Panel de Gobernanza e Infraestructura (/admin/infraestructura) y el Llavero Seguro (Vault) in-app cifrado y modal de re-autenticación de Supabase Auth, sumado al enlace con escudo de seguridad en el layout del Sidebar.
+- Se culminó la Fase C creando e inyectando la carpeta física /documentacion en la raíz del proyecto, con los 9 manuales funcionales de Nivel 1 y 7 runbooks de Nivel 2 de grado académico.
+- Se actualizaron los archivos del subproyecto: GEMINI.md, README.md y CHANGELOG.md elevando la versión de software a [1.4.0].
+- Se proponen los comandos de Git para registrar y subir los cambios a producción: `git status`, `git add .`, `git commit -m "feat(infra): migración de infraestructura, panel de gobernanza técnica in-app y centro de documentación de doble nivel (v1.4.0)"` y `git push origin master` de forma desatendida.

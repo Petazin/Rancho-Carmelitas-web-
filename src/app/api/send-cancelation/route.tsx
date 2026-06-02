@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const { data: settingsData } = await supabaseAdmin
       .from('settings')
       .select('key, value')
-      .in('key', ['company_name']);
+      .in('key', ['company_name', 'email_sender']);
 
     let companyName = 'Rancho Carmelitas';
     if (settingsData && settingsData.length > 0) {
@@ -65,9 +65,11 @@ export async function POST(req: Request) {
       subject = `Cancelación de Reserva: ${cabinName} — ${companyName}`;
     }
 
+    const emailSender = settingsData?.find((s: { key: string; value: string }) => s.key === 'email_sender')?.value || 'Rancho Carmelitas <onboarding@resend.dev>';
+
     // Enviar correo de cancelación al Cliente
     const { data, error } = await resend.emails.send({
-      from: 'Rancho Carmelitas <onboarding@resend.dev>',
+      from: emailSender,
       to: [guestEmail],
       subject,
       react: emailElement,
