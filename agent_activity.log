@@ -398,3 +398,6 @@
 - Se modificó `src/app/admin/reservas/page.tsx` para que el botón de edición llame directamente a la función `startEditing(booking)`, unificando el flujo de edición.
 - Se actualizó la función `startEditing` para aplicar el formateo de fecha `formatDateString` a `check_in` y `check_out` de forma segura.
 - Se actualizaron los archivos de documentación y logs `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.4.1] en español.
+[2026-06-03 14:13:00] Actividad de Antigravity:
+- Se creó el script `migration/limpiar_reserva_prueba.js` para eliminar de manera segura y definitiva todos los registros asociados a la reserva de prueba `01032258-c75a-4842-8fa6-f176d61c9110` en `bookings`, `booking_payments` y `audit_logs`.
+- Se solicitó al usuario la ejecución del script para persistir la limpieza en la base de datos de producción de Supabase.
