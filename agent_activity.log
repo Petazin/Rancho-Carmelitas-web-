@@ -401,3 +401,6 @@
 [2026-06-03 14:13:00] Actividad de Antigravity:
 - Se creó el script `migration/limpiar_reserva_prueba.js` para eliminar de manera segura y definitiva todos los registros asociados a la reserva de prueba `01032258-c75a-4842-8fa6-f176d61c9110` en `bookings`, `booking_payments` y `audit_logs`.
 - Se solicitó al usuario la ejecución del script para persistir la limpieza en la base de datos de producción de Supabase.
+[2026-06-03 14:25:00] Actividad de Antigravity:
+- Se creó el script `migration/buscar_reserva_prueba.js` para diagnosticar y buscar la reserva 'test' en la base de datos a la que apunta el archivo local `.env.local` y comprobar la conexión real con Supabase.
+- Se solicitó la ejecución de este script de diagnóstico al usuario.
