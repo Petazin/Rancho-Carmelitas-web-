@@ -1330,8 +1330,8 @@ function ReservasContent() {
 
     setEditForm({
       cabin_id: booking.cabin_id,
-      check_in: booking.check_in,
-      check_out: booking.check_out,
+      check_in: formatDateString(booking.check_in),
+      check_out: formatDateString(booking.check_out),
       discount_type: 'fixed',
       discount_value: booking.discount_applied ?? '',
       admin_notes: booking.admin_notes ?? '',
@@ -2648,27 +2648,7 @@ function ReservasContent() {
                               {/* Editar Inline */}
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setEditingBooking(booking);
-                                  setEditForm({
-                                    cabin_id: booking.cabin_id,
-                                    check_in: formatDateString(booking.check_in),
-                                    check_out: formatDateString(booking.check_out),
-                                    discount_type: booking.discount_applied ? 'fixed' : 'fixed',
-                                    discount_value: booking.discount_applied || '',
-                                    admin_notes: booking.admin_notes || '',
-                                    plataforma_id: booking.plataforma_id || '',
-                                    plataforma_comision_aplicada: booking.plataforma_comision_aplicada || '',
-                                    admin_comision_porcentaje: booking.admin_comision_porcentaje || '',
-                                    requires_invoice: !!booking.requires_invoice,
-                                    precio_base: booking.total_price ? booking.total_price.toString() : '',
-                                    guest_rut: booking.guest_rut || '',
-                                    vehicle_plate: booking.vehicle_plate || '',
-                                    guest_nationality: booking.guest_nationality || '',
-                                    guest_preferences: booking.guest_preferences || '',
-                                    guest_birthdate: booking.guest_birthdate || ''
-                                  });
-                                }}
+                                onClick={() => startEditing(booking)}
                                 className="text-gray-500 hover:text-blue-600 p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                                 title="Editar reserva"
                               >

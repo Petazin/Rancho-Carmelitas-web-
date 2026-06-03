@@ -1,5 +1,12 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.1] - 2026-06-03
+
+### Corregido / Mejorado (Corrección de Doble IVA en Edición de Reservas v1.4.1)
+
+- **Corrección de Doble Cobro de IVA:** Solución al problema de doble cobro de IVA al editar reservas. Se modificó el botón de edición (✏️) en el listado de reservas en `src/app/admin/reservas/page.tsx` para invocar de forma consistente el método `startEditing(booking)`. Este método realiza la reconstrucción matemática inversa correcta, sustrayendo el IVA del total para obtener la base neta original y re-calcular el IVA de forma limpia en el desglose de previsualización y guardado.
+- **Robustecimiento de Fechas en startEditing:** Se actualizó la función `startEditing` para aplicar el formateador `formatDateString` a `check_in` y `check_out` de forma segura, garantizando la consistencia del rango temporal de estadía.
+
 ## [1.4.0] - 2026-06-01
 
 ### Añadido / Mejorado (Migración de Infraestructura, Gobernanza in-app y Documentación Académica v1.4.0)

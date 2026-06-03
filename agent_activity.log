@@ -390,3 +390,11 @@
 - Se culminó la Fase C creando e inyectando la carpeta física /documentacion en la raíz del proyecto, con los 9 manuales funcionales de Nivel 1 y 7 runbooks de Nivel 2 de grado académico.
 - Se actualizaron los archivos del subproyecto: GEMINI.md, README.md y CHANGELOG.md elevando la versión de software a [1.4.0].
 - Se proponen los comandos de Git para registrar y subir los cambios a producción: `git status`, `git add .`, `git commit -m "feat(infra): migración de infraestructura, panel de gobernanza técnica in-app y centro de documentación de doble nivel (v1.4.0)"` y `git push origin master` de forma desatendida.
+[2026-06-01 21:23:00] Actividad de Antigravity:
+- Se inicia el proceso de guía interactiva de migración 1 a 1 y paso a paso para desvincular los sistemas satélite (Resend, Supabase y Vercel) sin caída del sistema en vivo.
+- Se establece una priorización rigurosa de migración: Resend -> Supabase -> Vercel, garantizando consistencia absoluta en caliente.
+[2026-06-03 14:02:00] Actividad de Antigravity:
+- Se detectó un error de doble IVA al editar reservas hechas con IVA, debido a que el botón de edición inline inicializaba el precio base con el total de la reserva (que ya incluía el IVA).
+- Se modificó `src/app/admin/reservas/page.tsx` para que el botón de edición llame directamente a la función `startEditing(booking)`, unificando el flujo de edición.
+- Se actualizó la función `startEditing` para aplicar el formateo de fecha `formatDateString` a `check_in` y `check_out` de forma segura.
+- Se actualizaron los archivos de documentación y logs `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.4.1] en español.
