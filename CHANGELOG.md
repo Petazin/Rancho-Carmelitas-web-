@@ -1,11 +1,30 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.5] - 2026-06-04
+
+### Añadido / Mejorado (Envío Automático de Correo de Agradecimiento y Despedida tras el Check-Out v1.4.5)
+
+- **Envío Automatizado de Correo de Despedida:** Se integró en el flujo operativo del PMS el envío automático de un correo electrónico de agradecimiento y despedida al huésped en el momento exacto en que se realiza con éxito su Check-Out en el PMS.
+- **Plantilla de Agradecimiento Premium:** Creación del componente `CheckoutThankYouTemplate.tsx` en [CheckoutThankYouTemplate.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/emails/CheckoutThankYouTemplate.tsx) con maquetación de tablas HTML para total compatibilidad y centrado perfecto en Gmail. Incluye un saludo personalizado, un mensaje cálido de agradecimiento y buenos deseos de viaje, un desglose claro de la estadía y una sección crema de Stitch UI (`#fffbeb`) que invita a compartir su experiencia o dejar su valoración en las redes sociales.
+- **API Dedicada:** Implementación del endpoint `/api/send-checkout-thankyou/route.tsx` en [route.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/api/send-checkout-thankyou/route.tsx) para despachar el correo utilizando el cliente de Resend con las configuraciones institucionales de emisor.
+- **Llamada Asíncrona en PMS:** Modificación en [page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/reservas/page.tsx) (`handlePmsCheckOut`) para ejecutar la petición fetch asíncrona hacia la nueva API en segundo plano, evitando añadir demoras de red en la interfaz del panel de reservas.
+
+## [1.4.4] - 2026-06-04
+
+### Añadido / Mejorado (Desglose de Todos los Abonos Realizados en el Correo de Confirmación v1.4.4)
+
+- **Historial de Abonos Detallado en el Correo:** Se implementó el desglose detallado de todos los abonos o pagos individuales registrados para una reserva en el cuerpo del correo electrónico de confirmación, reemplazando el bloque estático de abono único consolidado. En su lugar, se inyecta una subtabla elegante con fondo gris suave y bordes finos que detalla el número correlativo del abono, el método de pago, la referencia de la transacción y la fecha exacta del abono formateada localmente en formato chileno.
+- **Totalización y Soporte de Fallback:** Se actualizó la interfaz de props `PaymentConfirmationEmailProps` en [PaymentConfirmationTemplate.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/emails/PaymentConfirmationTemplate.tsx) para recibir de forma opcional el historial de pagos relacionales a través de `payments`. Si este array no es provisto (reservas legacy o sin abonos registrados), el componente aplica automáticamente un fallback al formato clásico de abono único consolidado, previniendo errores de renderizado.
+- **Sincronización en la API de Confirmación:** Se configuró y validó la inyección de la propiedad `payments` en la invocación de `React.createElement` dentro de la API [route.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/api/send-payment-confirmation/route.tsx), pasándole de manera limpia la lista de abonos consultada cronológicamente de Supabase.
+
 ## [1.4.3] - 2026-06-04
 
-### Corregido / Mejorado (Suma Acumulada de Abonos y Notificación de Abonos Posteriores en Mailing v1.4.3)
+### Corregido / Mejorado (Suma Acumulada de Abonos, Notificación de Abonos Posteriores y Saneamiento de Maquetación de Correos v1.4.3)
 
-- **Cálculo de Abono Acumulado en el Frontend para Confirmación Rápiva:** Se corrigió el problema por el cual al confirmar una reserva mediante el flujo rápido manual (`handleConfirmBooking`), el correo que le llegaba al cliente indicaba un abono de `$0` y saldo por pagar equivalente al total. Se modificó el frontend en `src/app/admin/reservas/page.tsx` para que calcule de manera exacta en el frontend el total de abonos acumulados (pagos previos registrados en la tabla relacional `booking_payments` más el abono que se ingresa en el momento de confirmar) y se lo envíe de forma consistente al backend en la variable `paymentAmount`.
+- **Cálculo de Abono Acumulado en el Frontend para Confirmación Rápida:** Se corrigió el problema por el cual al confirmar una reserva mediante el flujo rápido manual (`handleConfirmBooking`), el correo que le llegaba al cliente indicaba un abono de `$0` y saldo por pagar equivalente al total. Se modificó el frontend en `src/app/admin/reservas/page.tsx` para que calcule de manera exacta en el frontend el total de abonos acumulados (pagos previos registrados en la tabla relacional `booking_payments` más el abono que se ingresa en el momento de confirmar) y se lo envíe de forma consistente al backend en la variable `paymentAmount`.
 - **Notificación Automatizada de Abonos Subsecuentes:** Se implementó una lógica de notificación por correo para abonos registrados cuando la reserva ya se encuentra en estado `'Confirmada'`. En `handleAddPmsPayment`, si la reserva ya está confirmada y se registra un abono nuevo (por ejemplo, un segundo pago), el sistema dispara el correo de confirmación de pago al cliente notificando el abono y detallando el nuevo saldo pendiente al check-in en tiempo real.
+- **Saneamiento de Maquetación en Correos (Gmail Compatibility):** Se solucionó el problema por el cual el correo se visualizaba desplazado a la derecha en Gmail y se colapsaba con el botón `...` (trimmed content). Se refactorizó [PaymentConfirmationTemplate.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/emails/PaymentConfirmationTemplate.tsx) reemplazando la maquetación flexbox y márgenes de divs por tablas HTML tradicionales con alineación `align="center"`. Esto garantiza un centrado perfectamente simétrico del correo de 600px en todos los clientes. Además, se inyectó una marca de tiempo dinámica de transacción en el footer del correo.
+- **Asunto Dinámico Desagrupado:** Se modificó la API de envío en [route.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/api/send-payment-confirmation/route.tsx) para incluir el número de referencia de la reserva en el asunto (`✓ Reserva Confirmada: Cabaña (Ref: XXXX)`), logrando que Gmail cree hilos de conversación individuales por reserva y no oculte el contenido por similitud reiterada de hilos comunes.
 
 ## [1.4.2] - 2026-06-04
 

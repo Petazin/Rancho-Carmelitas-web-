@@ -479,3 +479,33 @@
   * **Notificación de Abonos Adicionales (`handleAddPmsPayment`):** Se inyectó lógica que detecta si la reserva ya se encuentra en estado `'Confirmada'`. Si es así, al registrar un abono subsecuente en el PMS, se dispara automáticamente el correo electrónico de confirmación al cliente notificándole la recepción del abono y detallando el nuevo saldo pendiente.
 - Se actualizaron los archivos de documentación y control `CHANGELOG.md` y `GEMINI.md` a la versión [1.4.3] en español.
 - No se ejecutan comandos de compilación o Git locales de forma autónoma por directivas de seguridad global. Se le presenta al usuario los comandos correspondientes para las pruebas locales y la sincronización con GitHub.
+[2026-06-04 01:42:00] Actividad de Antigravity:
+- El usuario reportó que el correo de confirmación enviado sale "colapsado" (recortado con el botón `...` de Gmail) y desalineado a la derecha con un gran espacio vacío lateral.
+- Se diagnosticó que el colapso con `...` (trimmed content) en Gmail es provocado por dos causas: la similitud de texto del footer/cuerpo en múltiples correos del mismo hilo, y que todas las pruebas se agrupan bajo el mismo asunto de correo estático de la cabaña. Asimismo, el desalineamiento ocurre porque Gmail tiene soporte limitado para Flexbox y directivas de centrado modernas en contenedores `div`.
+- Se modificó la plantilla `PaymentConfirmationTemplate.tsx` realizando una reestructuración de la maquetación:
+  * Se envolvió el cuerpo en una tabla principal contenedora con alineación `align="center"` para asegurar un centrado perfectamente simétrico en Gmail.
+  * Se sustituyó el flexbox de las filas financieras (abono recibido y saldo restante) por una tabla clásica de 100% de ancho con alineación izquierda/derecha para evitar amontonamientos.
+  * Se inyectó una firma de transacción única con marca de tiempo visible en el footer del correo (`Comprobante generado automáticamente el...`) para introducir variabilidad de contenido en cada envío y evitar que Gmail oculte el contenido por similitud exacta.
+- Se modificó la API de envío en `src/app/api/send-payment-confirmation/route.tsx` para inyectar el número abreviado de referencia de la reserva en el asunto (`✓ Reserva Confirmada: Cabaña (Ref: XXXX)`), logrando que Gmail separe las reservas en hilos de conversación independientes.
+- Se actualizaron los logs de documentación `CHANGELOG.md` y `GEMINI.md` detallando las optimizaciones de maquetación aplicadas sobre la versión [1.4.3].
+- Se proponen los comandos correspondientes para que el usuario pueda commitear y subir esta nueva actualización a GitHub.
+[2026-06-04 02:04:00] Actividad de Antigravity:
+- El usuario reportó un Build Error en local al intentar compilar: `Parsing ecmascript source code failed` en `PaymentConfirmationTemplate.tsx:251` debido a la presencia de los comentarios condicionales de Outlook (`{/*[if (gte mso 9)|(IE)]> ...`) dentro del árbol JSX.
+- Se diagnosticó que el compilador de Next.js/Turbopack intenta parsear los caracteres de los comentarios condicionales como código JavaScript/JSX (provocando el error de sintaxis al procesar el operador lógico de bitwise `|` y los paréntesis).
+- Se eliminaron por completo los comentarios condicionales de Outlook de la plantilla `PaymentConfirmationTemplate.tsx`, saneando la estructura y balance de las etiquetas de tablas (como la celda centradora `<td align="center">` y la fila `<tr>`), erradicando de raíz el fallo de compilación sin comprometer la visualización simétrica del correo.
+- Se indica al usuario volver a probar la compilación y los comandos de Git.
+[2026-06-04 06:27:00] Actividad de Antigravity:
+- Se implementó el desglose detallado del historial de abonos o pagos individuales en el correo de confirmación de pago (versión [1.4.4]).
+- Se agregó la propiedad opcional `payments` a la interfaz `PaymentConfirmationEmailProps` en `src/components/emails/PaymentConfirmationTemplate.tsx`.
+- Se adaptó la lógica de renderizado del componente para mapear e inyectar el listado de abonos en una subtabla elegante con fondo gris suave y bordes finos, detallando el correlativo del abono, método, referencia de transacción y fecha chilena de cobro.
+- Se implementó un fallback dinámico al formato de abono único consolidado si no se provee el array `payments`, garantizando plena compatibilidad retroactiva.
+- Se validó el paso de la propiedad `payments` en la invocación de `React.createElement` dentro del endpoint de la API `/api/send-payment-confirmation/route.tsx`.
+- Se actualizaron los archivos de documentación y control `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.4.4] en español.
+- Se proponen los comandos al usuario para las pruebas locales y la sincronización a GitHub.
+[2026-06-04 06:41:00] Actividad de Antigravity:
+- Se implementó el envío automatizado de un correo electrónico de agradecimiento y despedida al huésped tras realizar con éxito su Check-Out en el PMS (versión [1.4.5]).
+- Se diseñó y creó la plantilla de correo `CheckoutThankYouTemplate.tsx` en `src/components/emails` utilizando tablas HTML tradicionales para máxima compatibilidad con Gmail, incluyendo resumen de estadía y caja Stitch UI de feedback y redes sociales.
+- Se desarrolló el endpoint de la API `/api/send-checkout-thankyou/route.tsx` que consume las variables de entorno y los parámetros globales de contacto de la empresa de Supabase settings para despachar el correo con Resend.
+- Se inyectó la llamada fetch asíncrona en segundo plano hacia la API de agradecimiento dentro de la función `handlePmsCheckOut` de `src/app/admin/reservas/page.tsx` para evitar latencias o bloqueos en la interfaz del panel de administración.
+- Se actualizaron los archivos de documentación y control `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.4.5] en español.
+- Se proponen los comandos al usuario para las pruebas locales y la sincronización a GitHub.

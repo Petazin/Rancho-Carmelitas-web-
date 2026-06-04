@@ -58,20 +58,23 @@ export async function POST(req: Request) {
     // Esto asegura que el correo muestre los abonos acumulados correctos y no solo el pago individual
     let abonoAcumulado = 0;
     let ultimaReferencia = paymentReference || '';
+    let paymentsList: any[] = [];
 
     console.log(`[API SendPaymentConfirmation] Procesando bookingId: ${bookingId}, paymentAmount recibido: ${paymentAmount}, paymentReference recibido: ${paymentReference}`);
 
     if (bookingId) {
       const { data: paymentsData, error: paymentsError } = await supabaseAdmin
         .from('booking_payments')
-        .select('amount, reference')
-        .eq('booking_id', bookingId);
+        .select('id, amount, reference, payment_method, created_at')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: true });
         
       if (paymentsError) {
         console.error('[API SendPaymentConfirmation] Error al consultar booking_payments:', paymentsError);
       } else {
         console.log(`[API SendPaymentConfirmation] Se encontraron ${paymentsData?.length || 0} abonos en booking_payments para bookingId ${bookingId}`);
         if (paymentsData && paymentsData.length > 0) {
+          paymentsList = paymentsData;
           abonoAcumulado = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
           console.log(`[API SendPaymentConfirmation] Suma acumulada de abonos en base de datos: ${abonoAcumulado}`);
           // Obtener la última referencia de pago que no esté vacía
@@ -113,6 +116,7 @@ export async function POST(req: Request) {
       plataformaNombre: plataformaNombre || null,
       plataformaComisionAplicada: plataformaComisionAplicada !== undefined ? Number(plataformaComisionAplicada) : 0,
       requiresInvoice: requiresInvoice || false,
+      payments: paymentsList,
     });
 
     const emailSender = settings.email_sender || 'Rancho Carmelitas <onboarding@resend.dev>';
@@ -121,7 +125,7 @@ export async function POST(req: Request) {
     const { data: customerData, error: customerError } = await resend.emails.send({
       from: emailSender,
       to: [guestEmail],
-      subject: `✓ Reserva Confirmada: ${cabinName} — ${settings.company_name || 'Rancho Carmelitas'}`,
+      subject: `✓ Reserva Confirmada: ${cabinName} (Ref: ${bookingId.slice(0, 8).toUpperCase()}) — ${settings.company_name || 'Rancho Carmelitas'}`,
       react: emailElement,
     });
 

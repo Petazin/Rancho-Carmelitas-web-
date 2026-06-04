@@ -1343,11 +1343,29 @@ function ReservasContent() {
 
       if (cabinError) throw cabinError;
 
+      // 3. Enviar correo de despedida y agradecimiento en segundo plano (asíncrono)
+      if (selectedBookingForCheckOut.guest_email) {
+        fetch('/api/send-checkout-thankyou', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestName: selectedBookingForCheckOut.guest_name,
+            guestEmail: selectedBookingForCheckOut.guest_email,
+            cabinName: selectedBookingForCheckOut.cabin?.name || 'Cabaña',
+            checkIn: new Date(selectedBookingForCheckOut.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+            checkOut: new Date(selectedBookingForCheckOut.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+            bookingId: selectedBookingForCheckOut.id,
+          })
+        }).catch(err => {
+          console.error('[PMS Check-Out] Error al disparar el correo de agradecimiento:', err);
+        });
+      }
+
       setCheckOutModalOpen(false);
       setSelectedBookingForCheckOut(null);
       setCheckOutNotes('');
       await fetchBookings();
-      alert('Check-Out procesado con éxito. Llaves devueltas y cabaña enviada a Housekeeping (Necesita Aseo).');
+      alert('Check-Out procesado con éxito. Llaves devueltas, cabaña enviada a Housekeeping (Necesita Aseo) y correo de despedida enviado.');
     } catch (err: any) {
       alert('Error en Check-Out: ' + err.message);
     } finally {

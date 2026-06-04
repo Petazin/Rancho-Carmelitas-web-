@@ -16,7 +16,7 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
     *   Gestión centralizada de múltiples reservas en calendario.
     *   **Localización y Normalización de Dinero Global (es-CL):** Consistencia regional del 100% con punto para miles y coma para decimales mediante helper `formatMoney(amount)` centralizado.
     *   **Autocompletado de RUT Reactivo:** Formateador de RUT reactivo en la edición inline, creación manual y en el modal de Check-In del PMS.
-    *   **Gestión Unificada de Pagos Múltiples:** Soporte de abonos parciales y combinados almacenados en la tabla relacional `booking_payments`, con timeline de transacciones y subida de comprobantes. Incluye **Sugerencia Dinámica del 50%** interactiva con botón de pre-llenado (calculando montos faltantes) y **Auto-Confirmación Inteligente**, que promueve la reserva al estado `'Confirmada'` automáticamente al alcanzar o superar el 50% acumulado, enviando el correo definitivo. El botón de pagos muta en caliente a color verde y texto `"✓ Registrar y Confirmar Reserva"` al alcanzar el 50% de abono acumulado en reservas pendientes.
+    *   **Gestión Unificada de Pagos Múltiples (v1.4.4):** Soporte de abonos parciales y combinados almacenados en la tabla relacional `booking_payments`, con timeline de transacciones y subida de comprobantes. Incluye **Sugerencia Dinámica del 50%** interactiva con botón de pre-llenado (calculando montos faltantes) y **Auto-Confirmación Inteligente**, que promueve la reserva al estado `'Confirmada'` automáticamente al alcanzar o superar el 50% acumulado, enviando el correo definitivo con el desglose detallado de cada abono realizado. El botón de pagos muta en caliente a color verde y texto `"✓ Registrar y Confirmar Reserva"` al alcanzar el 50% de abono acumulado en reservas pendientes.
     *   **Check-In Defensivo y Restrictivo:** Registro obligatorio de ficha del huésped con bloqueo de estancia si existe saldo pendiente por liquidar. Habilita un botón directo de confirmación manual `✓ Confirmar` en las reservas pendientes que calcula y sugiere de forma dinámica el abono faltante exacto para cubrir el 50% (restando abonos previos) e inserta el pago rápida de forma unificada en `booking_payments`.
     *   **Hotfix Definitivo de Reactividad en Check-In (v1.2.5):** Inyección de abonos registrados en caliente y en tiempo real directamente en la ficha del Check-In local (`selectedBookingForCheckIn`), permitiendo que el saldo pendiente baje a `$0` al instante y active de inmediato el botón `"🚗 Completar Check-In & Entregar Cabaña"` sin forzar cierres de modal ni consultas asíncronas de red diferidas.
     *   **Registro de Bloqueo en Auditoría (v1.2.6):** Identificación y traducción dinámica a lenguaje natural de eventos de bloqueo (`🔒`) y desbloqueo (`🔓`) de colaboradores en el Trace Trail, exponiendo al administrador operador, el usuario afectado y el motivo de suspensión ingresado.
@@ -29,15 +29,15 @@ El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS 
     *   **Reportes Financieros & SII:** Panel interactivo para el cálculo asíncrono de Ingreso Bruto, IVA (19% sobre reservas con factura), comisiones de canales de venta (Airbnb/Booking.com), comisión de Rancho Carmelitas e Ingreso Neto final liquidado al dueño.
     *   **Gestión Multi-Media (Supabase Storage):** Subida de galerías por bloque y amenidades interactivas.
     *   **Galería de Imágenes Premium:** Integración de recursos visuales personalizados basados en la identidad real del Rancho.
-    *   Control de roles (Admin/Guest) y control de accesos RBAC para Staff.
+    *   **Control de roles (Admin/Guest) y control de accesos RBAC para Staff.**
     *   **Sistema de Comisiones Dinámicas:** Gestión y cálculo automático de comisiones de plataformas (externas) sobre el Precio Bruto e IVA de la reserva.
     *   **Ficha de Liquidación Interna Privada:** Desglose interactivo en tiempo real del pago neto estimado al dueño, excluido de los correos transaccionales por privacidad.
     *   **Creación Manual de Reservas:** Formulario premium de registro con previsualización financiera reactiva en tiempo real.
     *   **Cierres y Bloqueos Temporales (Parcial / Total):** Módulo administrativo autogestionable para declarar periodos de cierre por mantención o vacaciones del Rancho. Bloquea de forma estricta reservas en el cliente y el PMS e inyecta alertas rojas prioritarias ante colisiones con reservas activas.
     *   **Visualización Homologada de Estados en Dashboard:** Agenda del calendario y listado de Llegadas Inminentes en español nativo con badges homologados de colores del ciclo de vida del PMS. Resaltado de alta legibilidad para el teléfono del cliente (`📞`).
-
-
-*   **Correos de Confirmación (Resend):** Envíos automatizados al huésped con el desglose del cobro de plataforma y el comprobante oficial de pago, protegiendo los datos confidenciales de administración.
+*   **Correos de Confirmación y Notificación (Resend v1.4.5):**
+    *   **Confirmación de Pago:** Envíos automatizados al huésped con el desglose del cobro de plataforma, el comprobante oficial de pago y el desglose detallado de todos los abonos o pagos registrados en el Historial de Abonos, protegiendo al mismo tiempo los datos confidenciales internos de administración.
+    *   **Agradecimiento y Despedida:** Envío automatizado al huésped en el momento de procesar su Check-Out en el PMS, deseándole un feliz viaje de regreso, detallando su estadía y ofreciendo enlaces interactivos a redes sociales para invitarle a valorar su experiencia (Stitch Box).
 
 ## Stack Tecnológico
 
