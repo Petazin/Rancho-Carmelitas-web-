@@ -404,3 +404,21 @@
 [2026-06-03 14:25:00] Actividad de Antigravity:
 - Se creó el script `migration/buscar_reserva_prueba.js` para diagnosticar y buscar la reserva 'test' en la base de datos a la que apunta el archivo local `.env.local` y comprobar la conexión real con Supabase.
 - Se solicitó la ejecución de este script de diagnóstico al usuario.
+[2026-06-03 14:30:00] Actividad de Antigravity:
+- Se detectó un error tipográfico en el UUID de la reserva de prueba dentro del script `migration/limpiar_reserva_prueba.js` (se usaba el ID `01032258-c75a-4842-8fa6-f176d61c9110` en vez de `01032258-c75a-4b42-8fa6-f176d61c9110`).
+- Se corrigió el script localmente y se le solicita al usuario volver a ejecutar el comando: `node migration/limpiar_reserva_prueba.js` para proceder con el borrado en productivo.
+- Se proporciona soporte conceptual y opciones técnicas detalladas para que el usuario pueda duplicar o clonar la base de datos de Supabase de producción hacia su entorno de pruebas.
+[2026-06-03 14:53:00] Actividad de Antigravity:
+- El usuario reportó el log de búsqueda `node migration/buscar_reserva_prueba.js` mostrando 0 coincidencias para la palabra "test" en las reservas y confirmando que la limpieza se ejecutó de manera exitosa y definitiva en la base de datos de producción.
+- Se guía al usuario para realizar la copia de la base de datos de producción a test a través de las opciones planteadas (pg_dump y pg_restore, o mediante CLI).
+- Se proponen los comandos Git correspondientes para respaldar los scripts actualizados en el control de versiones local y remoto.
+[2026-06-03 20:20:00] Actividad de Antigravity:
+- Debido a que la CLI remota arrojó un conflicto por el historial de migraciones previas en producción, y la ejecución de `db dump` local falló por ausencia del motor Docker Desktop en Windows, se diseñó una solución híbrida, segura y libre de dependencias locales.
+- Se creó el archivo consolidado `migration/crear_esquema_completo.sql` conteniendo el DDL completo (creación de todas las tablas en orden, índices, llaves primarias/foráneas, políticas RLS detalladas y la función y triggers de auditoría en lenguaje natural).
+- Se creó el script de automatización `migration/clonar_datos_base.js` que utiliza `@supabase/supabase-js` para transferir en caliente los registros estáticos e institucionales (cabins, plataformas, settings, landing_settings y landing_gallery) desde la instancia productiva de Supabase hacia el nuevo proyecto de Test.
+- Se proporciona la guía detallada al usuario para aplicar el SQL y ejecutar el script localmente.
+- Se detectó y subsanó un error de sintaxis en `crear_esquema_completo.sql` provocado por una definición duplicada incompleta de la función `process_audit_logging` (sin su bloque `BEGIN`), lo que causaba un fallo en el SQL Editor de Supabase en la línea 267. Se re-escribió el archivo con la definición limpia y correcta.
+[2026-06-03 20:38:00] Actividad de Antigravity:
+- A solicitud del usuario, se generaron físicamente en la raíz del proyecto los dos llaveros de variables de entorno: `.env.local` apuntando al nuevo entorno aislado de Test (`rancho-carmelitas-test` / `cwoxuodcsfacvtojqjpz`) y `.env.prod` como respaldo ordenado y protegido con las credenciales del entorno real de producción (`oggmpexsscquyfwlbcwo`). Ambos archivos se mantienen seguros e ignorados en Git por el `.gitignore`.
+[2026-06-03 20:39:00] Actividad de Antigravity:
+- Con la autorización explícita y directa del usuario, se procedió a iniciar el servidor de desarrollo de Next.js localmente en segundo plano con el comando `npm run dev`. El servidor de desarrollo levantó de forma exitosa y está activo en `http://localhost:3000` operando al 100% sobre la base de datos aislada de Test.

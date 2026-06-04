@@ -38,7 +38,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   }
 });
 
-const bookingId = '01032258-c75a-4842-8fa6-f176d61c9110';
+const bookingId = '01032258-c75a-4b42-8fa6-f176d61c9110';
 
 async function main() {
   console.log(`Iniciando limpieza de la reserva de prueba con ID: ${bookingId}\n`);

@@ -6,6 +6,9 @@
 
 - **Corrección de Doble Cobro de IVA:** Solución al problema de doble cobro de IVA al editar reservas. Se modificó el botón de edición (✏️) en el listado de reservas en `src/app/admin/reservas/page.tsx` para invocar de forma consistente el método `startEditing(booking)`. Este método realiza la reconstrucción matemática inversa correcta, sustrayendo el IVA del total para obtener la base neta original y re-calcular el IVA de forma limpia en el desglose de previsualización y guardado.
 - **Robustecimiento de Fechas en startEditing:** Se actualizó la función `startEditing` para aplicar el formateador `formatDateString` a `check_in` y `check_out` de forma segura, garantizando la consistencia del rango temporal de estadía.
+- **Corrección de UUID en Script de Limpieza de Prueba:** Se subsanó un error de transcripción en el UUID de la reserva de prueba (`migration/limpiar_reserva_prueba.js`), sustituyendo el ID erróneo con el valor real encontrado mediante consultas diagnósticas (`01032258-c75a-4b42-8fa6-f176d61c9110`), asegurando que al ser ejecutado elimine efectivamente los datos huérfanos.
+- **Estrategia de Entornos de Base de Datos y Clonación:** Se formularon directrices y alternativas de duplicación y aislamiento de bases de datos de Supabase (por medio de pg_dump/pg_restore y Database Branching) para dotar al proyecto de un entorno de pruebas ("test/dev") separado de la instancia de producción actual.
+- **Scripts de Clonación Híbrida y DDL Consolidado:** Se crearon los archivos `migration/crear_esquema_completo.sql` (esquema físico, llaves, RLS y triggers de auditoría) y `migration/clonar_datos_base.js` (script en Node.js que copia datos de cabañas, plataformas y landing settings usando el SDK de Supabase). Juntos permiten estructurar y poblar el nuevo entorno de Test sin dependencias de Docker ni CLI locales.
 
 ## [1.4.0] - 2026-06-01
 
