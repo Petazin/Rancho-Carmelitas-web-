@@ -3,48 +3,59 @@
  * Proyecto: Rancho Carmelitas
  * Autor: Antigravity AI
  * Descripción: Copia los registros esenciales (Cabañas, Plataformas de Venta, Settings,
- *              Ajustes de Landing y Galería pública) de Producción a Test para
- *              habilitar el correcto funcionamiento de la web en el nuevo entorno.
+ *              Ajustes de Landing y Galería pública) de Producción a Test de forma segura,
+ *              leyendo dinámicamente de los archivos de variables locales .env.prod y .env.local
+ *              para evitar subir claves en duro a GitHub.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// 1. Cargar credenciales de Producción desde .env.local
-console.log('🔄 Cargando variables de producción desde .env.local...');
-const envPath = path.join(__dirname, '..', '.env.local');
-if (!fs.existsSync(envPath)) {
-  console.error('❌ Error: No se encontró el archivo .env.local.');
-  process.exit(1);
+// Helper para leer y parsear archivos .env locales de forma segura
+function cargarEnv(nombreArchivo) {
+  const envPath = path.join(__dirname, '..', nombreArchivo);
+  if (!fs.existsSync(envPath)) {
+    console.error(`❌ Error: No se encontró el archivo de entorno "${nombreArchivo}".`);
+    process.exit(1);
+  }
+
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  const env = {};
+  envContent.split(/\r?\n/).forEach(line => {
+    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+    if (match) {
+      const key = match[1];
+      let value = match[2] || '';
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.substring(1, value.length - 1);
+      } else if (value.startsWith("'") && value.endsWith("'")) {
+        value = value.substring(1, value.length - 1);
+      }
+      env[key] = value.trim();
+    }
+  });
+  return env;
 }
 
-const envContent = fs.readFileSync(envPath, 'utf8');
-const prodEnv = {};
-envContent.split(/\r?\n/).forEach(line => {
-  const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-  if (match) {
-    const key = match[1];
-    let value = match[2] || '';
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value.substring(1, value.length - 1);
-    } else if (value.startsWith("'") && value.endsWith("'")) {
-      value = value.substring(1, value.length - 1);
-    }
-    prodEnv[key] = value.trim();
-  }
-});
+console.log('🔄 Cargando variables de configuración desde archivos locales...');
+const prodEnv = cargarEnv('.env.prod');
+const testEnv = cargarEnv('.env.local');
 
 const prodUrl = prodEnv.NEXT_PUBLIC_SUPABASE_URL;
 const prodServiceKey = prodEnv.SUPABASE_SERVICE_ROLE_KEY;
 
+const testUrl = testEnv.NEXT_PUBLIC_SUPABASE_URL;
+const testServiceKey = testEnv.SUPABASE_SERVICE_ROLE_KEY;
+
 if (!prodUrl || !prodServiceKey) {
-  console.error('❌ Error: No se encontraron las credenciales de Producción en .env.local.');
+  console.error('❌ Error: No se encontraron las credenciales de Producción en .env.prod.');
   process.exit(1);
 }
 
-// 2. Credenciales del nuevo proyecto de Test
-const testUrl = 'https://cwoxuodcsfacvtojqjpz.supabase.co';
-const testServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3b3h1b2Rjc2ZhY3Z0b2pxanB6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDUyMzA0MiwiZXhwIjoyMDk2MDk5MDQyfQ.4OJ1ct19P8toDfx-LFIcRSEdVAkf8SLUJ7TpjPU6kRo';
+if (!testUrl || !testServiceKey) {
+  console.error('❌ Error: No se encontraron las credenciales de Test en .env.local.');
+  process.exit(1);
+}
 
 // 3. Inicializar Clientes de Supabase
 let createClient;
@@ -64,7 +75,7 @@ const supabaseTest = createClient(testUrl, testServiceKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 
-console.log('✅ Clientes Supabase inicializados:');
+console.log('✅ Clientes Supabase inicializados de forma segura:');
 console.log(`   PROD URL: ${prodUrl}`);
 console.log(`   TEST URL: ${testUrl}\n`);
 
@@ -92,7 +103,7 @@ async function clonarTabla(nombreTabla, idClave = 'id') {
   const { error: deleteError } = await supabaseTest
     .from(nombreTabla)
     .delete()
-    .neq(idClave, '00000000-0000-0000-0000-000000000000'); // Delete general defensivo para cualquier ID
+    .neq(idClave, '00000000-0000-0000-0000-000000000000'); // Delete general defensivo
     
   if (deleteError) {
     console.warn(`   ⚠️ Alerta al limpiar la tabla "${nombreTabla}" de Test:`, deleteError.message);
@@ -144,15 +155,15 @@ async function main() {
     await clonarTabla('plataformas');
     console.log('--------------------------------------------------');
 
-    // 3. Clonar Perfiles públicos (necesario para auditorías locales)
+    // 3. Clonar Perfiles públicos
     await clonarTabla('profiles');
     console.log('--------------------------------------------------');
 
-    // 4. Clonar Configuraciones generales (comisiones predeterminadas, WhatsApp)
+    // 4. Clonar Configuraciones generales
     await clonarTabla('settings', 'key');
     console.log('--------------------------------------------------');
 
-    // 5. Clonar Configuración de Landing (Hero Banner y logotipo)
+    // 5. Clonar Configuración de Landing
     await clonarLandingSettings();
     console.log('--------------------------------------------------');
 

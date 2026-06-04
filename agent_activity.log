@@ -422,3 +422,7 @@
 - A solicitud del usuario, se generaron físicamente en la raíz del proyecto los dos llaveros de variables de entorno: `.env.local` apuntando al nuevo entorno aislado de Test (`rancho-carmelitas-test` / `cwoxuodcsfacvtojqjpz`) y `.env.prod` como respaldo ordenado y protegido con las credenciales del entorno real de producción (`oggmpexsscquyfwlbcwo`). Ambos archivos se mantienen seguros e ignorados en Git por el `.gitignore`.
 [2026-06-03 20:39:00] Actividad de Antigravity:
 - Con la autorización explícita y directa del usuario, se procedió a iniciar el servidor de desarrollo de Next.js localmente en segundo plano con el comando `npm run dev`. El servidor de desarrollo levantó de forma exitosa y está activo en `http://localhost:3000` operando al 100% sobre la base de datos aislada de Test.
+[2026-06-03 20:44:00] Actividad de Antigravity:
+- Se recibió reporte del escáner de GitHub indicando detección de secreto de Supabase en `migration/clonar_datos_base.js` debido a la Service Role Key de Test escrita temporalmente en duro.
+- Se modificó `clonar_datos_base.js` para leer de forma segura y dinámica de los archivos locales de variables de entorno `.env.local` (Test) y `.env.prod` (Producción), abstrayendo y eliminando por completo cualquier clave secreta en duro en el código fuente.
+- Se instruye al usuario a rotar su Service Role Key de Test en la consola de Supabase y actualizar su archivo `.env.local` para mitigar la clave expuesta.
