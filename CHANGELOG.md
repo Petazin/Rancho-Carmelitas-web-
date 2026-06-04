@@ -10,6 +10,7 @@
 - **Estrategia de Entornos de Base de Datos y Clonación:** Se formularon directrices y alternativas de duplicación y aislamiento de bases de datos de Supabase (por medio de pg_dump/pg_restore y Database Branching) para dotar al proyecto de un entorno de pruebas ("test/dev") separado de la instancia de producción actual.
 - **Scripts de Clonación Híbrida y DDL Consolidado:** Se crearon los archivos `migration/crear_esquema_completo.sql` (esquema físico, llaves, RLS y triggers de auditoría) y `migration/clonar_datos_base.js` (script en Node.js que copia datos de cabañas, plataformas y landing settings usando el SDK de Supabase). Juntos permiten estructurar y poblar el nuevo entorno de Test sin dependencias de Docker ni CLI locales.
 - **Mitigación de Fuga de Credenciales (GitHub Alert):** Se modificó el script `clonar_datos_base.js` para extraer las claves secretas escritas temporalmente en duro. El script ahora lee dinámicamente el ambiente de Test desde `.env.local` y el de Producción desde `.env.prod`, protegiendo la seguridad del código y eliminando de raíz la alerta de GitHub.
+- **Aprovisionamiento de Administrador de Test:** Se programó el script `migration/crear_admin_test.js` para crear e inicializar la cuenta de administrador `claudio.milanolo@gmail.com` en Supabase Auth de Test con auto-confirmación, vinculándola automáticamente al perfil público con rol `'admin'`. Esto resuelve la falta de cuentas de acceso en la sección interna de autenticación del nuevo proyecto.
 
 ## [1.4.0] - 2026-06-01
 

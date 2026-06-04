@@ -428,3 +428,7 @@
 - Se instruye al usuario a rotar su Service Role Key de Test en la consola de Supabase y actualizar su archivo `.env.local` para mitigar la clave expuesta.
 [2026-06-03 20:52:00] Actividad de Antigravity:
 - A solicitud del usuario, se actualizó el archivo local `.env.local` reemplazando los tokens legacy por las nuevas llaves modernas de API de Supabase (`sb_publishable_...` y `sb_secret_...`) provistas tras desactivar las llaves JWT tradicionales en el panel de control de Supabase Test, remediando de manera definitiva la exposición del secreto legacy.
+[2026-06-03 21:05:00] Actividad de Antigravity:
+- El usuario reportó no poder iniciar sesión en local (ambiente de Test) con sus credenciales de producción ni recibir correos de recuperación, debido a que la sección de autenticación (`auth.users`) del nuevo proyecto de Test está vacía y aislada de producción.
+- Se creó el script de aprovisionamiento `migration/crear_admin_test.js` el cual inicializa al usuario administrador en caliente y de forma auto-confirmada en el Supabase Auth de Test y asocia su perfil público en `profiles` con el rol de `'admin'`.
+- Se solicita la ejecución de este script al usuario.
