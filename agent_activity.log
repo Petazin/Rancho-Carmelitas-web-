@@ -426,3 +426,5 @@
 - Se recibió reporte del escáner de GitHub indicando detección de secreto de Supabase en `migration/clonar_datos_base.js` debido a la Service Role Key de Test escrita temporalmente en duro.
 - Se modificó `clonar_datos_base.js` para leer de forma segura y dinámica de los archivos locales de variables de entorno `.env.local` (Test) y `.env.prod` (Producción), abstrayendo y eliminando por completo cualquier clave secreta en duro en el código fuente.
 - Se instruye al usuario a rotar su Service Role Key de Test en la consola de Supabase y actualizar su archivo `.env.local` para mitigar la clave expuesta.
+[2026-06-03 20:52:00] Actividad de Antigravity:
+- A solicitud del usuario, se actualizó el archivo local `.env.local` reemplazando los tokens legacy por las nuevas llaves modernas de API de Supabase (`sb_publishable_...` y `sb_secret_...`) provistas tras desactivar las llaves JWT tradicionales en el panel de control de Supabase Test, remediando de manera definitiva la exposición del secreto legacy.
