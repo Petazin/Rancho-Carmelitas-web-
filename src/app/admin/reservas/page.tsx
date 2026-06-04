@@ -1040,6 +1040,14 @@ function ReservasContent() {
       // Actualizar UI
       setBookings(bookings.map(b => b.id === bookingToConfirm.id ? { ...b, ...updatePayload } : b));
       
+      // Calcular abonos acumulados totales para enviar en el correo
+      const prevPayments = bookingToConfirm.booking_payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
+      const totalAbonadoPrevio = prevPayments === 0 && bookingToConfirm.payment_amount 
+        ? bookingToConfirm.payment_amount 
+        : prevPayments;
+      const nuevoAbonadoTotal = totalAbonadoPrevio + (Number(paymentForm.amount) || 0);
+      const refFinal = paymentForm.reference || bookingToConfirm.payment_reference || 'N/A';
+
       // Enviar correo via API
       fetch('/api/send-payment-confirmation', {
         method: 'POST',
@@ -1053,8 +1061,8 @@ function ReservasContent() {
           totalPrice: bookingToConfirm.total_price || 0,
           discountApplied: bookingToConfirm.discount_applied || 0,
           extraGuestsCost: bookingToConfirm.extra_guests_cost || 0,
-          paymentAmount: Number(paymentForm.amount) || 0,
-          paymentReference: paymentForm.reference || 'N/A',
+          paymentAmount: nuevoAbonadoTotal,
+          paymentReference: refFinal,
           paymentReceiptUrl: receiptUrl || null,
           adults: bookingToConfirm.adults || 1,
           children: bookingToConfirm.children || 0,
@@ -1130,72 +1138,105 @@ function ReservasContent() {
       const originalBooking = bookings.find(b => b.id === bookingId);
       let fueAutoConfirmada = false;
       
-      if (originalBooking && originalBooking.status === 'Pendiente') {
-        const prevPayments = originalBooking.booking_payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
-        const totalAbonadoPrevio = prevPayments === 0 && originalBooking.payment_amount 
-          ? originalBooking.payment_amount 
-          : prevPayments;
-        const nuevoAbonadoTotal = totalAbonadoPrevio + amountToRegister;
-        const abonoRequerido50 = Math.round(originalBooking.total_price * 0.5);
+      if (originalBooking) {
+        if (originalBooking.status === 'Pendiente') {
+          const prevPayments = originalBooking.booking_payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
+          const totalAbonadoPrevio = prevPayments === 0 && originalBooking.payment_amount 
+            ? originalBooking.payment_amount 
+            : prevPayments;
+          const nuevoAbonadoTotal = totalAbonadoPrevio + amountToRegister;
+          const abonoRequerido50 = Math.round(originalBooking.total_price * 0.5);
 
-        if (nuevoAbonadoTotal >= abonoRequerido50) {
-          const { data: { user } } = await supabase.auth.getUser();
-          const updatePayload = {
-            status: 'Confirmada',
-            confirmed_at: new Date().toISOString(),
-            confirmed_by: user?.email || 'Admin Auto-Abono'
-          };
+          if (nuevoAbonadoTotal >= abonoRequerido50) {
+            const { data: { user } } = await supabase.auth.getUser();
+            const updatePayload = {
+              status: 'Confirmada',
+              confirmed_at: new Date().toISOString(),
+              confirmed_by: user?.email || 'Admin Auto-Abono'
+            };
 
-          const { error: updateError } = await supabase
-            .from('bookings')
-            .update(updatePayload)
-            .eq('id', bookingId);
+            const { error: updateError } = await supabase
+              .from('bookings')
+              .update(updatePayload)
+              .eq('id', bookingId);
 
-          if (!updateError) {
-            fueAutoConfirmada = true;
-            
-            // Actualizar localmente la referencia del modal si estuviera abierta
-            if (selectedBookingForPayments && selectedBookingForPayments.id === bookingId) {
-              setSelectedBookingForPayments(prev => prev ? {
-                ...prev,
-                status: 'Confirmada',
-                confirmed_at: updatePayload.confirmed_at,
-                confirmed_by: updatePayload.confirmed_by
-              } : null);
+            if (!updateError) {
+              fueAutoConfirmada = true;
+              
+              // Actualizar localmente la referencia del modal si estuviera abierta
+              if (selectedBookingForPayments && selectedBookingForPayments.id === bookingId) {
+                setSelectedBookingForPayments(prev => prev ? {
+                  ...prev,
+                  status: 'Confirmada',
+                  confirmed_at: updatePayload.confirmed_at,
+                  confirmed_by: updatePayload.confirmed_by
+                } : null);
+              }
+
+              // Disparar correo de confirmación de forma desatendida y asíncrona
+              fetch('/api/send-payment-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  guestName: originalBooking.guest_name,
+                  guestEmail: originalBooking.guest_email,
+                  cabinName: originalBooking.cabin?.name || 'Cabaña',
+                  checkIn: new Date(originalBooking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+                  checkOut: new Date(originalBooking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+                  totalPrice: originalBooking.total_price || 0,
+                  discountApplied: originalBooking.discount_applied || 0,
+                  extraGuestsCost: originalBooking.extra_guests_cost || 0,
+                  paymentAmount: nuevoAbonadoTotal,
+                  paymentReference: referenceToRegister || 'Auto-Abono',
+                  paymentReceiptUrl: receiptUrl || null,
+                  adults: originalBooking.adults || 1,
+                  children: originalBooking.children || 0,
+                  bookingId: originalBooking.id,
+                  plataformaNombre: originalBooking.plataforma?.nombre || null,
+                  plataformaComisionAplicada: originalBooking.plataforma_comision_aplicada || 0,
+                  requiresInvoice: originalBooking.requires_invoice || false
+                })
+              }).catch(e => console.error('Error al enviar correo automático de abono:', e));
+
+              // Refrescar reservas en UI para reflejar el estado Confirmada
+              await fetchBookings();
+              
+              alert(`💡 ¡Excelente! El abono acumulado (${formatMoney(nuevoAbonadoTotal)}) alcanza o supera el 50% de la tarifa total de la reserva (${formatMoney(abonoRequerido50)}).\n\nLa reserva ha sido PROMOVIDA AUTOMÁTICAMENTE al estado "Confirmada" y se ha disparado la notificación por correo al huésped.`);
+            } else {
+              console.error('Error al promover estado automáticamente:', updateError);
             }
-
-            // Disparar correo de confirmación de forma desatendida y asíncrona
-            fetch('/api/send-payment-confirmation', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                guestName: originalBooking.guest_name,
-                guestEmail: originalBooking.guest_email,
-                cabinName: originalBooking.cabin?.name || 'Cabaña',
-                checkIn: new Date(originalBooking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
-                checkOut: new Date(originalBooking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
-                totalPrice: originalBooking.total_price || 0,
-                discountApplied: originalBooking.discount_applied || 0,
-                extraGuestsCost: originalBooking.extra_guests_cost || 0,
-                paymentAmount: nuevoAbonadoTotal,
-                paymentReference: referenceToRegister || 'Auto-Abono',
-                paymentReceiptUrl: receiptUrl || null,
-                adults: originalBooking.adults || 1,
-                children: originalBooking.children || 0,
-                bookingId: originalBooking.id,
-                plataformaNombre: originalBooking.plataforma?.nombre || null,
-                plataformaComisionAplicada: originalBooking.plataforma_comision_aplicada || 0,
-                requiresInvoice: originalBooking.requires_invoice || false
-              })
-            }).catch(e => console.error('Error al enviar correo automático de abono:', e));
-
-            // Refrescar reservas en UI para reflejar el estado Confirmada
-            await fetchBookings();
-            
-            alert(`💡 ¡Excelente! El abono acumulado (${formatMoney(nuevoAbonadoTotal)}) alcanza o supera el 50% de la tarifa total de la reserva (${formatMoney(abonoRequerido50)}).\n\nLa reserva ha sido PROMOVIDA AUTOMÁTICAMENTE al estado "Confirmada" y se ha disparado la notificación por correo al huésped.`);
-          } else {
-            console.error('Error al promover estado automáticamente:', updateError);
           }
+        } else if (originalBooking.status === 'Confirmada') {
+          // Si ya está confirmada, simplemente notificar el nuevo abono registrado y el saldo restante
+          const prevPayments = originalBooking.booking_payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
+          const totalAbonadoPrevio = prevPayments === 0 && originalBooking.payment_amount 
+            ? originalBooking.payment_amount 
+            : prevPayments;
+          const nuevoAbonadoTotal = totalAbonadoPrevio + amountToRegister;
+
+          fetch('/api/send-payment-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guestName: originalBooking.guest_name,
+              guestEmail: originalBooking.guest_email,
+              cabinName: originalBooking.cabin?.name || 'Cabaña',
+              checkIn: new Date(originalBooking.check_in).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+              checkOut: new Date(originalBooking.check_out).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+              totalPrice: originalBooking.total_price || 0,
+              discountApplied: originalBooking.discount_applied || 0,
+              extraGuestsCost: originalBooking.extra_guests_cost || 0,
+              paymentAmount: nuevoAbonadoTotal,
+              paymentReference: referenceToRegister || 'Abono',
+              paymentReceiptUrl: receiptUrl || null,
+              adults: originalBooking.adults || 1,
+              children: originalBooking.children || 0,
+              bookingId: originalBooking.id,
+              plataformaNombre: originalBooking.plataforma?.nombre || null,
+              plataformaComisionAplicada: originalBooking.plataforma_comision_aplicada || 0,
+              requiresInvoice: originalBooking.requires_invoice || false
+            })
+          }).catch(e => console.error('Error al enviar correo de abono adicional:', e));
         }
       }
       
@@ -1337,7 +1378,7 @@ function ReservasContent() {
       admin_notes: booking.admin_notes ?? '',
       plataforma_id: booking.plataforma_id ?? '',
       plataforma_comision_aplicada: booking.plataforma_comision_aplicada ?? '',
-      admin_comision_porcentaje: booking.admin_comision_porcentaje ?? '',
+      admin_comision_porcentaje: booking.admin_comision_porcentaje || defaultCommission,
       requires_invoice: booking.requires_invoice || false,
       precio_base: Math.round(baseOriginal).toString(),
       guest_rut: booking.guest_rut ?? '',

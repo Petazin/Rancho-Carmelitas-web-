@@ -54,6 +54,43 @@ export async function POST(req: Request) {
       });
     }
 
+    // Consultar todos los abonos registrados para esta reserva en la base de datos
+    // Esto asegura que el correo muestre los abonos acumulados correctos y no solo el pago individual
+    let abonoAcumulado = 0;
+    let ultimaReferencia = paymentReference || '';
+
+    console.log(`[API SendPaymentConfirmation] Procesando bookingId: ${bookingId}, paymentAmount recibido: ${paymentAmount}, paymentReference recibido: ${paymentReference}`);
+
+    if (bookingId) {
+      const { data: paymentsData, error: paymentsError } = await supabaseAdmin
+        .from('booking_payments')
+        .select('amount, reference')
+        .eq('booking_id', bookingId);
+        
+      if (paymentsError) {
+        console.error('[API SendPaymentConfirmation] Error al consultar booking_payments:', paymentsError);
+      } else {
+        console.log(`[API SendPaymentConfirmation] Se encontraron ${paymentsData?.length || 0} abonos en booking_payments para bookingId ${bookingId}`);
+        if (paymentsData && paymentsData.length > 0) {
+          abonoAcumulado = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
+          console.log(`[API SendPaymentConfirmation] Suma acumulada de abonos en base de datos: ${abonoAcumulado}`);
+          // Obtener la última referencia de pago que no esté vacía
+          const ultimoPagoConRef = [...paymentsData].reverse().find((p: any) => p.reference);
+          if (ultimoPagoConRef) {
+            ultimaReferencia = ultimoPagoConRef.reference;
+            console.log(`[API SendPaymentConfirmation] Última referencia encontrada: ${ultimaReferencia}`);
+          }
+        }
+      }
+    } else {
+      console.warn('[API SendPaymentConfirmation] Advertencia: bookingId es indefinido o nulo.');
+    }
+
+    const totalAbonado = abonoAcumulado > 0 ? abonoAcumulado : (paymentAmount || 0);
+    const refFinal = ultimaReferencia || paymentReference || 'N/A';
+    
+    console.log(`[API SendPaymentConfirmation] Total Abonado Final a enviar al template: ${totalAbonado}, Referencia final: ${refFinal}`);
+
     const emailElement = React.createElement(PaymentConfirmationTemplate, {
       guestName,
       cabinName,
@@ -62,8 +99,8 @@ export async function POST(req: Request) {
       totalPrice,
       discountApplied: discountApplied || 0,
       extraGuestsCost: extraGuestsCost || 0,
-      paymentAmount,
-      paymentReference,
+      paymentAmount: totalAbonado,
+      paymentReference: refFinal,
       paymentReceiptUrl: paymentReceiptUrl || undefined,
       adults,
       children,

@@ -1,5 +1,20 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.3] - 2026-06-04
+
+### Corregido / Mejorado (Suma Acumulada de Abonos y Notificación de Abonos Posteriores en Mailing v1.4.3)
+
+- **Cálculo de Abono Acumulado en el Frontend para Confirmación Rápiva:** Se corrigió el problema por el cual al confirmar una reserva mediante el flujo rápido manual (`handleConfirmBooking`), el correo que le llegaba al cliente indicaba un abono de `$0` y saldo por pagar equivalente al total. Se modificó el frontend en `src/app/admin/reservas/page.tsx` para que calcule de manera exacta en el frontend el total de abonos acumulados (pagos previos registrados en la tabla relacional `booking_payments` más el abono que se ingresa en el momento de confirmar) y se lo envíe de forma consistente al backend en la variable `paymentAmount`.
+- **Notificación Automatizada de Abonos Subsecuentes:** Se implementó una lógica de notificación por correo para abonos registrados cuando la reserva ya se encuentra en estado `'Confirmada'`. En `handleAddPmsPayment`, si la reserva ya está confirmada y se registra un abono nuevo (por ejemplo, un segundo pago), el sistema dispara el correo de confirmación de pago al cliente notificando el abono y detallando el nuevo saldo pendiente al check-in en tiempo real.
+
+## [1.4.2] - 2026-06-04
+
+### Corregido / Mejorado (Auto-relleno de Comisión de Administración en Edición de Reservas v1.4.2)
+
+- **Auto-relleno de Comisión Administrativa en Edición Inline:** Se solucionó el problema por el cual no se mostraba ni se auto-rellenaba la comisión de administración por defecto al editar una reserva inline. Se modificó la inicialización del formulario de edición en `src/app/admin/reservas/page.tsx` (`startEditing`) para cargar de manera reactiva la comisión global `defaultCommission` configurada en el sistema (ej. 10%) si el registro histórico o de prueba de la reserva tiene un valor nulo, indefinido o `0` (el cual era el valor asignado por defecto en la base de datos para reservas creadas en versiones previas a la parametrización). Se cambió el operador de coalescencia nula `??` por el operador lógico OR `||`, logrando que las reservas legacy que tengan `0` adopten el valor por defecto configurado al abrirlas para edición en la Ficha de Liquidación.
+- **Correcion de Tipo en Columna confirmed_by (Test SQL):** Se detectó que el campo `confirmed_by` en la tabla `bookings` de la base de datos de Test se creó como tipo `UUID`. Sin embargo, el código Next.js envía strings (ej: correos como `user.email` o literals como `Admin Auto-Abono`), causando un error SQL de casteo al promover automáticamente el estado de la reserva. Se creó el parche `migration/parche_test_pms.sql` para alterar la columna al tipo `TEXT` de manera compatible con producción.
+- **Aprovisionamiento de Storage en Test:** Se añadió al parche SQL la creación y registro del bucket público de almacenamiento `payment-receipts` y sus correspondientes políticas RLS para evitar el fallo de subida `StorageApiError: Bucket not found` al adjuntar comprobantes físicos de abonos en el entorno de pruebas local.
+
 ## [1.4.1] - 2026-06-03
 
 ### Corregido / Mejorado (Corrección de Doble IVA en Edición de Reservas v1.4.1)
