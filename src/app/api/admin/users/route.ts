@@ -113,7 +113,14 @@ export async function POST(request: Request) {
           
           if (isConfirmed) {
             // El usuario ya existe y está activo: Enviar correo de restablecimiento de contraseña
-            const { error: resetError } = await supabaseAdminLocal.auth.resetPasswordForEmail(email, {
+            // Usamos un cliente público (con la anon_key) para evitar que GoTrue genere un token con rol "service_role" en el enlace de recuperación.
+            const supabaseAnon = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              { auth: { autoRefreshToken: false, persistSession: false } }
+            );
+
+            const { error: resetError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
               redirectTo: `${siteOrigin}/login`,
             });
             
