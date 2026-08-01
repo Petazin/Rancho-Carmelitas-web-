@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -61,6 +62,22 @@ export default function LoginPage() {
       // 3. Verificar flujo implícito clásico (hash #access_token=...)
       if (hash && (hash.includes('access_token') || hash.includes('type=recovery') || hash.includes('type=invite'))) {
         setView('reset');
+        
+        // Extraer y establecer la sesión de forma manual para evitar que Next.js/Supabase SSR lo ignore o tenga condiciones de carrera
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        
+        if (accessToken) {
+          console.log('Estableciendo sesión manual desde el hash...');
+          const { data: { session }, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+          if (!setSessionError && session) {
+            setSessionEmail(session.user?.email || null);
+          }
+        }
       }
     };
 
@@ -68,7 +85,13 @@ export default function LoginPage() {
     window.addEventListener('hashchange', checkRecovery);
 
     // Escuchar el evento de recuperación de contraseña nativo de Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('onAuthStateChange event:', event, 'session:', !!session);
+      if (session) {
+        setSessionEmail(session.user?.email || null);
+      } else {
+        setSessionEmail(null);
+      }
       if (event === 'PASSWORD_RECOVERY') {
         setView('reset');
       }
@@ -139,6 +162,33 @@ export default function LoginPage() {
       setResetError('La contraseña debe tener al menos 6 caracteres.');
       setResetLoading(false);
       return;
+    }
+
+    // Verificar si hay sesión activa antes de intentar actualizar
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    
+    if (!currentSession) {
+      console.log('No se detectó sesión en memoria al actualizar, re-intentando parsear desde el hash...');
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      
+      if (accessToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        });
+        if (setSessionError) {
+          setResetError(`La sesión expiró o es inválida: ${setSessionError.message}`);
+          setResetLoading(false);
+          return;
+        }
+      } else {
+        setResetError('No se encontró una sesión activa de restauración. Por favor, vuelve a abrir el enlace de tu correo.');
+        setResetLoading(false);
+        return;
+      }
     }
 
     const { error } = await supabase.auth.updateUser({
@@ -302,7 +352,13 @@ export default function LoginPage() {
                 </svg>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Nueva Contraseña</h1>
-              <p className="text-gray-500 mt-2">Establece tu nueva contraseña de acceso</p>
+              <p className="text-gray-500 mt-2 text-sm leading-relaxed">
+                {sessionEmail ? (
+                  <>Establece la nueva contraseña para <strong className="text-gray-800 block break-all">{sessionEmail}</strong></>
+                ) : (
+                  'Establece tu nueva contraseña de acceso'
+                )}
+              </p>
             </div>
 
             <form onSubmit={handleUpdatePassword} className="space-y-6">
