@@ -520,3 +520,13 @@
 - Se modificó `src/app/login/page.tsx` para forzar manualmente la inicialización de la sesión llamando a `supabase.auth.setSession` al detectar parámetros de acceso en el hash en `checkRecovery`.
 - Se implementó un mecanismo de salvaguarda ("fallback") en `handleUpdatePassword` para que, en caso de llamarse a `updateUser` con una sesión en memoria nula, intente recuperar y establecer la sesión en tiempo real a partir del hash de la URL antes de ejecutar la actualización.
 - Se añadió retroalimentación visual al usuario mostrando la cuenta de correo electrónico asociada al restablecimiento activo de forma dinámica en la cabecera de la modal (`sessionEmail`).
+[2026-07-31 22:21:00] Actividad de Antigravity:
+- El usuario decidió implementar la medición de tráfico a través de Vercel Analytics por su simplicidad e integración nativa (versión [1.4.7]).
+- Se modificó el archivo `src/app/layout.tsx` para importar e instanciar el componente `<Analytics />` de `@vercel/analytics/react` dentro del cuerpo del layout global.
+- Se agregó la dependencia `"@vercel/analytics": "^1.4.0"` al archivo `package.json`.
+- Se actualizaron los archivos de documentación y control `CHANGELOG.md` y `GEMINI.md` a la versión [1.4.7] en español.
+- Se ejecutó de forma supervisada a petición explícita del usuario el comando `npm install` para instalar la dependencia `@vercel/analytics`, completándose de forma exitosa.
+- Se inició en segundo plano (daemon) el comando `npm run dev` para lanzar el servidor de desarrollo local y validar el correcto arranque de la aplicación.
+- Se detectó un problema de carga infinita al acceder a http://localhost:3000 causado porque Turbopack infirió incorrectamente la raíz del proyecto en la carpeta padre debido a un archivo `package-lock.json` huérfano.
+- Se detuvo la tarea de desarrollo previa (`task-50`) y se eliminó el archivo `package-lock.json` huérfano de la raíz del workspace (`C:\Users\Petazo\Desktop\Pagina rancho Carmelitas`).
+- Se relanzó el servidor de desarrollo en la subcarpeta `rancho-carmelitas-web` (`task-73`), logrando un arranque exitoso de 2.1s y un renderizado exitoso de la página con código HTTP 200.

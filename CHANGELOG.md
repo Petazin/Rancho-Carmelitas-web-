@@ -1,5 +1,12 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.7] - 2026-07-31
+
+### Añadido / Mejorado (Integración de Vercel Analytics para Medición de Tráfico v1.4.7)
+
+- **Instalación de Vercel Analytics:** Se añadió el paquete oficial `@vercel/analytics` al archivo [package.json](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/package.json) para habilitar el seguimiento del tráfico.
+- **Inserción del Componente de Analíticas:** Se importó e integró el componente `<Analytics />` en el RootLayout global en [layout.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/layout.tsx), lo que permite capturar visitas, procedencia y rendimiento del sitio una vez desplegado en Vercel.
+
 ## [1.4.6] - 2026-07-31
 
 ### Corregido / Mejorado (Robustecimiento de Recuperación de Contraseñas y Soporte PKCE v1.4.6)
