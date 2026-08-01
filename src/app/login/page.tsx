@@ -29,10 +29,37 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Detectar si venimos de un enlace de recuperación
-    const checkRecovery = () => {
+    // Detectar si venimos de un enlace de recuperación o invitación
+    const checkRecovery = async () => {
+      // 1. Verificar si hay un error en el hash (ej. link expirado o ya usado)
       const hash = window.location.hash;
-      if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
+      if (hash && hash.includes('error=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const errorDesc = params.get('error_description') || 'El enlace es inválido o ha expirado.';
+        setError(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+        // Limpiar el hash de la URL para que no se quede pegado
+        router.replace('/login');
+        return;
+      }
+
+      // 2. Verificar si hay un código de PKCE en la URL (?code=...)
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          setView('reset');
+          router.replace('/login');
+          return;
+        } else {
+          setError('El enlace de recuperación es inválido o ha expirado.');
+          router.replace('/login');
+          return;
+        }
+      }
+
+      // 3. Verificar flujo implícito clásico (hash #access_token=...)
+      if (hash && (hash.includes('access_token') || hash.includes('type=recovery') || hash.includes('type=invite'))) {
         setView('reset');
       }
     };
@@ -51,7 +78,7 @@ export default function LoginPage() {
       window.removeEventListener('hashchange', checkRecovery);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

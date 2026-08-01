@@ -1,5 +1,12 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.6] - 2026-07-31
+
+### Corregido / Mejorado (Robustecimiento de Recuperación de Contraseñas y Soporte PKCE v1.4.6)
+
+- **Soporte PKCE y Flujo Implícito en Login:** Se actualizó la lógica de inicialización en [page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/login/page.tsx) (`checkRecovery` dentro de `useEffect`) para soportar de forma nativa e integrada tanto el flujo moderno de PKCE (intercambiando el código `?code=...` de la URL mediante `exchangeCodeForSession` de Supabase Auth) como el flujo implícito heredado (`#access_token=...`). Esto evita la pérdida de la sesión de autenticación al redirigir al usuario tras hacer clic en su enlace de restablecimiento o invitación.
+- **Prevención de Enlaces Caducados:** Se inyectó lógica en `LoginPage` para detectar de forma preventiva parámetros de error en el hash (`error=...`) que retorna Supabase cuando un enlace de recuperación de contraseña ha expirado o ya ha sido consumido (por ejemplo, por un pre-escaneo de spam en el cliente de correo del usuario). La interfaz ahora captura la descripción del error y lo muestra en color rojo en la modal de login, impidiendo que el usuario navegue a una pantalla de cambio de clave no autenticada que posteriormente fallaría con el error "Auth session missing!".
+
 ## [1.4.5] - 2026-06-04
 
 ### Añadido / Mejorado (Envío Automático de Correo de Agradecimiento y Despedida tras el Check-Out v1.4.5)

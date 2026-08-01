@@ -433,7 +433,7 @@
 - Se creó el script de aprovisionamiento `migration/crear_admin_test.js` el cual inicializa al usuario administrador en caliente y de forma auto-confirmada en el Supabase Auth de Test y asocia su perfil público en `profiles` con el rol de `'admin'`.
 - Se solicita la ejecución de este script al usuario.
 [2026-06-03 23:36:00] Actividad de Antigravity:
-- El usuario generó una nueva API Key de pruebas (`re_PEJXQ3J8_3F3UtJeDrxYLJQwBnyMb21PE`) en su cuenta de Resend corporativa.
+- El usuario generó una nueva API Key de pruebas (re_OBLITERATED_KEY_FOR_SECURITY) en su cuenta de Resend corporativa.
 - Se actualizó el archivo `.env.local` reemplazando la clave de Resend anterior por la nueva clave de pruebas corporativa.
 - Se registra la actividad en el log para visibilidad de los cambios locales.
 [2026-06-04 00:15:00] Actividad de Antigravity:
@@ -509,3 +509,8 @@
 - Se inyectó la llamada fetch asíncrona en segundo plano hacia la API de agradecimiento dentro de la función `handlePmsCheckOut` de `src/app/admin/reservas/page.tsx` para evitar latencias o bloqueos en la interfaz del panel de administración.
 - Se actualizaron los archivos de documentación y control `GEMINI.md`, `README.md` y `CHANGELOG.md` a la versión [1.4.5] en español.
 - Se proponen los comandos al usuario para las pruebas locales y la sincronización a GitHub.
+[2026-07-31 19:30:00] Actividad de Antigravity:
+- Se ejecutó una búsqueda recursiva de cadenas relacionadas con la recuperación de contraseñas mediante Get-ChildItem y Select-String en PowerShell.
+- Se ejecutó una consulta directa (Invoke-RestMethod) al endpoint de dominios de Resend para validar el estado de verificación del dominio ranchocarmelitas.com utilizando la clave de API del proyecto, obteniendo un error 401 debido a que la API key está restringida únicamente para envío.
+- Se modificó `src/app/login/page.tsx` para hacer la vista de recuperación/invitación de contraseña mucho más robusta. Ahora soporta explícitamente el flujo PKCE (`exchangeCodeForSession` cuando detecta un query param `?code=...`) además del flujo implícito clásico (`#access_token=...`), mitigando problemas de pérdida de sesión en redirecciones y navegadores móviles restrictivos.
+- Se agregó detección de parámetros de error en el hash (`error=...` de Supabase) en `LoginPage` para detectar de forma preventiva enlaces de recuperación expirados o inválidos en el frontend, mostrando el error correspondiente directamente en la modal en lugar de renderizar el formulario unauthenticated que luego arroja "Auth session missing!".
