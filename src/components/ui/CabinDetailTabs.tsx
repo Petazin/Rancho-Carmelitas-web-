@@ -70,24 +70,44 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
               </p>
             </div>
 
-            {/* Galería Secundaria (Scroller horizontal) */}
+            {/* Galería Secundaria (Adaptativa y Responsiva) */}
             {cabin.galleryUrls.length > 1 && (
               <div className="space-y-4">
                 <h3 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">
                   Galería de Fotos
                 </h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x scroll-smooth custom-scrollbar">
+                
+                {/* 📱 Vista Móvil: Scroller horizontal táctil */}
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth custom-scrollbar md:hidden">
                   {cabin.galleryUrls.slice(1).map((url: string, index: number) => (
                     <div
                       key={index}
-                      className="relative w-64 md:w-80 h-48 md:h-56 flex-shrink-0 snap-center rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
+                      className="relative w-64 h-48 flex-shrink-0 snap-center rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
                     >
                       <Image
                         src={url}
                         alt={`Vista ${index + 2} de ${cabin.name}`}
                         fill
                         className="object-cover hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 768px) 256px, 320px"
+                        sizes="256px"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* 💻 Vista Tablet y PC: Grid responsivo simétrico */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {cabin.galleryUrls.slice(1).map((url: string, index: number) => (
+                    <div
+                      key={index}
+                      className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 shadow-sm group"
+                    >
+                      <Image
+                        src={url}
+                        alt={`Vista ${index + 2} de ${cabin.name}`}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 1024px) 50vw, 33vw"
                       />
                     </div>
                   ))}

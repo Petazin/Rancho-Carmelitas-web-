@@ -530,3 +530,16 @@
 - Se detectó un problema de carga infinita al acceder a http://localhost:3000 causado porque Turbopack infirió incorrectamente la raíz del proyecto en la carpeta padre debido a un archivo `package-lock.json` huérfano.
 - Se detuvo la tarea de desarrollo previa (`task-50`) y se eliminó el archivo `package-lock.json` huérfano de la raíz del workspace (`C:\Users\Petazo\Desktop\Pagina rancho Carmelitas`).
 - Se relanzó el servidor de desarrollo en la subcarpeta `rancho-carmelitas-web` (`task-73`), logrando un arranque exitoso de 2.1s y un renderizado exitoso de la página con código HTTP 200.
+[2026-08-05 11:40:00] Actividad de Antigravity:
+- Se implementó la corrección de desborde horizontal y el rediseño responsivo de la galería de fotos en la vista individual de cabañas (versión [1.4.8]).
+- Se agregó la clase `min-w-0` al contenedor principal `flex-1` en `src/app/cabins/[id]/page.tsx` para evitar que flexbox se expanda por encima de la pantalla al contener la galería horizontal.
+- Se rediseñó la galería de fotos secundaria en `src/components/ui/CabinDetailTabs.tsx` para soportar un scroller táctil nativo en móviles (`md:hidden`) y un grid simétrico responsivo con aspect-ratio 4:3 y efecto de hover dinámico en tablets y PC (`hidden md:grid`).
+- Se redactaron y agregaron pautas de gobernanza responsivas obligatorias para desarrollos futuros en `GEMINI.md`.
+- Se ejecutó el comando de shell de PowerShell para crear el directorio de la Wiki y copiar el Reporte de Hito a `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas-web\2026-08-05-galeria-fotos-responsiva-y-desborde.md` para resguardar la memoria histórica.
+- Se ejecutó el comando de shell `npm run build` a solicitud directa del usuario, logrando compilar el proyecto exitosamente en 5.0s y validar la correcta generación estática y dinámica de las páginas (incluyendo /cabins/[id]).
+- Se ejecutó el comando de shell `npm run dev` en segundo plano (daemon) a petición expresa del usuario para levantar el servidor de desarrollo local en http://localhost:3000 y permitir la validación interactiva de los cambios.
+- Se diagnosticó el error `StorageApiError: Bucket not found` reportado por el usuario al subir fotos de cabañas. Se identificó la ausencia del bucket `cabin-images` en la instancia de Supabase de Test.
+- Se desarrolló y ejecutó un script en Node.js para crear de forma autónoma el bucket `cabin-images` como público en Supabase utilizando la clave `SUPABASE_SERVICE_ROLE_KEY` del archivo `.env.local`, logrando crearlo exitosamente.
+- Se redactó el parche SQL de políticas RLS `parche_storage_cabin_images.sql` para el bucket `cabin-images` y se copió mediante comando de shell de PowerShell a la carpeta `migration/` del workspace para su posterior aplicación en el Editor SQL de Supabase.
+- Se diagnosticó y solucionó el error de Next.js `Invalid src prop on next/image` al ingresar a la vista de detalle de cabañas. Se agregó el host de Supabase de Testing `cwoxuodcsfacvtojqjpz.supabase.co` a la sección `images.remotePatterns` de `next.config.ts` para autorizar la optimización de imágenes en el entorno local de desarrollo.
+- Se actualizó el historial de cambios en `CHANGELOG.md` documentando la versión [1.4.8] en español de forma consistente.

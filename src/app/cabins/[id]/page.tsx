@@ -108,7 +108,7 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
           <div className="flex flex-col lg:flex-row gap-12">
             
             {/* Detalles Principales */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex flex-wrap gap-4 mb-8 pb-8 border-b border-gray-200">
                 <div className="flex items-center gap-2 text-gray-700">
                   <svg className="w-6 h-6 text-[#11d442]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

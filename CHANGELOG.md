@@ -1,5 +1,15 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.8] - 2026-08-05
+
+### Corregido / Mejorado (Responsividad Global, Pautas de Gobernanza en GEMINI.md y Hotfix de Desborde Horizontal v1.4.8)
+
+- **Corrección de Desborde Horizontal en Detalles de Cabaña:** Se inyectó la clase `min-w-0` en el contenedor principal `<div className="flex-1">` de [page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/cabins/%5Bid%5D/page.tsx). Esto resuelve el error por el cual el scroller horizontal de fotos forzaba la expansión del contenedor flexible hacia la derecha, rompiendo los márgenes laterales del layout y generando scrollbars horizontales globales en el navegador.
+- **Galería de Fotos Adaptativa Híbrida:** Rediseño del componente [CabinDetailTabs.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/ui/CabinDetailTabs.tsx) para dividir la galería en dos layouts controlados dinámicamente por breakpoints de Tailwind CSS:
+  * *📱 Vista Móvil:* Scroller horizontal nativo con scroll por inercia (`snap-x flex gap-4 overflow-x-auto md:hidden`), ideal para desplazarse con el dedo en pantallas táctiles.
+  * *💻 Vista Tablet y PC:* Grid responsivo simétrico (`hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4`) que distribuye las imágenes con una relación de aspecto uniforme `aspect-[4/3]` (4:3) y micro-animaciones premium al pasar el cursor (`hover:scale-105 transition-transform duration-500`).
+- **Gobernanza de Diseño Responsivo en GEMINI.md:** Se agregó la nueva sección de gobernanza y pautas de desarrollo responsivas obligatorias en [GEMINI.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/GEMINI.md). Establece los estándares estrictos de adaptabilidad para Móvil, Tablet y PC, así como las restricciones técnicas para prevenir desbordes horizontales de Flexbox y anchos estáticos en el futuro.
+
 ## [1.4.7] - 2026-07-31
 
 ### Añadido / Mejorado (Integración de Vercel Analytics para Medición de Tráfico v1.4.7)

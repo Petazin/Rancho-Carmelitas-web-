@@ -173,4 +173,22 @@ El sistema ahora soporta:
 
 Próximos pasos: **Ingreso de Datos Reales (v1.3.0+)** — La base de datos fue reiniciada exitosamente eliminando todos los datos de prueba (reservas, pagos, cabañas, plataformas, auditoría y galería). Los **2 usuarios del equipo** se preservaron intactos. El sistema está en estado cero, listo para el ingreso de cabañas reales, canales de venta reales y reservas históricas reales del Rancho Carmelitas.
 
+## 4. Gobernanza de Diseño Responsivo y Adaptabilidad (PC, Tablet, Celular)
+
+De aquí en adelante, cualquier desarrollo, refactorización o corrección en el código del Rancho Carmelitas debe cumplir estrictamente con los siguientes estándares de responsividad para garantizar una experiencia visual óptima en cualquier tamaño de pantalla:
+
+1. **Enfoque Adaptativo Completo:**
+   - **Móvil (Celulares < 768px):** Diseño optimizado para uso vertical táctil con una sola mano. Navegación simplificada, tamaños de fuente legibles sin hacer zoom y scrollers horizontales limitados para colecciones de imágenes largas para no saturar verticalmente.
+   - **Tablet (768px - 1024px):** Layouts distribuidos en 2 columnas, menús que optimizan el espacio disponible y elementos interactivos que respondan tanto a gestos táctiles como a clics de puntero.
+   - **PC / Laptops (>= 1024px):** Layouts estructurados en 3 o más columnas, sin elementos gigantes innecesarios, aprovechando el espacio horizontal de forma simétrica e implementando micro-animaciones premium al pasar el cursor (hover).
+
+2. **Evitar el Desborde Horizontal Global:**
+   - Queda estrictamente prohibido introducir contenedores rígidos con anchos estáticos en píxeles que excedan el ancho del viewport de pantallas móviles (ej: `w-[800px]`).
+   - Cuando se usen contenedores flexibles (`flex` con dirección horizontal `flex-row`) y dentro de ellos existan scrollers de imágenes, tablas anchas o componentes dinámicos con comportamiento no-shrinkable (`flex-shrink-0`), se debe aplicar de forma mandatoria la clase `min-w-0` al elemento flex principal para forzar al navegador a limitar su tamaño al contenedor padre, evitando el desborde horizontal de la página completa.
+
+3. **Uso de Clases Responsivas Nativas de Tailwind CSS:**
+   - Se debe favorecer el uso de prefijos responsivos en grids (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`), flexbox (`flex-col lg:flex-row`), paddings, margins y tamaños de fuente.
+   - La relación de aspecto en fotos fluidas se controlará idealmente mediante clases de aspect-ratio de Tailwind (`aspect-[4/3]`, `aspect-video`, etc.) en lugar de alturas fijas rígidas.
+
+
 
