@@ -543,3 +543,6 @@
 - Se redactó el parche SQL de políticas RLS `parche_storage_cabin_images.sql` para el bucket `cabin-images` y se copió mediante comando de shell de PowerShell a la carpeta `migration/` del workspace para su posterior aplicación en el Editor SQL de Supabase.
 - Se diagnosticó y solucionó el error de Next.js `Invalid src prop on next/image` al ingresar a la vista de detalle de cabañas. Se agregó el host de Supabase de Testing `cwoxuodcsfacvtojqjpz.supabase.co` a la sección `images.remotePatterns` de `next.config.ts` para autorizar la optimización de imágenes en el entorno local de desarrollo.
 - Se actualizó el historial de cambios en `CHANGELOG.md` documentando la versión [1.4.8] en español de forma consistente.
+- Tras recibir la confirmación de validación por parte del usuario, se ejecutaron los comandos de shell `git status`, `git add .`, `git commit -m "..."` y `git push origin master` para consolidar los cambios en local y subirlos al repositorio remoto de GitHub para su despliegue a producción.
+[2026-08-06 17:57:00] Actividad de Antigravity:
+- Se inició en segundo plano (daemon) el comando de shell `npm run dev` a petición expresa del usuario para levantar el servidor de desarrollo local en http://localhost:3000 y validar la nueva pestaña de "Desarrollo y Mejoras".

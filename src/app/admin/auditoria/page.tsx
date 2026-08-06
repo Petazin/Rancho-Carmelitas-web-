@@ -379,6 +379,41 @@ export default function AuditoriaPage() {
       return `🔌 ${autor} removió y deshabilitó el canal de venta "${nombre}" del sistema (${fecha}).`;
     }
 
+    if (log.table_name === 'desarrollo_ideas') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const titulo = data?.idea || 'sugerencia sin título';
+      const tipo = data?.type === 'bug' ? 'el reporte de bug' : 'la propuesta';
+      const prefijo = data?.type === 'bug' ? '🐛' : '💡';
+
+      if (log.action === 'INSERT') {
+        return `${prefijo} ${autor} creó ${tipo} "${titulo}" (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const oldCompleted = log.old_data?.completed;
+        const newCompleted = log.new_data?.completed;
+        const oldPriority = log.old_data?.priority;
+        const newPriority = log.new_data?.priority;
+        const oldIdea = log.old_data?.idea;
+        const newIdea = log.new_data?.idea;
+
+        if (oldCompleted !== newCompleted && newCompleted !== undefined) {
+          if (newCompleted) {
+            return `✅ ${autor} marcó como completado ${tipo} "${titulo}" (${fecha}).`;
+          } else {
+            return `🔄 ${autor} reabrió y marcó como pendiente ${tipo} "${titulo}" (${fecha}).`;
+          }
+        }
+        if (oldPriority !== newPriority && newPriority !== undefined) {
+          return `📌 ${autor} reordenó la prioridad de ${tipo} "${titulo}" al puesto #${newPriority} (${fecha}).`;
+        }
+        if (oldIdea !== newIdea) {
+          return `📝 ${autor} editó el título de ${tipo} a: "${newIdea}" (${fecha}).`;
+        }
+        return `📝 ${autor} actualizó los detalles de ${tipo} "${titulo}" (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó del roadmap ${tipo} "${titulo}" (${fecha}).`;
+    }
+
     return `🔗 ${autor} realizó una acción de tipo ${log.action} en el módulo ${log.table_name} (${fecha}).`;
   };
 

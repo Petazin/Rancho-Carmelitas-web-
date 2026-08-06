@@ -1,5 +1,16 @@
 # Changelog - Rancho Carmelitas
 
+## [1.4.9] - 2026-08-06
+
+### Añadido / Mejorado (Módulo de Desarrollo, Mejoras, Evidencias Visuales de Bugs y Auditoría v1.4.9)
+
+- **Módulo de Desarrollo y Roadmap con Drag & Drop:** Creación de una pantalla dedicada de administración en [page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/desarrollo/page.tsx) para listar propuestas de mejora y reportes de fallas ordenados por prioridad consecutiva. El orden se modifica interactivamente arrastrando y soltando las tarjetas (HTML5 drag & drop nativo sin librerías externas), lo que gatilla un `upsert` masivo reactivo en Supabase.
+- **Soporte de Evidencias Multimedia y Pegado Rápido (Ctrl+V):** El formulario de creación permite adjuntar explicaciones en texto y añadir múltiples imágenes de soporte mediante input clásico, arrastrado (dropzone) o pegado directo desde el portapapeles (`Ctrl+V`) para una captura ultra veloz de fallas. Los archivos se suben al bucket `cabin-images` dentro del directorio `/bugs/`.
+- **Control de Completado y Fecha de Finalización:** Inclusión de un checkbox interactivo por tarjeta para marcar las tareas como resueltas. Al completarse, se registra la hora en `completed_at`, la tarjeta se difumina suavemente y el título se tacha. Se inyectó también un badge de estado con la fecha de finalización.
+- **Auditoría Trace Trail en Lenguaje Natural:** Se actualizó la bitácora de auditoría in-app en [page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/auditoria/page.tsx) para traducir los logs de `desarrollo_ideas` a español en lenguaje natural, identificando de manera descriptiva qué administrador creó, editó, reordenó, completó o eliminó una tarea e indicando su título.
+- **Estadísticas de Roadmap en Cabecera:** Adición de un tercer badge azul en el encabezado del panel de desarrollo que cuenta y actualiza en tiempo real la cantidad de soluciones completadas.
+- **Actualización de Sidebar y SQL de Inicialización:** Modificación de [layout.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/layout.tsx) para inyectar el enlace de navegación lateral y creación de [schema_update_desarrollo_ideas.sql](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/schema_update_desarrollo_ideas.sql) en el directorio raíz para inicializar la base de datos de producción con el trigger de auditoría histórica.
+
 ## [1.4.8] - 2026-08-05
 
 ### Corregido / Mejorado (Responsividad Global, Pautas de Gobernanza en GEMINI.md y Hotfix de Desborde Horizontal v1.4.8)
