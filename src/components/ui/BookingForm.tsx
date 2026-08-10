@@ -31,7 +31,6 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   // Estados para disponibilidad
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
   const [existingClosures, setExistingClosures] = useState<any[]>([]);
-  const [isAvailable, setIsAvailable] = useState(true);
   const [isChecking, setIsChecking] = useState(true);
 
   // Estado del calendario interactivo
@@ -62,43 +61,38 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
     fetchData();
   }, [cabinId]);
 
-  // Validar solapamiento cada vez que cambian las fechas
-  useEffect(() => {
-    if (!checkIn || !checkOut) {
-      setIsAvailable(false);
-      return;
+  // Validar solapamiento de forma sincrónica durante la fase de renderizado para evitar lags o parpadeos visuales
+  const checkOverlap = () => {
+    if (!checkIn || !checkOut) return false;
+
+    const selectedIn = new Date(checkIn);
+    const selectedOut = new Date(checkOut);
+
+    // Validar reservas en conflicto
+    for (const b of existingBookings) {
+      const bookedIn = new Date(b.check_in);
+      const bookedOut = new Date(b.check_out);
+      
+      if (selectedIn < bookedOut && selectedOut > bookedIn) {
+        return false;
+      }
     }
 
-    const checkOverlap = () => {
-      const selectedIn = new Date(checkIn);
-      const selectedOut = new Date(checkOut);
-
-      // Validar reservas en conflicto
-      for (const b of existingBookings) {
-        const bookedIn = new Date(b.check_in);
-        const bookedOut = new Date(b.check_out);
-        
-        if (selectedIn < bookedOut && selectedOut > bookedIn) {
-          return false;
-        }
+    // Validar cierres en conflicto (individuales o totales)
+    for (const c of existingClosures) {
+      const closureIn = new Date(c.start_date);
+      const closureOut = new Date(c.end_date);
+      
+      // El cierre dura todo el día de inicio y de término inclusive
+      if (selectedIn <= closureOut && selectedOut >= closureIn) {
+        return false;
       }
+    }
 
-      // Validar cierres en conflicto (individuales o totales)
-      for (const c of existingClosures) {
-        const closureIn = new Date(c.start_date);
-        const closureOut = new Date(c.end_date);
-        
-        // El cierre dura todo el día de inicio y de término inclusive
-        if (selectedIn <= closureOut && selectedOut >= closureIn) {
-          return false;
-        }
-      }
+    return true;
+  };
 
-      return true;
-    };
-
-    setIsAvailable(checkOverlap());
-  }, [checkIn, checkOut, existingBookings, existingClosures]);
+  const isAvailable = checkOverlap();
 
 
   const isDateBooked = (dateStr: string) => {

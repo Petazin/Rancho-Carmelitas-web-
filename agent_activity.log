@@ -560,3 +560,7 @@
 - A petición explícita del usuario, se ejecutó el comando de shell `node migration/clonar_datos_completos.js` de forma supervisada para sincronizar todos los datos de Supabase de Producción a Test.
 - Se completó la clonación de datos de manera exitosa, logrando un entorno de pruebas 100% equivalente al de producción.
 - Se modificó la lógica de inicio en `src/app/admin/layout.tsx` para inyectar un fallback administrativo en desarrollo en caso de error de obtención de perfil. Esto corrige de raíz el error visual `Error fetching profile: {}` gatillado cuando el usuario local de Auth no tiene su UUID correspondiente en la tabla `profiles` recién clonada de producción, asegurando que el sidebar de control de QA esté 100% visible.
+[2026-08-09 22:58:00] Actividad de Antigravity:
+- Se actualizó el script de sincronización `migration/clonar_datos_completos.js` para incluir la tabla `desarrollo_ideas` y se re-ejecutó con éxito para corregir la discrepancia de bugs no sincronizados en test.
+- Se identificó y resolvió el retardo visual (delay) y el banner de conflicto transitorio al hacer clic en los días del calendario en `src/components/ui/BookingForm.tsx`. Se eliminó el estado asíncrono `isAvailable` que se actualizaba en un `useEffect` posterior al render, reemplazándolo por una derivación 100% sincrónica durante la fase de renderizado.
+- Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.

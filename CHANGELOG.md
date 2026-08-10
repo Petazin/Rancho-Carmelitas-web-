@@ -9,6 +9,7 @@
 - **Gestor Dinámico de Reglas de Convivencia:** Implementación en el panel administrativo (`/admin/landing`) de un editor interactivo Rancho Stitch UI que permite añadir, reordenar con flechas de prioridad (`▲`/`▼`) y eliminar reglas de la lista (`rules_list` array en PostgreSQL), visualizándose inmediatamente en el Home público mediante un mapeo reactivo.
 - **Campo de Explicación del Desarrollador en Roadmap:** Adición de la columna `developer_comment` en la tabla `desarrollo_ideas` y la correspondiente visualización e ingreso en el panel de Roadmap (`/admin/desarrollo`). Permite al desarrollador documentar en lenguaje no técnico el estado de la mejora, cómo se resolvió y cómo se interactúa con ella por pantalla, mostrándose en una tarjeta azul Rancho destacada al expandir el requerimiento.
 - **Scripts de Migración SQL:** Creación de `schema_update_landing_texts.sql` y `schema_update_desarrollo_comment.sql` en el directorio raíz para actualizar la base de datos en Supabase.
+- **Hotfix de Validación Instantánea de Disponibilidad:** Se refactorizó la lógica en `BookingForm.tsx` eliminando el estado asíncrono `isAvailable` que se calculaba en un `useEffect`. En su lugar, el solapamiento de fechas se evalúa de manera 100% sincrónica durante la fase de renderizado. Esto elimina de raíz el retardo visual (delay) y el banner de conflicto transitorio al hacer clic en las fechas del calendario, haciendo que la transición al botón "Confirmar y Reservar" sea instantánea.
 
 ## [1.4.9] - 2026-08-06
 
