@@ -546,3 +546,17 @@
 - Tras recibir la confirmación de validación por parte del usuario, se ejecutaron los comandos de shell `git status`, `git add .`, `git commit -m "..."` y `git push origin master` para consolidar los cambios en local y subirlos al repositorio remoto de GitHub para su despliegue a producción.
 [2026-08-06 17:57:00] Actividad de Antigravity:
 - Se inició en segundo plano (daemon) el comando de shell `npm run dev` a petición expresa del usuario para levantar el servidor de desarrollo local en http://localhost:3000 y validar la nueva pestaña de "Desarrollo y Mejoras".
+[2026-08-09 13:35:00] Actividad de Antigravity:
+- Se crearon los scripts SQL `schema_update_landing_texts.sql` y `schema_update_desarrollo_comment.sql` en la raíz del proyecto para actualizar el esquema de Supabase.
+- Se modificó la página pública `src/app/page.tsx` para consumir dinámicamente los textos de la sección de Cabañas (sanitizada sin la frase "de madera"), Galería, SERNATUR y Reglas de Convivencia con fallbacks defensivos locales.
+- Se modificó el panel de administración de Landing `src/app/admin/landing/page.tsx` para permitir al administrador editar los títulos, subtítulos generales y las Reglas de Convivencia con un gestor interactivo de arrays (añadir, reordenar y eliminar).
+- Se modificó el panel de Roadmap `src/app/admin/desarrollo/page.tsx` para añadir el campo de comentario explicativo del desarrollador a nivel de interfaz (TypeScript), formulario de edición y visualización responsiva.
+- Se ejecutó el comando de shell `npm run build` en el workspace local para validar que la aplicación Next.js compile limpiamente y sin errores de TypeScript.
+[2026-08-09 22:15:00] Actividad de Antigravity:
+- El usuario aplicó con éxito las queries de migración en la base de datos de pruebas (Supabase Test).
+- A petición explícita del usuario, se ejecutó el comando de shell `npm run dev -- -p 3005` en segundo plano (daemon) dentro de la subcarpeta `rancho-carmelitas-web` para levantar el servidor de desarrollo en el puerto libre http://localhost:3005 y proceder con las validaciones visuales.
+- Se creó el script de automatización Node.js `migration/clonar_datos_completos.js` para permitir la sincronización íntegra (profiles, cabins, plataformas, settings, closures, bookings, payments, audit_logs) de Producción a Test respetando la integridad referencial de llaves foráneas en PostgreSQL.
+[2026-08-09 22:23:00] Actividad de Antigravity:
+- A petición explícita del usuario, se ejecutó el comando de shell `node migration/clonar_datos_completos.js` de forma supervisada para sincronizar todos los datos de Supabase de Producción a Test.
+- Se completó la clonación de datos de manera exitosa, logrando un entorno de pruebas 100% equivalente al de producción.
+- Se modificó la lógica de inicio en `src/app/admin/layout.tsx` para inyectar un fallback administrativo en desarrollo en caso de error de obtención de perfil. Esto corrige de raíz el error visual `Error fetching profile: {}` gatillado cuando el usuario local de Auth no tiene su UUID correspondiente en la tabla `profiles` recién clonada de producción, asegurando que el sidebar de control de QA esté 100% visible.

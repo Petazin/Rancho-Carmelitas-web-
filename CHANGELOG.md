@@ -1,5 +1,15 @@
 # Changelog - Rancho Carmelitas
 
+## [1.5.0] - 2026-08-09
+
+### Añadido / Mejorado (Textos Autogestionables en Landing y Comentario del Desarrollador v1.5.0)
+
+- **Desacoplamiento de Textos de Landing Page:** Migración de los textos de la página pública (títulos, descripciones y sellos de confianza) que antes estaban escritos en duro en el código JSX, centralizándolos en la tabla única `landing_settings` de Supabase.
+- **Sanitización de Cabañas:** Remoción de la frase "de madera" de la descripción por defecto de las cabañas por requerimiento del propietario, dejando la descripción fluida y natural.
+- **Gestor Dinámico de Reglas de Convivencia:** Implementación en el panel administrativo (`/admin/landing`) de un editor interactivo Rancho Stitch UI que permite añadir, reordenar con flechas de prioridad (`▲`/`▼`) y eliminar reglas de la lista (`rules_list` array en PostgreSQL), visualizándose inmediatamente en el Home público mediante un mapeo reactivo.
+- **Campo de Explicación del Desarrollador en Roadmap:** Adición de la columna `developer_comment` en la tabla `desarrollo_ideas` y la correspondiente visualización e ingreso en el panel de Roadmap (`/admin/desarrollo`). Permite al desarrollador documentar en lenguaje no técnico el estado de la mejora, cómo se resolvió y cómo se interactúa con ella por pantalla, mostrándose en una tarjeta azul Rancho destacada al expandir el requerimiento.
+- **Scripts de Migración SQL:** Creación de `schema_update_landing_texts.sql` y `schema_update_desarrollo_comment.sql` en el directorio raíz para actualizar la base de datos en Supabase.
+
 ## [1.4.9] - 2026-08-06
 
 ### Añadido / Mejorado (Módulo de Desarrollo, Mejoras, Evidencias Visuales de Bugs y Auditoría v1.4.9)

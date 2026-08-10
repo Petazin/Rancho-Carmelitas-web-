@@ -19,6 +19,7 @@ interface Idea {
   created_at: string;
   created_by?: string;
   profiles?: Profile | null;
+  developer_comment?: string | null;
 }
 
 export default function AdminDesarrolloPage() {
@@ -38,6 +39,7 @@ export default function AdminDesarrolloPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editDeveloperComment, setEditDeveloperComment] = useState('');
 
   // Drag & Drop
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -252,7 +254,8 @@ export default function AdminDesarrolloPage() {
         .from('desarrollo_ideas')
         .update({
           idea: editTitle,
-          description: editDescription
+          description: editDescription,
+          developer_comment: editDeveloperComment
         })
         .eq('id', id);
 
@@ -646,8 +649,21 @@ export default function AdminDesarrolloPage() {
                                 onChange={(e) => setEditDescription(e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#11d442] resize-none"
                                 rows={3}
+                                placeholder="Descripción del Bug..."
                               />
                             )}
+                            <div className="space-y-1">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase">
+                                Explicación del Desarrollador (Solución para no técnicos)
+                              </label>
+                              <textarea
+                                value={editDeveloperComment}
+                                onChange={(e) => setEditDeveloperComment(e.target.value)}
+                                placeholder="Explica en lenguaje sencillo qué se implementó o reparó y cómo interactuar con ello por pantalla..."
+                                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#11d442] resize-none bg-gray-50/20 text-gray-700"
+                                rows={2.5}
+                              />
+                            </div>
                             <div className="flex gap-2 justify-end">
                               <button
                                 onClick={() => setEditingId(null)}
@@ -742,6 +758,7 @@ export default function AdminDesarrolloPage() {
                               setEditingId(item.id);
                               setEditTitle(item.idea);
                               setEditDescription(item.description || '');
+                              setEditDeveloperComment(item.developer_comment || '');
                             }}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-750 hover:bg-gray-50 transition-colors"
                             title="Editar"
@@ -776,6 +793,18 @@ export default function AdminDesarrolloPage() {
                             </h5>
                             <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-white p-3.5 rounded-xl border border-gray-200">
                               {item.description}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Comentario del Desarrollador (Explicación de solución para no técnicos) */}
+                        {item.developer_comment && (
+                          <div className="space-y-1.5 pt-2 border-t border-gray-100">
+                            <h5 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                              <span>🛠️</span> Explicación de la Solución (Desarrollador)
+                            </h5>
+                            <p className="text-xs text-blue-900 bg-blue-50/50 p-3.5 rounded-xl border border-blue-100/70 whitespace-pre-wrap leading-relaxed shadow-sm">
+                              {item.developer_comment}
                             </p>
                           </div>
                         )}

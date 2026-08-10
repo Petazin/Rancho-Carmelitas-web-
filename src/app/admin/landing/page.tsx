@@ -3,12 +3,27 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
+/* 
+ * COMENTARIO DEL DESARROLLADOR:
+ * MEJORA ARQUITECTÓNICA - INTERFAZ DE CONFIGURACIONES GENERALES
+ * Hemos extendido la interfaz `LandingSettings` para reflejar todas las nuevas columnas de la base de datos Supabase,
+ * permitiendo así unificar la carga y persistencia del Hero, Logo, Cabañas, Galería, Sello SERNATUR y Reglas de Convivencia.
+ */
 interface LandingSettings {
   id: number;
   hero_title: string;
   hero_subtitle: string;
   hero_bg_url: string;
   logo_url?: string;
+  cabins_title?: string;
+  cabins_subtitle?: string;
+  gallery_title?: string;
+  gallery_subtitle?: string;
+  sernatur_title?: string;
+  sernatur_subtitle?: string;
+  sernatur_badge?: string;
+  rules_title?: string;
+  rules_list?: string[];
 }
 
 interface LandingGalleryItem {
@@ -33,9 +48,18 @@ export default function AdminLandingPage() {
   const [newHeroBgFile, setNewHeroBgFile] = useState<File | null>(null);
   const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
 
-  // Estados editables locales para textos de Hero
+  // Estados editables locales para textos de la Landing Page
   const [editTitle, setEditTitle] = useState('');
   const [editSubtitle, setEditSubtitle] = useState('');
+  const [cabinsTitle, setCabinsTitle] = useState('');
+  const [cabinsSubtitle, setCabinsSubtitle] = useState('');
+  const [galleryTitle, setGalleryTitle] = useState('');
+  const [gallerySubtitle, setGallerySubtitle] = useState('');
+  const [sernaturTitle, setSernaturTitle] = useState('');
+  const [sernaturSubtitle, setSernaturSubtitle] = useState('');
+  const [sernaturBadge, setSernaturBadge] = useState('');
+  const [rulesTitle, setRulesTitle] = useState('');
+  const [rulesList, setRulesList] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -44,7 +68,7 @@ export default function AdminLandingPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      // 1. Obtener configuraciones del Hero
+      // 1. Obtener configuraciones del Hero y Secciones
       const { data: settingsData, error: settingsError } = await supabase
         .from('landing_settings')
         .select('*')
@@ -57,10 +81,38 @@ export default function AdminLandingPage() {
         setSettings(settingsData);
         setEditTitle(settingsData.hero_title);
         setEditSubtitle(settingsData.hero_subtitle);
+        setCabinsTitle(settingsData.cabins_title || 'Nuestras Cabañas');
+        setCabinsSubtitle(settingsData.cabins_subtitle || 'Espacios diseñados para tu confort. Cabañas con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.');
+        setGalleryTitle(settingsData.gallery_title || 'Galería de Momentos');
+        setGallerySubtitle(settingsData.gallery_subtitle || 'Vistas reales de nuestro entorno, piscina y confortables interiores.');
+        setSernaturTitle(settingsData.sernatur_title || 'Servicio Turístico Registrado');
+        setSernaturSubtitle(settingsData.sernatur_subtitle || 'Vigencia hasta Enero 2026 • Registro № 71034');
+        setSernaturBadge(settingsData.sernatur_badge || 'Calidad y Confianza');
+        setRulesTitle(settingsData.rules_title || 'Reglas de Convivencia');
+        setRulesList(settingsData.rules_list || [
+          'Check-in: 15:00 hrs. Check-out: 11:00 hrs.',
+          'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
+          'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
+          'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
+        ]);
       } else {
         // Inicializar textos de edición si la fila de Supabase está vacía
         setEditTitle(settings.hero_title);
         setEditSubtitle(settings.hero_subtitle);
+        setCabinsTitle('Nuestras Cabañas');
+        setCabinsSubtitle('Espacios diseñados para tu confort. Cabañas con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.');
+        setGalleryTitle('Galería de Momentos');
+        setGallerySubtitle('Vistas reales de nuestro entorno, piscina y confortables interiores.');
+        setSernaturTitle('Servicio Turístico Registrado');
+        setSernaturSubtitle('Vigencia hasta Enero 2026 • Registro № 71034');
+        setSernaturBadge('Calidad y Confianza');
+        setRulesTitle('Reglas de Convivencia');
+        setRulesList([
+          'Check-in: 15:00 hrs. Check-out: 11:00 hrs.',
+          'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
+          'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
+          'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
+        ]);
       }
 
       // 2. Obtener galería de momentos
@@ -81,7 +133,7 @@ export default function AdminLandingPage() {
     }
   }
 
-  // Guardar cambios en el Hero (Textos y opcionalmente fondo)
+  // Guardar cambios en el Hero y Secciones (Textos, reglas y opcionalmente imágenes)
   const handleSaveSettings = async () => {
     if (!editTitle.trim()) {
       alert('El título principal no puede estar vacío.');
@@ -133,7 +185,7 @@ export default function AdminLandingPage() {
         finalLogoUrl = publicUrl;
       }
 
-      // Upsert en la tabla landing_settings
+      // Upsert en la tabla landing_settings con los campos extendidos
       const { error: upsertError } = await supabase
         .from('landing_settings')
         .upsert({
@@ -141,14 +193,23 @@ export default function AdminLandingPage() {
           hero_title: editTitle,
           hero_subtitle: editSubtitle,
           hero_bg_url: finalBgUrl,
-          logo_url: finalLogoUrl
+          logo_url: finalLogoUrl,
+          cabins_title: cabinsTitle,
+          cabins_subtitle: cabinsSubtitle,
+          gallery_title: galleryTitle,
+          gallery_subtitle: gallerySubtitle,
+          sernatur_title: sernaturTitle,
+          sernatur_subtitle: sernaturSubtitle,
+          sernatur_badge: sernaturBadge,
+          rules_title: rulesTitle,
+          rules_list: rulesList
         });
 
       if (upsertError) {
         throw new Error(upsertError.message);
       }
 
-      alert('¡Configuración de Landing guardada exitosamente!');
+      alert('¡Configuración de Landing Page guardada exitosamente!');
       setNewHeroBgFile(null);
       setNewLogoFile(null);
       fetchData();
@@ -450,7 +511,224 @@ export default function AdminLandingPage() {
             disabled={savingSettings}
             className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 text-sm disabled:opacity-50"
           >
-            {savingSettings ? 'Guardando...' : '✓ Guardar Cambios del Hero'}
+            {savingSettings ? 'Guardando...' : '✓ Guardar Toda la Configuración de Landing'}
+          </button>
+        </div>
+      </div>
+
+      {/* SECCIÓN 2: EDICIÓN DE TEXTOS Y SECCIONES DE LA LANDING */}
+      <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            ✏️ Textos y Secciones de la Landing Page
+          </h3>
+          <p className="text-xs text-gray-400">Edita los títulos, subtítulos y reglas de convivencia generales de la Landing Page pública.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Lado izquierdo: Textos de Cabañas, Galería y SERNATUR */}
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-1.5">
+                <span>🏠</span> Sección de Cabañas
+              </h4>
+              <div className="space-y-3 mt-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título Sección Cabañas</label>
+                  <input 
+                    type="text"
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                    value={cabinsTitle}
+                    onChange={e => setCabinsTitle(e.target.value)}
+                    placeholder="Ej. Nuestras Cabañas"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subtítulo Descriptivo Cabañas</label>
+                  <textarea 
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs text-gray-600 transition-all min-h-[70px] resize-none"
+                    value={cabinsSubtitle}
+                    onChange={e => setCabinsSubtitle(e.target.value)}
+                    placeholder="Escribe el subtítulo de la sección de cabañas..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-50">
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-1.5">
+                <span>🖼️</span> Sección de Galería de Momentos
+              </h4>
+              <div className="space-y-3 mt-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título Sección Galería</label>
+                  <input 
+                    type="text"
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                    value={galleryTitle}
+                    onChange={e => setGalleryTitle(e.target.value)}
+                    placeholder="Ej. Galería de Momentos"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subtítulo Descriptivo Galería</label>
+                  <textarea 
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs text-gray-600 transition-all min-h-[70px] resize-none"
+                    value={gallerySubtitle}
+                    onChange={e => setGallerySubtitle(e.target.value)}
+                    placeholder="Escribe el subtítulo de la sección de galería..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-50">
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-1.5">
+                <span>🎖️</span> Sello de Confianza SERNATUR
+              </h4>
+              <div className="space-y-3 mt-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título SERNATUR</label>
+                  <input 
+                    type="text"
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                    value={sernaturTitle}
+                    onChange={e => setSernaturTitle(e.target.value)}
+                    placeholder="Ej. Servicio Turístico Registrado"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subtítulo (Vigencia)</label>
+                    <input 
+                      type="text"
+                      className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-[11px] font-semibold text-gray-700 transition-all"
+                      value={sernaturSubtitle}
+                      onChange={e => setSernaturSubtitle(e.target.value)}
+                      placeholder="Ej. Vigencia hasta Enero 2026..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Badge de Confianza</label>
+                    <input 
+                      type="text"
+                      className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-[11px] font-semibold text-gray-750 transition-all"
+                      value={sernaturBadge}
+                      onChange={e => setSernaturBadge(e.target.value)}
+                      placeholder="Ej. Calidad y Confianza"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Lado derecho: Reglas de Convivencia con editor dinámico de array */}
+          <div className="space-y-4 flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+              <h4 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                <span>📋</span> Reglas de Convivencia
+              </h4>
+              <button
+                type="button"
+                onClick={() => setRulesList([...rulesList, ''])}
+                className="bg-green-50 text-[#11d442] hover:bg-[#11d442] hover:text-white text-[11px] px-2.5 py-1.5 rounded-lg font-bold transition-all border border-green-200/50 flex items-center gap-1 shadow-sm"
+              >
+                <span>➕</span> Añadir Regla
+              </button>
+            </div>
+
+            <div className="space-y-4 flex-1">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título de Sección de Reglas</label>
+                <input 
+                  type="text"
+                  className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                  value={rulesTitle}
+                  onChange={e => setRulesTitle(e.target.value)}
+                  placeholder="Ej. Reglas de Convivencia"
+                />
+              </div>
+
+              {/* Editor de array rulesList */}
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Listado de Reglas Individuales</label>
+                
+                {rulesList.map((rule, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50/50 p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <span className="text-[10px] font-bold text-gray-400 w-5 text-center">#{idx + 1}</span>
+                    <input 
+                      type="text"
+                      className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] text-xs font-medium text-gray-700 transition-all"
+                      value={rule}
+                      onChange={e => {
+                        const newList = [...rulesList];
+                        newList[idx] = e.target.value;
+                        setRulesList(newList);
+                      }}
+                      placeholder="Ej. Check-in: 15:00 hrs. Check-out: 11:00 hrs."
+                    />
+                    
+                    {/* Botones de control del array */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const newList = [...rulesList];
+                          const temp = newList[idx];
+                          newList[idx] = newList[idx - 1];
+                          newList[idx - 1] = temp;
+                          setRulesList(newList);
+                        }}
+                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 border border-gray-200 transition-colors disabled:opacity-30"
+                        title="Subir prioridad"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === rulesList.length - 1}
+                        onClick={() => {
+                          const newList = [...rulesList];
+                          const temp = newList[idx];
+                          newList[idx] = newList[idx + 1];
+                          newList[idx + 1] = temp;
+                          setRulesList(newList);
+                        }}
+                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 border border-gray-200 transition-colors disabled:opacity-30"
+                        title="Bajar prioridad"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRulesList(rulesList.filter((_, i) => i !== idx))}
+                        className="w-6 h-6 rounded bg-red-50 hover:bg-red-150 flex items-center justify-center text-xs text-red-600 border border-red-200/50 transition-colors"
+                        title="Eliminar regla"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {rulesList.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4 italic">No hay reglas registradas. Se usarán las reglas por defecto en la web pública.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-gray-50">
+          <button 
+            onClick={handleSaveSettings}
+            disabled={savingSettings}
+            className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {savingSettings ? 'Guardando...' : '✓ Guardar Toda la Configuración de Landing'}
           </button>
         </div>
       </div>
