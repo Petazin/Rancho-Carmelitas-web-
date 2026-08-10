@@ -35,7 +35,9 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
     ...cabinData,
     galleryUrls: cabinData.gallery_urls?.length ? cabinData.gallery_urls : ['/cabins/default.jpg'],
     price: cabinData.price_per_night,
-    bedrooms: Math.ceil(cabinData.capacity / 2),
+    bedrooms: cabinData.bedrooms !== null && cabinData.bedrooms !== undefined
+      ? cabinData.bedrooms
+      : Math.floor(cabinData.capacity / 2), // Fallback: redondeando al entero inferior si está vacío
     amenities: cabinData.amenities || ["Wi-Fi de alta velocidad", "Terraza Privada"],
     slogan: cabinData.slogan,
     origin_title: cabinData.origin_title,

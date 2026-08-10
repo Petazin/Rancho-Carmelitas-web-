@@ -564,3 +564,17 @@
 - Se actualizó el script de sincronización `migration/clonar_datos_completos.js` para incluir la tabla `desarrollo_ideas` y se re-ejecutó con éxito para corregir la discrepancia de bugs no sincronizados en test.
 - Se identificó y resolvió el retardo visual (delay) y el banner de conflicto transitorio al hacer clic en los días del calendario en `src/components/ui/BookingForm.tsx`. Se eliminó el estado asíncrono `isAvailable` que se actualizaba en un `useEffect` posterior al render, reemplazándolo por una derivación 100% sincrónica durante la fase de renderizado.
 - Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.
+[2026-08-09 23:05:00] Actividad de Antigravity:
+- A petición explícita del usuario, se volvió a iniciar el servidor de desarrollo `npm run dev -- -p 3005` en segundo plano (daemon) en el puerto 3005 para realizar pruebas locales finales de la sincronización de ideas y el hotfix de disponibilidad.
+[2026-08-09 23:15:00] Actividad de Antigravity:
+- Se implementó la parametrización del número de habitaciones por cabaña por petición de aclaración del usuario y resolución del requerimiento #2 del roadmap ("Cambiar nº habitaciones").
+- Se creó el script SQL `schema_update_cabins_bedrooms.sql` en la raíz para añadir la columna `bedrooms` en Supabase.
+- Se modificó `src/app/cabins/[id]/page.tsx` para consumir la columna `bedrooms` y aplicar un fallback redondeando la capacidad al entero inferior (`Math.floor(capacidad / 2)`) si el campo está vacío.
+- Se actualizó el panel administrativo de cabañas `src/app/admin/cabanas/page.tsx` para integrar el campo `bedrooms` en los formularios de edición y creación rápida, e inyectar un badge de advertencia animado Stitch UI amarillo si el campo está vacío en base de datos.
+- Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.
+[2026-08-09 23:37:00] Actividad de Antigravity:
+- Se implementó la corrección para evitar el desbordamiento de contenido y el recorte de los botones del Hero en `src/app/page.tsx`. Se modificó la maquetación del Hero para reemplazar la altura fija y `overflow-hidden` por una altura mínima adaptativa `min-h-[85vh]` con padding vertical `py-20 sm:py-24 md:py-28`, asegurando que los botones y textos se muestren en cualquier zoom y dispositivo.
+- Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.
+[2026-08-09 23:48:00] Actividad de Antigravity:
+- Se corrigió el mapeo de habitaciones en el catálogo público en `src/app/page.tsx`. Al renderizar `CabinCard` se pasaba una fórmula estática `Math.ceil(cabin.capacity / 2)` en vez de mapear la columna real `cabin.bedrooms` y su correspondiente fallback `Math.floor`.
+- Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.

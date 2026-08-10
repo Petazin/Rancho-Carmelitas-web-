@@ -27,15 +27,16 @@ interface Cabin {
   origin_title?: string;
   origin_description?: string;
   fun_fact?: string;
+  bedrooms?: number | null;
 }
 
 export default function AdminCabanasPage() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, image_url: string, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string}>({ name: '', price: 0, capacity: 0, image_url: '', gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '' });
+  const [editForm, setEditForm] = useState<{name: string, price: number, capacity: number, image_url: string, gallery_urls: string[], description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string, bedrooms: number}>({ name: '', price: 0, capacity: 0, image_url: '', gallery_urls: [], description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '', bedrooms: 0 });
   const [isCreating, setIsCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, image_url: string, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string}>({
+  const [createForm, setCreateForm] = useState<{name: string, price_per_night: number, capacity: number, image_url: string, description: string, amenities: string[], max_extra_guests: number, extra_guest_surcharge_percentage: number, extra_surcharge_mode: 'percentage' | 'fixed', slogan: string, origin_title: string, origin_description: string, fun_fact: string, bedrooms: number}>({
     name: '',
     price_per_night: 0,
     capacity: 2,
@@ -48,7 +49,8 @@ export default function AdminCabanasPage() {
     slogan: '',
     origin_title: '¿Por qué este nombre?',
     origin_description: '',
-    fun_fact: ''
+    fun_fact: '',
+    bedrooms: 0
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -239,7 +241,8 @@ export default function AdminCabanasPage() {
       slogan: cabin.slogan || '',
       origin_title: cabin.origin_title || '¿Por qué este nombre?',
       origin_description: cabin.origin_description || '',
-      fun_fact: cabin.fun_fact || ''
+      fun_fact: cabin.fun_fact || '',
+      bedrooms: cabin.bedrooms || 0
     });
   };
 
@@ -307,7 +310,8 @@ export default function AdminCabanasPage() {
         slogan: editForm.slogan || null,
         origin_title: editForm.origin_title || '¿Por qué este nombre?',
         origin_description: editForm.origin_description || null,
-        fun_fact: editForm.fun_fact || null
+        fun_fact: editForm.fun_fact || null,
+        bedrooms: editForm.bedrooms > 0 ? editForm.bedrooms : null
       })
       .eq('id', id);
 
@@ -347,7 +351,8 @@ export default function AdminCabanasPage() {
         slogan: createForm.slogan || null,
         origin_title: createForm.origin_title || '¿Por qué este nombre?',
         origin_description: createForm.origin_description || null,
-        fun_fact: createForm.fun_fact || null
+        fun_fact: createForm.fun_fact || null,
+        bedrooms: createForm.bedrooms > 0 ? createForm.bedrooms : null
       }])
       .select('id')
       .single();
@@ -413,7 +418,7 @@ export default function AdminCabanasPage() {
 
     setUploading(false);
     setIsCreating(false);
-    setCreateForm({ name: '', price_per_night: 0, capacity: 2, image_url: '', description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '' });
+    setCreateForm({ name: '', price_per_night: 0, capacity: 2, image_url: '', description: '', amenities: [], max_extra_guests: 0, extra_guest_surcharge_percentage: 100, extra_surcharge_mode: 'percentage', slogan: '', origin_title: '¿Por qué este nombre?', origin_description: '', fun_fact: '', bedrooms: 0 });
     setSelectedFiles([]);
     setCoverFile(null);
     fetchCabins();
@@ -653,6 +658,17 @@ export default function AdminCabanasPage() {
                 className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
                 value={createForm.max_extra_guests || ''} 
                 onChange={e => setCreateForm({...createForm, max_extra_guests: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Habitaciones</label>
+              <input 
+                type="number" 
+                min="1"
+                placeholder={`Fallback: ${Math.floor(createForm.capacity / 2)}`}
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-semibold" 
+                value={createForm.bedrooms || ''} 
+                onChange={e => setCreateForm({...createForm, bedrooms: parseInt(e.target.value) || 0})}
               />
             </div>
             {/* Costo por persona adicional - Crear */}
@@ -960,6 +976,17 @@ export default function AdminCabanasPage() {
                     onChange={e => setEditForm({...editForm, max_extra_guests: parseInt(e.target.value)})}
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Habitaciones</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    placeholder={`Fallback: ${Math.floor(editForm.capacity / 2)}`}
+                    className="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] text-sm font-semibold" 
+                    value={editForm.bedrooms || ''} 
+                    onChange={e => setEditForm({...editForm, bedrooms: parseInt(e.target.value) || 0})}
+                  />
+                </div>
                 {/* Costo por persona adicional - Editar */}
                 <div className="md:col-span-1">
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Costo Persona Adicional</label>
@@ -1260,9 +1287,19 @@ export default function AdminCabanasPage() {
               </div>
             ) : (
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900">{cabin.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 flex-wrap">
+                  {cabin.name}
+                  {!cabin.bedrooms && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                      ⚠️ Falta configurar habitaciones (Fallback: {Math.floor(cabin.capacity / 2)})
+                    </span>
+                  )}
+                </h3>
                 <div className="flex flex-wrap gap-4 mt-1 items-center">
                   <span className="text-sm text-gray-500">👥 Capacidad: {cabin.capacity} pers.</span>
+                  <span className="text-sm text-gray-500">
+                    🚪 {cabin.bedrooms ? `${cabin.bedrooms} Habitaciones` : `Habitaciones sin configurar (Fallback: ${Math.floor(cabin.capacity / 2)})`}
+                  </span>
                   <span className="text-sm font-bold text-[#11d442]">💰 ${cabin.price_per_night.toLocaleString()} / noche</span>
                   <button 
                     onClick={() => toggleActive(cabin.id, cabin.is_active)}

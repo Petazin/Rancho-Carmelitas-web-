@@ -135,7 +135,7 @@ export default async function Home() {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center bg-gray-900 overflow-hidden">
+        <section className="relative min-h-[85vh] py-20 sm:py-24 md:py-28 flex items-center justify-center bg-gray-900">
           {/* Background image autogestionable */}
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center"
@@ -188,7 +188,7 @@ export default async function Home() {
                     price={cabin.price_per_night}
                     imageUrl={cabin.gallery_urls?.[0] || '/gallery/interior.png'}
                     capacity={cabin.capacity}
-                    bedrooms={Math.ceil(cabin.capacity / 2)}
+                    bedrooms={cabin.bedrooms !== null && cabin.bedrooms !== undefined ? cabin.bedrooms : Math.floor(cabin.capacity / 2)}
                   />
                 ))
               ) : (
