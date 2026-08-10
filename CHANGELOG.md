@@ -1,5 +1,14 @@
 # Changelog - Rancho Carmelitas
 
+## [1.5.1] - 2026-08-10
+
+### Añadido / Mejorado (Parametrización de Contacto y Ubicación en Landing Page v1.5.1)
+
+- **Parametrización Dinámica de Contacto y Ubicación:** Desacoplamiento de los textos y enlaces de la sección de contacto y localización que antes estaban en duro en el código del Home público (`SocialSection.tsx`), moviéndolos a la base de datos Supabase en la tabla `landing_settings`.
+- **Campos Agregados a Base de Datos:** Se crearon las columnas `contact_address`, `contact_phone`, `contact_email`, `contact_maps_url` y `contact_location_legend` en Supabase mediante un nuevo script de migración SQL.
+- **Gestión Agrupada en el Panel Administrativo:** Adición de una sección interactiva de edición en `/admin/landing` que agrupa todos los datos de contacto del Rancho (dirección física, número de WhatsApp/llamada, correo electrónico de consultas, enlace al mapa de Google Maps y leyenda de distancias/regiones al pie), permitiendo su edición y persistencia en Supabase.
+- **Script SQL de Contacto:** Creación del script de migración `schema_update_landing_contact.sql` en el directorio raíz.
+
 ## [1.5.0] - 2026-08-09
 
 ### Añadido / Mejorado (Textos Autogestionables en Landing y Comentario del Desarrollador v1.5.0)

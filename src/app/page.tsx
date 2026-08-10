@@ -45,7 +45,12 @@ export default async function Home() {
       'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
       'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
       'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
-    ]
+    ],
+    contact_address: 'Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile',
+    contact_phone: '+56 9 8401 2748',
+    contact_email: 'contacto@ranchocarmelitas.cl',
+    contact_maps_url: 'https://maps.app.goo.gl/6W1fhgChaMWaQzbK8',
+    contact_location_legend: '* Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago.'
   };
 
   try {
@@ -238,7 +243,13 @@ export default async function Home() {
         </section>
 
         {/* Ubicación y Comunidad en Redes Sociales */}
-        <SocialSection />
+        <SocialSection 
+          address={heroSettings.contact_address}
+          phone={heroSettings.contact_phone}
+          email={heroSettings.contact_email}
+          mapsUrl={heroSettings.contact_maps_url}
+          locationLegend={heroSettings.contact_location_legend}
+        />
 
         {/* Rules Section */}
         <section id="rules" className="py-24 bg-surface border-t border-gray-100">

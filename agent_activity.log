@@ -578,3 +578,10 @@
 [2026-08-09 23:48:00] Actividad de Antigravity:
 - Se corrigió el mapeo de habitaciones en el catálogo público en `src/app/page.tsx`. Al renderizar `CabinCard` se pasaba una fórmula estática `Math.ceil(cabin.capacity / 2)` en vez de mapear la columna real `cabin.bedrooms` y su correspondiente fallback `Math.floor`.
 - Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.
+[2026-08-10 00:21:00] Actividad de Antigravity:
+- Se implementó la parametrización dinámica y desacoplamiento de los datos de contacto y ubicación en la Landing Page.
+- Se creó el script SQL `schema_update_landing_contact.sql` para añadir las columnas `contact_address`, `contact_phone`, `contact_email`, `contact_maps_url` y `contact_location_legend` en la tabla `landing_settings` de Supabase.
+- Se modificó `src/components/ui/SocialSection.tsx` para aceptar y renderizar la leyenda explicativa de ubicación dinámicamente.
+- Se actualizó `src/app/page.tsx` para cargar los campos de contacto de la base de datos y pasarlos como propiedades al componente `SocialSection`.
+- Se expandió la interfaz `LandingSettings`, los hooks de estado, la consulta fetch y la función de upsert en `src/app/admin/landing/page.tsx` para guardar y editar estos campos de forma agrupada en el panel administrativo.
+- Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.

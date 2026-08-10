@@ -7,6 +7,7 @@ interface SocialSectionProps {
   address?: string;
   phone?: string;
   email?: string;
+  locationLegend?: string;
 }
 
 export function SocialSection({
@@ -15,7 +16,8 @@ export function SocialSection({
   mapsUrl = "https://maps.app.goo.gl/6W1fhgChaMWaQzbK8",
   address = "Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile",
   phone = "+56 9 8401 2748",
-  email = "contacto@ranchocarmelitas.cl"
+  email = "contacto@ranchocarmelitas.cl",
+  locationLegend = "* Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago."
 }: SocialSectionProps) {
   return (
     <section id="location-social" className="py-24 bg-surface border-t border-gray-100 dark:bg-[#0c0c0c] dark:border-zinc-800">
@@ -95,7 +97,7 @@ export function SocialSection({
 
                 <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <p className="text-xs text-gray-400 dark:text-zinc-500">
-                    * Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago.
+                    {locationLegend}
                   </p>
                   <a
                     href={mapsUrl}

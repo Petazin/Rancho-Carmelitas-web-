@@ -24,6 +24,11 @@ interface LandingSettings {
   sernatur_badge?: string;
   rules_title?: string;
   rules_list?: string[];
+  contact_address?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  contact_maps_url?: string;
+  contact_location_legend?: string;
 }
 
 interface LandingGalleryItem {
@@ -60,6 +65,11 @@ export default function AdminLandingPage() {
   const [sernaturBadge, setSernaturBadge] = useState('');
   const [rulesTitle, setRulesTitle] = useState('');
   const [rulesList, setRulesList] = useState<string[]>([]);
+  const [contactAddress, setContactAddress] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMapsUrl, setContactMapsUrl] = useState('');
+  const [contactLocationLegend, setContactLocationLegend] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -95,6 +105,11 @@ export default function AdminLandingPage() {
           'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
           'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
         ]);
+        setContactAddress(settingsData.contact_address || 'Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile');
+        setContactPhone(settingsData.contact_phone || '+56 9 8401 2748');
+        setContactEmail(settingsData.contact_email || 'contacto@ranchocarmelitas.cl');
+        setContactMapsUrl(settingsData.contact_maps_url || 'https://maps.app.goo.gl/6W1fhgChaMWaQzbK8');
+        setContactLocationLegend(settingsData.contact_location_legend || '* Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago.');
       } else {
         // Inicializar textos de edición si la fila de Supabase está vacía
         setEditTitle(settings.hero_title);
@@ -113,6 +128,11 @@ export default function AdminLandingPage() {
           'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
           'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
         ]);
+        setContactAddress('Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile');
+        setContactPhone('+56 9 8401 2748');
+        setContactEmail('contacto@ranchocarmelitas.cl');
+        setContactMapsUrl('https://maps.app.goo.gl/6W1fhgChaMWaQzbK8');
+        setContactLocationLegend('* Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago.');
       }
 
       // 2. Obtener galería de momentos
@@ -202,7 +222,12 @@ export default function AdminLandingPage() {
           sernatur_subtitle: sernaturSubtitle,
           sernatur_badge: sernaturBadge,
           rules_title: rulesTitle,
-          rules_list: rulesList
+          rules_list: rulesList,
+          contact_address: contactAddress,
+          contact_phone: contactPhone,
+          contact_email: contactEmail,
+          contact_maps_url: contactMapsUrl,
+          contact_location_legend: contactLocationLegend
         });
 
       if (upsertError) {
@@ -729,6 +754,83 @@ export default function AdminLandingPage() {
             className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 text-sm disabled:opacity-50"
           >
             {savingSettings ? 'Guardando...' : '✓ Guardar Toda la Configuración de Landing'}
+          </button>
+        </div>
+      </div>
+
+      {/* SECCIÓN 1.5: DATOS DE CONTACTO Y UBICACIÓN */}
+      <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            📍 Datos de Contacto y Ubicación
+          </h3>
+          <p className="text-xs text-gray-400">Administra la dirección, teléfono, email, leyenda al pie e hipervínculo del mapa del Rancho.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Dirección Oficial</label>
+            <input 
+              type="text"
+              className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+              value={contactAddress}
+              onChange={e => setContactAddress(e.target.value)}
+              placeholder="Ej. Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Teléfono de Llamada</label>
+            <input 
+              type="text"
+              className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+              value={contactPhone}
+              onChange={e => setContactPhone(e.target.value)}
+              placeholder="Ej. +56 9 8401 2748"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Correo Electrónico de Consultas</label>
+            <input 
+              type="text"
+              className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+              value={contactEmail}
+              onChange={e => setContactEmail(e.target.value)}
+              placeholder="Ej. contacto@ranchocarmelitas.cl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Enlace del Mapa (Google Maps URL)</label>
+            <input 
+              type="text"
+              className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+              value={contactMapsUrl}
+              onChange={e => setContactMapsUrl(e.target.value)}
+              placeholder="Ej. https://maps.app.goo.gl/6W1fhgChaMWaQzbK8"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Leyenda Explicativa de Ubicación (Pie de Mapa)</label>
+            <input 
+              type="text"
+              className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+              value={contactLocationLegend}
+              onChange={e => setContactLocationLegend(e.target.value)}
+              placeholder="Ej. * Pullally está ubicado en la Región de Valparaíso, a sólo 2 horas de Santiago."
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-gray-50">
+          <button 
+            onClick={handleSaveSettings}
+            disabled={savingSettings}
+            className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {savingSettings ? 'Guardando...' : '✓ Guardar Datos de Contacto y Ubicación'}
           </button>
         </div>
       </div>
