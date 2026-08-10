@@ -1,5 +1,15 @@
 # Changelog - Rancho Carmelitas
 
+## [1.5.2] - 2026-08-10
+
+### Añadido / Mejorado (Desactivación de Optimización en Vercel y Compresión de Imágenes en Cliente v1.5.2)
+
+- **Desactivación Global de Optimización de Vercel:** Adición de la directiva `unoptimized: true` en [`next.config.ts`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/next.config.ts), lo que instruye a Next.js a servir las imágenes directamente desde las URLs públicas de Supabase, evitando por completo el procesamiento en Vercel y eliminando el límite mensual de 5,000 transformaciones.
+- **Utilidad de Compresión del Lado del Cliente (Navegador):** Creación de la utilidad modular helper [`src/lib/image-compress.ts`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/lib/image-compress.ts) en React/TypeScript. Esta herramienta utiliza Canvas HTML5 nativo para redimensionar y comprimir imágenes en milisegundos de forma transparente para el administrador antes de ser enviadas al Storage de Supabase.
+- **Compresión en Cabañas:** Integración en [`src/app/admin/cabanas/page.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/cabanas/page.tsx) para fotos de portada y galería de cabañas, limitándolas automáticamente a un máximo de **1600px** de dimensión y una calidad JPEG de **80%** (peso reducido a ~200-300 KB).
+- **Compresión en Landing Page:** Integración en [`src/app/admin/landing/page.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/landing/page.tsx) para fondos Hero (máx. **1920px**), logotipos (máx. **400px**) y carrusel de momentos (máx. **1600px**) con calidad JPEG del **80%**.
+- **Compresión de Comprobantes:** Integración en [`src/app/admin/reservas/page.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/reservas/page.tsx) en el registro de abonos y transferencias de PMS para fotos del recibo (máx. **1000px**, calidad del **75%** para total legibilidad de textos), ignorando y preservando de manera segura archivos PDF de forma nativa.
+
 ## [1.5.1] - 2026-08-10
 
 ### Añadido / Mejorado (Parametrización de Contacto y Ubicación en Landing Page v1.5.1)

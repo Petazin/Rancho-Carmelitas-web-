@@ -585,3 +585,22 @@
 - Se actualizó `src/app/page.tsx` para cargar los campos de contacto de la base de datos y pasarlos como propiedades al componente `SocialSection`.
 - Se expandió la interfaz `LandingSettings`, los hooks de estado, la consulta fetch y la función de upsert en `src/app/admin/landing/page.tsx` para guardar y editar estos campos de forma agrupada en el panel administrativo.
 - Se validó el build del proyecto Next.js en local mediante `npm run build` de manera exitosa.
+[2026-08-10 18:15:00] Actividad de Antigravity:
+- Se analizó la alerta de límite de optimización de imágenes (5000/mes) de Vercel y se estructuró la solución técnica.
+- Se redactó y guardó el Plan de Implementación interactivo `implementation_plan.md` en el directorio de artefactos para revisión del usuario.
+- El plan propone desactivar globalmente la optimización de Vercel (`unoptimized: true` en `next.config.ts`) y desarrollar una utilidad nativa en React/TypeScript (`src/lib/image-compress.ts`) para comprimir y redimensionar automáticamente las fotos en el navegador del administrador antes de subirse a Supabase, logrando un proceso transparente, rápido y sin costos adicionales.
+[2026-08-10 18:20:00] Actividad de Antigravity:
+- Se modificó `next.config.ts` para inyectar la directiva global `images: { unoptimized: true }`, desactivando por completo el optimizador de Vercel y desviando todas las peticiones directamente a Supabase.
+- Se creó el archivo utilitario modular `src/lib/image-compress.ts` que implementa compresión del lado del cliente mediante Canvas (resolución máxima adaptable de 1000px, 1600px o 1920px y calidad JPEG 75-80% según el tipo de recurso).
+- Se integró la compresión asíncrona automática en `src/app/admin/cabanas/page.tsx` para las portadas y carruseles (creación y edición).
+- Se integró la compresión automática en `src/app/admin/landing/page.tsx` para el fondo Hero, logo del Rancho y fotos de momentos.
+- Se integró la compresión automática en `src/app/admin/reservas/page.tsx` para los comprobantes bancarios en formato de imagen (PNG/JPG), ignorando PDFs.
+- Se inició la validación local ejecutando el comando de compilación `npm run build`.
+[2026-08-10 18:22:00] Actividad de Antigravity:
+- A solicitud explícita del usuario para iniciar el entorno de pruebas local, se levantó el servidor de desarrollo de Next.js en el puerto 3005 ejecutando `npm run dev -- -p 3005` en segundo plano.
+[2026-08-10 18:30:00] Actividad de Antigravity:
+- Se implementaron optimizaciones de renderizado y aceleración por hardware en CSS en las vistas principales. Se inyectó `will-change-transform` y `transform-gpu` en los contenedores de las cabañas y galerías (`CabinCard.tsx`, `CabinDetailTabs.tsx`, y `page.tsx`) para forzar al navegador a procesar las transiciones de escala mediante la GPU, eliminando tirones y mejorando la fluidez del hover. Se agregó `decoding="async"` y `loading="lazy"` a las etiquetas `<img>` de la galería pública.
+[2026-08-10 18:40:00] Actividad de Antigravity:
+- A solicitud explícita del usuario, se desarrolló y ejecutó un script automatizado en Python (`scratch/optimize_database_images.py`) para descargar de forma masiva, comprimir localmente y resubir (sobrescribir) todos los recursos de imagen pesados en Supabase Test.
+- El script procesó y optimizó exitosamente las fotos de portadas y galerías de cabañas, el fondo Hero del landing, logotipos y más de 20 fotos del carrusel de momentos públicos (logrando reducciones de tamaño de archivo de hasta un 92%, por ejemplo, reduciendo fotos de 4.5 MB a 362 KB).
+- Esto restaura de forma retroactiva el rendimiento del sitio en local sin modificar las URLs de base de datos ni romper enlaces.

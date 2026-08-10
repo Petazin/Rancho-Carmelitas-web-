@@ -88,7 +88,7 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
                         src={url}
                         alt={`Vista ${index + 2} de ${cabin.name}`}
                         fill
-                        className="object-cover hover:scale-105 transition-transform duration-500"
+                        className="object-cover hover:scale-105 transition-transform duration-500 will-change-transform transform-gpu"
                         sizes="256px"
                       />
                     </div>
@@ -106,7 +106,7 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
                         src={url}
                         alt={`Vista ${index + 2} de ${cabin.name}`}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform transform-gpu"
                         sizes="(max-width: 1024px) 50vw, 33vw"
                       />
                     </div>

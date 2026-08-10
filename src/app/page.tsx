@@ -213,11 +213,13 @@ export default async function Home() {
             <p className="text-gray-500 mb-12 max-w-2xl mx-auto">{heroSettings.gallery_subtitle}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {galleryItems.map((img, i) => (
-                <div key={i} className="aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                <div key={i} className="aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 shadow-sm will-change-transform transform-gpu">
                   <img 
                     src={img.src} 
                     alt={img.alt} 
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               ))}

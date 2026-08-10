@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image-compress';
 
 /* 
  * COMENTARIO DEL DESARROLLADOR:
@@ -167,13 +168,14 @@ export default function AdminLandingPage() {
     try {
       // Subir nueva imagen del Hero si está seleccionada
       if (newHeroBgFile) {
-        const fileExt = newHeroBgFile.name.split('.').pop();
+        const compressedHeroBg = await compressImage(newHeroBgFile, 1920, 0.8);
+        const fileExt = compressedHeroBg.name.split('.').pop();
         const fileName = `hero_bg_${Date.now()}.${fileExt}`;
         const filePath = `landing/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('cabin-images')
-          .upload(filePath, newHeroBgFile);
+          .upload(filePath, compressedHeroBg);
 
         if (uploadError) {
           throw new Error(`Fallo al subir fondo de Hero: ${uploadError.message}`);
@@ -187,13 +189,14 @@ export default function AdminLandingPage() {
 
       // Subir nueva imagen del Logo si está seleccionada
       if (newLogoFile) {
-        const fileExt = newLogoFile.name.split('.').pop();
+        const compressedLogo = await compressImage(newLogoFile, 400, 0.8);
+        const fileExt = compressedLogo.name.split('.').pop();
         const fileName = `logo_${Date.now()}.${fileExt}`;
         const filePath = `landing/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('cabin-images')
-          .upload(filePath, newLogoFile);
+          .upload(filePath, compressedLogo);
 
         if (uploadError) {
           throw new Error(`Fallo al subir Logo del Rancho: ${uploadError.message}`);
@@ -258,13 +261,14 @@ export default function AdminLandingPage() {
       let maxOrder = gallery.length > 0 ? Math.max(...gallery.map(item => item.order_index)) : -1;
 
       for (const file of selectedGalleryFiles) {
-        const fileExt = file.name.split('.').pop();
+        const compressedFile = await compressImage(file, 1600, 0.8);
+        const fileExt = compressedFile.name.split('.').pop();
         const fileName = `gallery_${Math.random()}.${fileExt}`;
         const filePath = `landing/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('cabin-images')
-          .upload(filePath, file);
+          .upload(filePath, compressedFile);
 
         if (uploadError) {
           console.error(`Error subiendo foto de galería ${file.name}:`, uploadError);

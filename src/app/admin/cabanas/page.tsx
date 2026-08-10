@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image-compress';
 
 const AVAILABLE_AMENITIES = [
   "Wi-Fi de alta velocidad", "Piscina compartida", "Piscina privada", "Aire Acondicionado", 
@@ -253,13 +254,14 @@ export default function AdminCabanasPage() {
 
     // Subir nueva foto de portada si está seleccionada
     if (coverFile) {
-      const fileExt = coverFile.name.split('.').pop();
+      const compressedCoverFile = await compressImage(coverFile, 1600, 0.8);
+      const fileExt = compressedCoverFile.name.split('.').pop();
       const fileName = `cover_${Math.random()}.${fileExt}`;
       const filePath = `${id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('cabin-images')
-        .upload(filePath, coverFile);
+        .upload(filePath, compressedCoverFile);
 
       if (uploadError) {
         console.error('Error subiendo foto de portada:', uploadError);
@@ -275,13 +277,14 @@ export default function AdminCabanasPage() {
     // Subir nuevos archivos locales si los hay
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
+        const compressedFile = await compressImage(file, 1600, 0.8);
+        const fileExt = compressedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `${id}/${fileName}`; // Folder por cabaña
 
         const { error: uploadError } = await supabase.storage
           .from('cabin-images')
-          .upload(filePath, file);
+          .upload(filePath, compressedFile);
 
         if (uploadError) {
           console.error('Error subiendo imagen:', uploadError);
@@ -367,13 +370,14 @@ export default function AdminCabanasPage() {
 
     // Subir foto de portada si está seleccionada
     if (coverFile) {
-      const fileExt = coverFile.name.split('.').pop();
+      const compressedCoverFile = await compressImage(coverFile, 1600, 0.8);
+      const fileExt = compressedCoverFile.name.split('.').pop();
       const fileName = `cover_${Math.random()}.${fileExt}`;
       const filePath = `${newId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('cabin-images')
-        .upload(filePath, coverFile);
+        .upload(filePath, compressedCoverFile);
 
       if (!uploadError) {
         const { data: { publicUrl } } = supabase.storage
@@ -388,13 +392,14 @@ export default function AdminCabanasPage() {
     // Subir archivos al Storage a la carpeta específica de esta cabaña (ID)
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
+        const compressedFile = await compressImage(file, 1600, 0.8);
+        const fileExt = compressedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `${newId}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('cabin-images')
-          .upload(filePath, file);
+          .upload(filePath, compressedFile);
 
         if (!uploadError) {
           const { data: { publicUrl } } = supabase.storage

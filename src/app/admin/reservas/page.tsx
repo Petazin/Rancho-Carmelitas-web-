@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image-compress';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -984,11 +985,12 @@ function ReservasContent() {
       let receiptUrl = null;
       // 1. Upload receipt if exists
       if (paymentForm.receiptFile) {
-        const fileExt = paymentForm.receiptFile.name.split('.').pop();
+        const compressedReceipt = await compressImage(paymentForm.receiptFile, 1000, 0.75);
+        const fileExt = compressedReceipt.name.split('.').pop();
         const fileName = `${bookingToConfirm.id}-${Date.now()}.${fileExt}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('payment-receipts')
-          .upload(fileName, paymentForm.receiptFile);
+          .upload(fileName, compressedReceipt);
           
         if (uploadError) {
           console.error('Error al subir el comprobante:', uploadError);
@@ -1100,11 +1102,12 @@ function ReservasContent() {
       }
 
       if (fileToUpload) {
-        const fileExt = fileToUpload.name.split('.').pop();
+        const compressedReceipt = await compressImage(fileToUpload, 1000, 0.75);
+        const fileExt = compressedReceipt.name.split('.').pop();
         const fileName = `payment_${bookingId}_${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('payment-receipts')
-          .upload(fileName, fileToUpload);
+          .upload(fileName, compressedReceipt);
 
         if (uploadError) {
           console.error('Error al subir comprobante:', uploadError);
