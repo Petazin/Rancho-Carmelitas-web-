@@ -1,5 +1,15 @@
 # Changelog - Rancho Carmelitas
 
+## [1.5.3] - 2026-08-14
+
+### Añadido / Mejorado (Filtrado de Métricas del Administrador en Vercel Analytics v1.5.3)
+
+- **Wrapper Cliente de Vercel Analytics (`VercelAnalytics.tsx`):** Creación del componente cliente [`src/components/analytics/VercelAnalytics.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/analytics/VercelAnalytics.tsx) que intercepta los eventos de navegación antes de ser despachados a Vercel mediante el middleware `beforeSend`.
+- **Exclusión Automática de Rutas `/admin`:** Descarte completo de eventos originados en el panel de administración (`/admin`, `/admin/desarrollo`, `/admin/cabanas`, `/admin/landing`, etc.), evitando que inflen la métrica de vistas de página globales.
+- **Marca de Administrador en Navegador (`rc_is_admin`):** Integración en [`src/app/admin/layout.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/layout.tsx) para establecer `localStorage.setItem('rc_is_admin', 'true')` cuando el administrador accede al panel de control, y limpiarlo al cerrar sesión.
+- **Exclusión de Visitas Públicas del Administrador:** El filtro `beforeSend` detecta la marca de administrador y descarta también las visitas que realice el propietario/administrador a la portada pública o fichas de cabañas mientras navega en su dispositivo personal.
+- **Actualización de Layout Raíz:** Reemplazo de `<Analytics />` nativo por `<VercelAnalytics />` en [`src/app/layout.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/layout.tsx).
+
 ## [1.5.2] - 2026-08-10
 
 ### Añadido / Mejorado (Desactivación de Optimización en Vercel y Compresión de Imágenes en Cliente v1.5.2)

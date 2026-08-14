@@ -41,6 +41,9 @@ export default function AdminLayout({
       } else {
         setProfile(data);
       }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rc_is_admin', 'true');
+      }
       setLoading(false);
     }
 
@@ -48,6 +51,9 @@ export default function AdminLayout({
   }, [router]);
 
   const handleLogout = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('rc_is_admin');
+    }
     await supabase.auth.signOut();
     router.push('/login');
   };

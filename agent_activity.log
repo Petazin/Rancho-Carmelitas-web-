@@ -604,3 +604,17 @@
 - A solicitud explícita del usuario, se desarrolló y ejecutó un script automatizado en Python (`scratch/optimize_database_images.py`) para descargar de forma masiva, comprimir localmente y resubir (sobrescribir) todos los recursos de imagen pesados en Supabase Test.
 - El script procesó y optimizó exitosamente las fotos de portadas y galerías de cabañas, el fondo Hero del landing, logotipos y más de 20 fotos del carrusel de momentos públicos (logrando reducciones de tamaño de archivo de hasta un 92%, por ejemplo, reduciendo fotos de 4.5 MB a 362 KB).
 - Esto restaura de forma retroactiva el rendimiento del sitio en local sin modificar las URLs de base de datos ni romper enlaces.
+[2026-08-10 18:55:00] Actividad de Antigravity:
+- Se confirmaron y validaron satisfactoriamente las pruebas de optimización local con el usuario.
+- Se detuvo el servidor de desarrollo local y se ejecutaron los comandos Git (`git add`, `git commit`, `git push`) para enviar las modificaciones a la rama master en GitHub y gatillar la compilación y despliegue automático de la nueva versión a producción en Vercel.
+- Se creó y ejecutó el script `scratch/optimize_database_images_prod.py` (conectado a Supabase Production mediante las claves en `.env.prod`) para aplicar de manera automática y masiva la compresión sobre todas las imágenes existentes del sitio web real. El script optimizó de forma transparente todas las portadas y galerías de cabañas, el logo y el carrusel de momentos reales en producción, resolviendo el lag en vivo de forma retroactiva y eliminando por completo futuros consumos del límite de transformaciones de Vercel.
+[2026-08-10 19:10:00] Actividad de Antigravity:
+- A solicitud explícita del usuario, se inició una auditoría de seguridad preventiva en los entornos de desarrollo (Test) y producción.
+- Se creó y ejecutó el script `scratch/security_scanner.py` para analizar el historial completo de commits de Git y todos los archivos rastreados (133 archivos). El resultado confirmó que no existen archivos de configuración de variables de entorno (`.env.local` o `.env.prod`) en seguimiento en GitHub ni tampoco claves o tokens expuestos de forma pública.
+- Se ejecutó el verificador de blindaje RLS en producción (`node verify-rls.js`), confirmando que la base de datos de producción de Supabase tiene políticas de seguridad 100% blindadas (4 de 4 pruebas aprobadas). El acceso a perfiles de equipo y la escritura en tablas públicas por parte de usuarios anónimos está correctamente bloqueado.
+[2026-08-14 17:51:00] Actividad de Antigravity:
+- Se implementó la solución de filtrado de tráfico para Vercel Analytics en la versión [1.5.3].
+- Se creó el componente cliente wrapper `src/components/analytics/VercelAnalytics.tsx` con middleware `beforeSend`.
+- Se configuró la cancelación automática de eventos de analytics para cualquier ruta bajo `/admin`.
+- Se implementó el etiquetado en `localStorage` (`rc_is_admin=true`) en `src/app/admin/layout.tsx` al verificar sesión administrativa y su remoción al cerrar sesión, descartando también el tráfico del administrador al navegar la portada pública.
+- Se verificó la compilación de producción mediante `npm run build`, confirmando resultado exitoso (código de salida 0).
