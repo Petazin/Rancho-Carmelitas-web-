@@ -97,11 +97,63 @@ export default function AuditoriaPage() {
     }
   }
 
+  // Diccionario de etiquetas amigables para campos de la base de datos
+  const FIELD_LABELS: Record<string, string> = {
+    status: 'Estado',
+    payment_amount: 'Total Abonado',
+    payment_reference: 'Referencia de Pago',
+    payment_receipt_url: 'Comprobante',
+    confirmed_at: 'Fecha de Confirmación',
+    confirmed_by: 'Confirmado Por',
+    check_in: 'Fecha Check-In',
+    check_out: 'Fecha Check-Out',
+    adults: 'Adultos',
+    children: 'Niños',
+    total_price: 'Precio Total',
+    admin_notes: 'Notas Internas',
+    guest_name: 'Nombre Huésped',
+    guest_email: 'Email Huésped',
+    guest_phone: 'Teléfono Huésped',
+    cabin_id: 'Cabaña Asignada',
+    is_active: 'Disponible / Activo',
+    price_per_night: 'Precio por Noche',
+    capacity: 'Capacidad',
+    amount: 'Monto del Pago',
+    payment_method: 'Método de Pago',
+    reference: 'N° Transacción/Ref'
+  };
+
+  const formatFieldValue = (key: string, val: any) => {
+    if (val === null || val === undefined || val === '') {
+      return <span className="italic text-gray-400">Sin asignar / Ninguno</span>;
+    }
+    if (typeof val === 'boolean') {
+      return val ? 'Sí' : 'No';
+    }
+    if (key === 'status') {
+      const s = String(val);
+      if (s.toLowerCase() === 'cancelada') {
+        return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold uppercase text-[10px]">Cancelada</span>;
+      }
+      if (s.toLowerCase() === 'confirmada') {
+        return <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold uppercase text-[10px]">Confirmada</span>;
+      }
+      return <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase text-[10px]">{s}</span>;
+    }
+    if (['payment_amount', 'total_price', 'amount', 'price_per_night'].includes(key) && !isNaN(Number(val))) {
+      return `$${Number(val).toLocaleString('es-CL')}`;
+    }
+    if (typeof val === 'object') {
+      return JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   // Helper para renderizar los cambios clave en formato amigable
   const renderDataDiff = (log: AuditLog) => {
     if (log.action === 'INSERT') {
       return (
-        <div className="text-xs text-gray-600 bg-green-50/50 p-3 rounded-lg border border-green-100 max-h-40 overflow-y-auto font-mono">
+        <div className="text-xs text-gray-600 bg-green-50/50 p-3 rounded-lg border border-green-100 max-h-48 overflow-y-auto font-mono">
           <span className="font-bold text-green-700 block mb-1">Registro Creado:</span>
           {JSON.stringify(log.new_data, null, 2)}
         </div>
@@ -109,49 +161,54 @@ export default function AuditoriaPage() {
     }
     if (log.action === 'DELETE') {
       return (
-        <div className="text-xs text-gray-600 bg-red-50/50 p-3 rounded-lg border border-red-100 max-h-40 overflow-y-auto font-mono">
+        <div className="text-xs text-gray-600 bg-red-50/50 p-3 rounded-lg border border-red-100 max-h-48 overflow-y-auto font-mono">
           <span className="font-bold text-red-700 block mb-1">Registro Eliminado:</span>
           {JSON.stringify(log.old_data, null, 2)}
         </div>
       );
     }
-        // Para updates, encontrar y mostrar sólo los campos que realmente cambiaron
+
+    // Para updates, encontrar y mostrar los campos que realmente cambiaron
     const changes: Record<string, { old: any; new: any }> = {};
     if (log.old_data && log.new_data) {
       Object.keys(log.new_data).forEach((key) => {
-        if (key === 'updated_at' || key === 'action_type' || key === 'status') return; // Excluir campos técnicos del diff
+        // Excluir sólo marcas técnicas irrelevantes (status NUNCA se excluye)
+        if (key === 'updated_at' || key === 'action_type') return;
         const oldVal = log.old_data[key];
         const newVal = log.new_data[key];
         if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-          // Ignorar marcas de tiempo de actualización si es ruidoso, u opcionalmente mantenerlas
           changes[key] = { old: oldVal, new: newVal };
         }
       });
     }
 
     return (
-      <div className="text-xs text-gray-600 bg-amber-50/50 p-3 rounded-lg border border-amber-100 max-h-48 overflow-y-auto">
+      <div className="text-xs text-gray-600 bg-amber-50/50 p-3 rounded-lg border border-amber-100 max-h-56 overflow-y-auto">
         <span className="font-bold text-amber-700 block mb-2">Campos Modificados:</span>
         {Object.keys(changes).length === 0 ? (
-          <span className="italic text-gray-400">Sin diferencias detectadas en campos de primer nivel.</span>
+          <div className="py-2 text-gray-500 italic text-xs leading-relaxed">
+            🔄 Sincronización o verificación de estado: los valores de los datos no sufrieron alteraciones respecto al estado previo.
+          </div>
         ) : (
           <table className="w-full text-left font-mono">
             <thead>
               <tr className="border-b border-amber-200/50 text-[10px] text-amber-800">
-                <th className="pb-1 font-semibold">Campo</th>
-                <th className="pb-1 font-semibold">Valor Anterior</th>
-                <th className="pb-1 font-semibold">Valor Nuevo</th>
+                <th className="pb-1.5 font-semibold">Campo</th>
+                <th className="pb-1.5 font-semibold">Valor Anterior</th>
+                <th className="pb-1.5 font-semibold">Valor Nuevo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-amber-200/20">
               {Object.entries(changes).map(([field, vals]) => (
-                <tr key={field}>
-                  <td className="py-1 font-bold text-gray-700 pr-2">{field}</td>
-                  <td className="py-1 text-red-600 line-through pr-2 break-all max-w-[150px]">
-                    {vals.old === null ? 'null' : typeof vals.old === 'object' ? JSON.stringify(vals.old) : String(vals.old)}
+                <tr key={field} className="hover:bg-amber-100/30 transition-colors">
+                  <td className="py-1.5 font-bold text-gray-800 pr-2">
+                    {FIELD_LABELS[field] || field}
                   </td>
-                  <td className="py-1 text-green-600 font-medium break-all max-w-[150px]">
-                    {vals.new === null ? 'null' : typeof vals.new === 'object' ? JSON.stringify(vals.new) : String(vals.new)}
+                  <td className="py-1.5 text-red-600 line-through pr-2 break-all max-w-[150px]">
+                    {formatFieldValue(field, vals.old)}
+                  </td>
+                  <td className="py-1.5 text-green-700 font-medium break-all max-w-[150px]">
+                    {formatFieldValue(field, vals.new)}
                   </td>
                 </tr>
               ))}
@@ -175,16 +232,61 @@ export default function AuditoriaPage() {
       const cabana = (cabinId && cabinsMap[cabinId]) ? cabinsMap[cabinId] : 'una cabaña';
       
       if (log.action === 'INSERT') {
-        return `✨ ${autor} ingresó una nueva reserva para el huésped "${huesped}" en la cabaña "${cabana}" (${fecha}).`;
+        return `✨ ${autor} ingresó una nueva reserva para "${huesped}" en "${cabana}" (${fecha}).`;
       }
       if (log.action === 'UPDATE') {
-        // Buscar qué campo principal cambió
         const oldStatus = log.old_data?.status;
         const newStatus = log.new_data?.status;
-        if (oldStatus !== newStatus && newStatus) {
-          return `🔄 ${autor} cambió el estado de la reserva de "${huesped}" en "${cabana}" a "${newStatus}" (${fecha}).`;
+        const oldAbono = Number(log.old_data?.payment_amount) || 0;
+        const newAbono = Number(log.new_data?.payment_amount) || 0;
+        const refPago = log.new_data?.payment_reference;
+        const confirmedBy = log.new_data?.confirmed_by;
+
+        // 1. Cambio de estado a Cancelada
+        if (newStatus?.toLowerCase() === 'cancelada') {
+          return `❌ ${autor} canceló la reserva de "${huesped}" en "${cabana}" (fechas liberadas en el calendario) (${fecha}).`;
         }
-        return `📝 ${autor} actualizó los datos de la reserva del huésped "${huesped}" en la cabaña "${cabana}" (${fecha}).`;
+
+        // 2. Cambio de estado a Confirmada o Acreditación de Pago
+        if (oldStatus !== newStatus && newStatus?.toLowerCase() === 'confirmada') {
+          if (newAbono > 0) {
+            return `💳 ${autor} confirmó la reserva de "${huesped}" con abono de $${newAbono.toLocaleString('es-CL')} en "${cabana}" (${fecha}).`;
+          }
+          return `✅ ${autor} confirmó la reserva de "${huesped}" en "${cabana}" (${fecha}).`;
+        }
+
+        // 3. Otros cambios de estado
+        if (oldStatus !== newStatus && newStatus) {
+          if (newStatus.toLowerCase().includes('checkin') || newStatus.toLowerCase().includes('check-in')) {
+            return `🔑 ${autor} registró el Check-In del huésped "${huesped}" en "${cabana}" (${fecha}).`;
+          }
+          if (newStatus.toLowerCase().includes('checkout') || newStatus.toLowerCase().includes('check-out')) {
+            return `👋 ${autor} registró el Check-Out del huésped "${huesped}" en "${cabana}" (${fecha}).`;
+          }
+          return `🔄 ${autor} cambió el estado de la reserva de "${huesped}" de "${oldStatus || 'N/A'}" a "${newStatus}" (${fecha}).`;
+        }
+
+        // 4. Mismo estado, pero cambió el abono/pago
+        if (oldAbono !== newAbono) {
+          return `💰 ${autor} actualizó el abono de "${huesped}" de $${oldAbono.toLocaleString('es-CL')} a $${newAbono.toLocaleString('es-CL')} ${refPago ? `(Ref: ${refPago})` : ''} (${fecha}).`;
+        }
+
+        // 5. Cambio en fechas
+        if (log.old_data?.check_in !== log.new_data?.check_in || log.old_data?.check_out !== log.new_data?.check_out) {
+          return `📅 ${autor} modificó las fechas de estadía para "${huesped}" (${log.new_data?.check_in} al ${log.new_data?.check_out}) (${fecha}).`;
+        }
+
+        // 6. Cambio en notas administrativas
+        if (log.old_data?.admin_notes !== log.new_data?.admin_notes) {
+          return `📋 ${autor} actualizó las notas administrativas de la reserva de "${huesped}" (${fecha}).`;
+        }
+
+        // 7. Sincronización automática de pasarela o sistema
+        if (confirmedBy && (confirmedBy.includes('Sync') || confirmedBy.includes('Webhook') || confirmedBy.includes('Pago Online'))) {
+          return `🔄 ${autor} sincronizó y validó el abono online ($${newAbono.toLocaleString('es-CL')}) para "${huesped}" (${fecha}).`;
+        }
+
+        return `📝 ${autor} actualizó los datos de la reserva del huésped "${huesped}" en "${cabana}" (${fecha}).`;
       }
       return `❌ ${autor} eliminó por completo la reserva del huésped "${huesped}" que estaba programada en la cabaña "${cabana}" (${fecha}).`;
     }
@@ -414,6 +516,21 @@ export default function AuditoriaPage() {
       return `🗑️ ${autor} eliminó del roadmap ${tipo} "${titulo}" (${fecha}).`;
     }
 
+    if (log.table_name === 'booking_payments') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const monto = Number(data?.amount) || 0;
+      const metodo = data?.payment_method || 'Pago';
+      const ref = data?.reference ? `(Ref: ${data.reference})` : '';
+
+      if (log.action === 'INSERT') {
+        return `💵 ${autor} registró un nuevo pago/abono de $${monto.toLocaleString('es-CL')} vía ${metodo} ${ref} (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        return `💵 ${autor} actualizó el registro del abono de $${monto.toLocaleString('es-CL')} (${metodo}) (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó el registro de abono de $${monto.toLocaleString('es-CL')} (${fecha}).`;
+    }
+
     return `🔗 ${autor} realizó una acción de tipo ${log.action} en el módulo ${log.table_name} (${fecha}).`;
   };
 
@@ -451,6 +568,7 @@ export default function AuditoriaPage() {
           >
             <option value="ALL">Todas las tablas</option>
             <option value="bookings">bookings (Reservas)</option>
+            <option value="booking_payments">booking_payments (Abonos y Pagos)</option>
             <option value="cabins">cabins (Cabañas)</option>
             <option value="cabin_closures">cabin_closures (Bloqueos)</option>
             <option value="profiles">profiles (Usuarios/Perfiles)</option>

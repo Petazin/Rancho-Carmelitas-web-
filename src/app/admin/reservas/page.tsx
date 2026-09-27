@@ -949,13 +949,23 @@ function ReservasContent() {
     if (!bookingToCancel) return;
     setIsCanceling(true);
     try {
+      const reasonLabels: Record<string, string> = {
+        no_payment: 'Falta de Abono (Plazo 24h vencido)',
+        conflict: 'Conflicto de Overbooking / Reubicación',
+        other: 'Otro Motivo / Cancelación General'
+      };
+      const motivoDesc = reasonLabels[cancelForm.reasonType] || 'Cancelación General';
+      const prevNotes = bookingToCancel.admin_notes ? `${bookingToCancel.admin_notes}\n` : '';
+      const cancelNote = `${prevNotes}[Cancelada el ${new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} - Motivo: ${motivoDesc}]`;
+
       // 1. Actualizar estado a Cancelada en Supabase
       const { error } = await supabase
         .from('bookings')
         .update({ 
           status: 'Cancelada',
           confirmed_at: null,
-          confirmed_by: null
+          confirmed_by: null,
+          admin_notes: cancelNote
         })
         .eq('id', bookingToCancel.id);
 

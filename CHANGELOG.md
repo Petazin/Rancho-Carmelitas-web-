@@ -1,5 +1,15 @@
 # Changelog - Rancho Carmelitas
 
+## [1.7.1] - 2026-09-27
+
+### Añadido / Mejorado (Clarificación y Reconstrucción Histórica de la Bitácora de Auditoría y Cancelaciones v1.7.1)
+
+- **Reconstrucción y Visibilidad Total de Estados en Auditoría (`/admin/auditoria`):** Eliminación de la regla que excluía `status` del comparador de diferencias (`renderDataDiff`), permitiendo visualizar de inmediato y de forma retroactiva todos los cambios históricos de estado (`Confirmada`, `Cancelada`, `Pendiente`, `Check-in`, etc.).
+- **Desglose Amigable con Formateo Visual:** Diccionario semántico de etiquetas en español (`FIELD_LABELS`) y formateo inteligente de valores: badges visuales en rojo para `Cancelada`, verde para `Confirmada`, valores en pesos chilenos (`$XX.XXX`) para montos y precios, y explicación clara cuando una operación corresponde a sincronización o validación sin alteración de datos.
+- **Explicaciones en Lenguaje Natural de Alto Nivel:** El generador de la línea de tiempo ahora detalla explícitamente cancelaciones (con liberación de fechas), confirmaciones con monto de abono, actualizaciones de montos, cambios de fechas de estadía y sincronizaciones de pasarela online en lugar de textos genéricos.
+- **Soporte y Filtro para Abonos y Pagos (`booking_payments`):** Incorporación de la tabla `booking_payments` tanto en las explicaciones narrativas de auditoría como en el selector desplegable de filtros por tabla/módulo.
+- **Registro de Motivo de Cancelación en PMS (`/admin/reservas`):** Al cancelar una reserva con el botón papelera (`🗑️`), se almacena automáticamente el motivo específico seleccionado en el modal dentro de `admin_notes` con timestamp para auditoría interna.
+
 ## [1.7.0] - 2026-09-26
 
 ### Añadido / Mejorado (Integración Oficial de Mercado Pago Producción, Reconciliación Automática y Pasarela Online v1.7.0)
