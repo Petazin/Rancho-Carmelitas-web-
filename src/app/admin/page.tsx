@@ -25,6 +25,7 @@ interface Booking {
   isConflict?: boolean;
   payment_amount?: number;
   discount_applied?: number;
+  booking_payments?: Array<{ amount: number }>;
 }
 
 export default function AdminDashboard() {
@@ -84,7 +85,8 @@ export default function AdminDashboard() {
         cabin_id,
         payment_amount,
         discount_applied,
-        cabin:cabins (name)
+        cabin:cabins (name),
+        booking_payments (amount)
       `)
       .gte('check_out', startDate)
       .lte('check_in', endDate)
@@ -169,6 +171,12 @@ export default function AdminDashboard() {
     }
   };
 
+  const getBookingTotalAbonado = (b: Booking) => {
+    const sumPayments = b.booking_payments?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
+    if (sumPayments > 0) return sumPayments;
+    return Number(b.payment_amount) || 0;
+  };
+
   const renderCalendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -184,10 +192,10 @@ export default function AdminDashboard() {
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
-        // Reservas que chocaban con este día
+        // Reservas que chocaban con este día (excluyendo canceladas)
         const dayBookings = upcomingBookings.filter(b => {
              // asumiendo check_out es salida por la mañana, por lo que la noche anterior cuenta.
-             return dateStr >= b.check_in && dateStr < b.check_out && b.status !== 'Cancelada'; 
+             return dateStr >= b.check_in && dateStr < b.check_out && b.status?.toLowerCase() !== 'cancelada'; 
         });
         
         const isToday = new Date().toISOString().split('T')[0] === dateStr;
@@ -200,10 +208,12 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-1">
                     {dayBookings.map(b => {
                         const statusLower = (b.status || 'Pendiente').toLowerCase();
-                        const isConfirmed = statusLower === 'confirmada';
-                        const totalToPay = (b.total_price || 0) - (b.discount_applied || 0);
-                        const isFullyPaid = isConfirmed && (b.payment_amount || 0) >= totalToPay;
-                        const isAbonada = isConfirmed && !isFullyPaid && (b.payment_amount || 0) > 0;
+                        const isCancelled = statusLower === 'cancelada';
+                        const totalAbonado = getBookingTotalAbonado(b);
+                        const totalToPay = Math.max(0, (b.total_price || 0) - (b.discount_applied || 0));
+                        const isFullyPaid = !isCancelled && totalAbonado >= totalToPay && totalToPay > 0;
+                        const isAbonada = !isCancelled && !isFullyPaid && totalAbonado > 0;
+                        const isConfirmedOrStay = statusLower === 'confirmada' || statusLower === 'checkin' || statusLower === 'checkout';
 
                         let colorClasses = "bg-yellow-50 text-yellow-700 border-yellow-200"; // Default: Pendiente (Amarillo)
                         let labelPrefix = "🟡 ";
@@ -217,18 +227,20 @@ export default function AdminDashboard() {
                         } else if (isAbonada) {
                           colorClasses = "bg-green-50 text-green-700 border-green-200";
                           labelPrefix = "🟢 ";
-                        } else if (isConfirmed) {
+                        } else if (isConfirmedOrStay) {
                           // Confirmada pero sin abono aún (0 o nulo)
                           colorClasses = "bg-orange-50 text-orange-700 border-orange-200";
                           labelPrefix = "🟠 ";
                         }
+
+                        const statusText = isFullyPaid ? 'Totalmente Pagada' : isAbonada ? 'Abonada' : isConfirmedOrStay ? 'Confirmada (Sin Abono)' : 'Pendiente';
 
                         return (
                           <Link 
                             key={b.id} 
                             href={`/admin/reservas?id=${b.id}`}
                             className={`text-[10px] px-1.5 py-1 rounded font-bold truncate border transition-all block cursor-pointer hover:shadow-sm ${colorClasses}`} 
-                            title={`${b.guest_name} - ${b.cabin?.name || ''}${b.isConflict ? ' (⚠️ Requiere atención por conflicto de fechas)' : ''} - Estado: ${b.status}`}
+                            title={`${b.guest_name} - ${b.cabin?.name || ''}${b.isConflict ? ' (⚠️ Conflicto de fechas)' : ''} - ${statusText} (Total: ${formatMoney(totalToPay)} / Abonado: ${formatMoney(totalAbonado)})`}
                           >
                               {labelPrefix}
                               {b.guest_name}: {b.cabin?.name || 'Cabaña'}
@@ -282,12 +294,12 @@ export default function AdminDashboard() {
     );
   }
 
-  // Filtrar próximas llegadas a partir de HOY para la vista de lista (max 5)
+  // Filtrar próximas llegadas a partir de HOY para la vista de lista (max 5, excluyendo canceladas)
   const localDate = new Date();
   const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
   
   const nextListBookings = upcomingBookings
-    .filter(b => b.check_in >= todayStr)
+    .filter(b => b.check_in >= todayStr && b.status?.toLowerCase() !== 'cancelada')
     .sort((a, b) => a.check_in.localeCompare(b.check_in))
     .slice(0, 5);
 
@@ -444,23 +456,42 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4">
                           {(() => {
                             const status = booking.status || 'Pendiente';
-                            const colorClasses = getStatusColor(status);
+                            const statusLower = status.toLowerCase();
+                            const totalAbonado = getBookingTotalAbonado(booking);
+                            const totalToPay = Math.max(0, (booking.total_price || 0) - (booking.discount_applied || 0));
+                            const isFullyPaid = totalAbonado >= totalToPay && totalToPay > 0;
+                            const isAbonada = !isFullyPaid && totalAbonado > 0;
+
                             let displayLabel = status;
+                            let badgeStyle = 'bg-gray-50 text-gray-700 border-gray-200';
                             
-                            if (status.toLowerCase() === 'pending' || status.toLowerCase() === 'pendiente') {
+                            if (statusLower === 'pending' || statusLower === 'pendiente') {
                               displayLabel = '🟡 Pendiente';
-                            } else if (status.toLowerCase() === 'confirmada') {
-                              displayLabel = '🟠 Confirmada';
-                            } else if (status.toLowerCase() === 'checkin') {
-                              displayLabel = '🟢 En Cabaña';
-                            } else if (status.toLowerCase() === 'checkout') {
-                              displayLabel = '🔵 Completada';
-                            } else if (status.toLowerCase() === 'cancelada') {
+                              badgeStyle = 'bg-yellow-50 text-yellow-750 border-yellow-200';
+                            } else if (statusLower === 'confirmada') {
+                              if (isFullyPaid) {
+                                displayLabel = '🔵 Confirmada (Pagada)';
+                                badgeStyle = 'bg-blue-50 text-blue-750 border-blue-200';
+                              } else if (isAbonada) {
+                                displayLabel = '🟢 Confirmada (Abonada)';
+                                badgeStyle = 'bg-green-50 text-green-750 border-green-200';
+                              } else {
+                                displayLabel = '🟠 Confirmada (Sin Abono)';
+                                badgeStyle = 'bg-orange-50 text-orange-750 border-orange-200';
+                              }
+                            } else if (statusLower === 'checkin') {
+                              displayLabel = '🔑 En Cabaña (Check-In)';
+                              badgeStyle = 'bg-emerald-50 text-emerald-800 border-emerald-200 animate-pulse';
+                            } else if (statusLower === 'checkout') {
+                              displayLabel = '👋 Completada (Check-Out)';
+                              badgeStyle = 'bg-blue-50 text-blue-750 border-blue-200';
+                            } else if (statusLower === 'cancelada') {
                               displayLabel = '🔴 Cancelada';
+                              badgeStyle = 'bg-red-50 text-red-750 border-red-200';
                             }
 
                             return (
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border transition-all ${colorClasses} ${status.toLowerCase() === 'checkin' ? 'animate-pulse' : ''}`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border transition-all ${badgeStyle}`}>
                                 {displayLabel}
                               </span>
                             );

@@ -1,5 +1,17 @@
 # Changelog - Rancho Carmelitas
 
+## [1.7.3] - 2026-09-27
+
+### Añadido / Mejorado (Unificación Cromática de Calendario y Tabla de Reservas, Soporte de Abonos y Filtro de Canceladas v1.7.3)
+
+- **Cálculo Financiero Real en Calendario del Dashboard (`/admin`):** Se integró la consulta relacional de `booking_payments` y la suma acumulada de abonos (`getBookingTotalAbonado`). Ahora las reservas con abono del 50% (como las de Fernando Fernández, John Vega y Olga Virginia) se pintan con su color oficial **Verde 🟢 (Abonada 50%)**, y las pagadas al 100% con **Azul 🔵 (Totalmente Pagada)**, resolviendo de raíz el Bug #6 reportado por administración.
+- **Armonización Completa en la Tabla de Reservas (`/admin/reservas`):** La columna de Estado en la tabla principal ahora distingue con precisión:
+  - `🟢 Confirmada (Abonada)` para reservas con abono parcial.
+  - `🔵 Confirmada (Pagada)` para reservas con 100% liquidado.
+  - `🟠 Confirmada (Sin Abono)` para reservas sin pagos registrados.
+  - `🟡 Pendiente`, `🔑 En Cabaña (Check-In)`, `👋 Completada (Check-Out)` y `🔴 Cancelada`.
+- **Exclusión de Reservas Canceladas en "Próximas Llegadas Inminentes":** El widget de llegadas inminentes del Dashboard ahora filtra estrictamente con `b.status !== 'Cancelada'`, garantizando que las reservas canceladas no ocupen cupos ni generen falsas alarmas operativas al equipo de recepción.
+
 ## [1.7.2] - 2026-09-27
 
 ### Añadido / Mejorado (Sincronización Idempotente Silenciosa y Blindaje Defensivo de Cancelaciones v1.7.2)

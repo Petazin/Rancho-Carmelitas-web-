@@ -2651,6 +2651,15 @@ function ReservasContent() {
                       {/* Celda de Estado */}
                       <td className="px-6 py-4">
                         {(() => {
+                          const breakdown = getBookingBreakdown(booking);
+                          let totalAbonado = booking.booking_payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+                          if (totalAbonado === 0 && booking.payment_amount) {
+                            totalAbonado = booking.payment_amount;
+                          }
+                          const totalToPay = breakdown.totalCliente;
+                          const isFullyPaid = totalAbonado >= totalToPay && totalToPay > 0;
+                          const isAbonada = !isFullyPaid && totalAbonado > 0;
+
                           switch (booking.status) {
                             case 'Pendiente':
                               return (
@@ -2659,21 +2668,35 @@ function ReservasContent() {
                                 </span>
                               );
                             case 'Confirmada':
+                              if (isFullyPaid) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-750 border border-blue-150" title={`Pagada al 100% (${formatMoney(totalAbonado)})`}>
+                                    🔵 Confirmada (Pagada)
+                                  </span>
+                                );
+                              }
+                              if (isAbonada) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-750 border border-green-150" title={`Abono registrado: ${formatMoney(totalAbonado)}`}>
+                                    🟢 Confirmada (Abonada)
+                                  </span>
+                                );
+                              }
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-750 border border-orange-150">
-                                  🟠 Confirmada
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-750 border border-orange-150" title="Confirmada sin abonos registrados">
+                                  🟠 Confirmada (Sin Abono)
                                 </span>
                               );
                             case 'checkin':
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-750 border border-green-150 animate-pulse">
-                                  🟢 En Cabaña
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 animate-pulse">
+                                  🔑 En Cabaña (Check-In)
                                 </span>
                               );
                             case 'checkout':
                               return (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-750 border border-blue-150">
-                                  🔵 Completada
+                                  👋 Completada (Check-Out)
                                 </span>
                               );
                             case 'Cancelada':
