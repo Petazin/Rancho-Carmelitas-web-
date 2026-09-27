@@ -39,32 +39,47 @@ export async function POST(req: Request) {
       const amountToRegister = Number(payment.transaction_amount) || Number(expectedAmount) || 0;
       const paymentMethodName = payment.payment_method_id ? `Pago Online (${payment.payment_method_id.toUpperCase()})` : 'Pago Online';
 
-      // 2. Verificar si este pago ya fue registrado en booking_payments
+      // 2. Verificar si este pago ya fue registrado en booking_payments (Idempotencia)
       const { data: existingPay } = await supabaseAdmin
         .from('booking_payments')
         .select('id')
         .eq('reference', refStr)
         .maybeSingle();
 
-      if (!existingPay) {
-        // Insertar en booking_payments
-        const { error: insertErr } = await supabaseAdmin
-          .from('booking_payments')
-          .insert([{
-            booking_id: bookingId,
-            amount: amountToRegister,
-            payment_method: paymentMethodName,
-            reference: refStr,
-            notes: `Acreditado automáticamente vía Pago Online (${paymentType === 'saldo' ? 'Saldo Restante' : 'Abono 50%'})`
-          }]);
-
-        if (!insertErr) {
-          syncedCount++;
-          syncedPayments.push({ bookingId, paymentId: payment.id, amount: amountToRegister });
-        }
+      // Si el pago ya fue registrado y procesado anteriormente, saltar para no generar updates innecesarios ni ensuciar la bitácora
+      if (existingPay) {
+        continue;
       }
 
-      // 3. Recalcular y actualizar el total abonado en bookings
+      // Obtener la reserva correspondiente para verificar su estado actual
+      const { data: currentBooking } = await supabaseAdmin
+        .from('bookings')
+        .select('id, status, guest_name, guest_email, check_in, check_out, total_price, cabins(name)')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+      if (!currentBooking) continue;
+
+      // 3. Insertar el nuevo pago en booking_payments
+      const { error: insertErr } = await supabaseAdmin
+        .from('booking_payments')
+        .insert([{
+          booking_id: bookingId,
+          amount: amountToRegister,
+          payment_method: paymentMethodName,
+          reference: refStr,
+          notes: `Acreditado automáticamente vía Pago Online (${paymentType === 'saldo' ? 'Saldo Restante' : 'Abono 50%'})`
+        }]);
+
+      if (insertErr) {
+        console.error('[MercadoPago Sync] Error insertando abono:', insertErr);
+        continue;
+      }
+
+      syncedCount++;
+      syncedPayments.push({ bookingId, paymentId: payment.id, amount: amountToRegister });
+
+      // 4. Recalcular el total abonado acumulado
       const { data: allPayments } = await supabaseAdmin
         .from('booking_payments')
         .select('amount')
@@ -72,21 +87,29 @@ export async function POST(req: Request) {
 
       const totalAbonado = (allPayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
+      // Preparar los datos a actualizar en la reserva
+      const updateData: any = {
+        payment_amount: totalAbonado,
+        payment_reference: refStr
+      };
+
+      // RESPETO ESTRICTO A CANCELACIONES:
+      // Si la reserva fue cancelada manualmente por el administrador, JAMÁS revertir a 'Confirmada'
+      if (currentBooking.status?.toLowerCase() !== 'cancelada') {
+        updateData.status = 'Confirmada';
+        updateData.confirmed_at = payment.date_approved || new Date().toISOString();
+        updateData.confirmed_by = 'Pago Online (Auto-Sync)';
+      }
+
       const { data: updatedBooking } = await supabaseAdmin
         .from('bookings')
-        .update({
-          payment_amount: totalAbonado,
-          payment_reference: refStr,
-          status: 'Confirmada',
-          confirmed_at: payment.date_approved || new Date().toISOString(),
-          confirmed_by: 'Pago Online (Auto-Sync)'
-        })
+        .update(updateData)
         .eq('id', bookingId)
         .select('*, cabins(name)')
         .single();
 
-      // 4. Enviar correo de confirmación de pago si recién se sincronizó
-      if (!existingPay && updatedBooking && updatedBooking.guest_email) {
+      // 5. Enviar correo de confirmación de pago al huésped si recién se acreditó y la reserva sigue vigente
+      if (updatedBooking && updatedBooking.guest_email && currentBooking.status?.toLowerCase() !== 'cancelada') {
         try {
           const originUrl = process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.cl' : 'http://localhost:3005';
           await fetch(`${originUrl}/api/send-payment-confirmation`, {

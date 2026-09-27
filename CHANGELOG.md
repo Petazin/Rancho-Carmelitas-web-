@@ -1,5 +1,13 @@
 # Changelog - Rancho Carmelitas
 
+## [1.7.2] - 2026-09-27
+
+### Añadido / Mejorado (Sincronización Idempotente Silenciosa y Blindaje Defensivo de Cancelaciones v1.7.2)
+
+- **Sincronización Idempotente Silenciosa (`/api/mercadopago/sync`):** Si un pago online ya fue procesado y existe en `booking_payments`, la sincronización salta inmediatamente la transacción sin ejecutar consultas `UPDATE` redundantes sobre `bookings`. Esto erradica por completo la generación de registros clones o repetidos en la Bitácora (`audit_logs`) al cargar la página de reservas.
+- **Blindaje Estricto de Cancelaciones:** Tanto la ruta de sincronización periódica (`/api/mercadopago/sync`) como el Webhook en tiempo real (`/api/mercadopago/webhook`) validan el estado actual de la reserva antes de actualizarla. Si la reserva tiene estado `'Cancelada'`, el sistema **jamás** la reactiva ni la devuelve a `'Confirmada'`, protegiendo de forma irrevocable la decisión operativa de los administradores.
+- **Cero Ruido en Auditoría:** Los disparadores de base de datos en PostgreSQL ahora sólo se activan cuando realmente entra dinero nuevo o cambia una condición operativa real, garantizando una bitácora limpia, sobria y concisa.
+
 ## [1.7.1] - 2026-09-27
 
 ### Añadido / Mejorado (Clarificación y Reconstrucción Histórica de la Bitácora de Auditoría y Cancelaciones v1.7.1)

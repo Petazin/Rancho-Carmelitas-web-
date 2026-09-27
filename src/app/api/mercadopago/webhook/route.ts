@@ -84,16 +84,29 @@ export async function POST(req: Request) {
 
       const totalAbonadoAcumulado = (allPayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-      // 4. Actualizar estado en la tabla bookings
+      // 4. Obtener la reserva actual para validar su estado
+      const { data: currentBooking } = await supabaseAdmin
+        .from('bookings')
+        .select('id, status')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+      const updateBookingData: any = {
+        payment_amount: totalAbonadoAcumulado,
+        payment_reference: `MP-${paymentId}`
+      };
+
+      // Si la reserva fue cancelada manualmente por el administrador, no reactivar a 'Confirmada'
+      if (currentBooking?.status?.toLowerCase() !== 'cancelada') {
+        updateBookingData.status = 'Confirmada';
+        updateBookingData.confirmed_at = date_approved || new Date().toISOString();
+        updateBookingData.confirmed_by = 'Pago Online (Auto-Webhook)';
+      }
+
+      // Actualizar en la tabla bookings
       const { data: updatedBooking, error: updateBookingError } = await supabaseAdmin
         .from('bookings')
-        .update({
-          payment_amount: totalAbonadoAcumulado,
-          payment_reference: `MP-${paymentId}`,
-          status: 'Confirmada',
-          confirmed_at: date_approved || new Date().toISOString(),
-          confirmed_by: 'Pago Online (Auto-Webhook)'
-        })
+        .update(updateBookingData)
         .eq('id', bookingId)
         .select('*, cabins(name)')
         .single();
@@ -101,11 +114,11 @@ export async function POST(req: Request) {
       if (updateBookingError) {
         console.error('[MercadoPago Webhook] Error actualizando reserva:', updateBookingError);
       } else {
-        console.log(`[MercadoPago Webhook] Reserva ${bookingId} confirmada con éxito. Total abonado: $${totalAbonadoAcumulado}`);
+        console.log(`[MercadoPago Webhook] Reserva ${bookingId} procesada con éxito. Total abonado: $${totalAbonadoAcumulado}`);
       }
 
-      // 5. Despachar correo de confirmación de pago automático
-      if (updatedBooking && updatedBooking.guest_email) {
+      // 5. Despachar correo de confirmación de pago automático si la reserva sigue activa
+      if (updatedBooking && updatedBooking.guest_email && currentBooking?.status?.toLowerCase() !== 'cancelada') {
         try {
           const originUrl = process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.cl' : 'http://localhost:3005';
           await fetch(`${originUrl}/api/send-payment-confirmation`, {
