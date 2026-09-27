@@ -618,3 +618,65 @@
 - Se configuró la cancelación automática de eventos de analytics para cualquier ruta bajo `/admin`.
 - Se implementó el etiquetado en `localStorage` (`rc_is_admin=true`) en `src/app/admin/layout.tsx` al verificar sesión administrativa y su remoción al cerrar sesión, descartando también el tráfico del administrador al navegar la portada pública.
 - Se verificó la compilación de producción mediante `npm run build`, confirmando resultado exitoso (código de salida 0).
+[2026-08-14 18:17:00] Actividad de Antigravity:
+- A solicitud explícita del usuario para realizar pruebas, se inició el servidor de desarrollo local de Next.js (`npm run dev -- -p 3005`) en segundo plano en la subcarpeta `rancho-carmelitas-web`, disponible en http://localhost:3005.
+[2026-08-14 20:13:00] Actividad de Antigravity:
+- Se implementó el Frontend del sistema multicanal de pagos en `src/components/ui/CheckoutForm.tsx` con selector de modalidades (Mercado Pago, Transbank Webpay, Transferencia Bancaria) y un simulador de pasarelas para pruebas de control de calidad (QA).
+- Se rediseñó la pantalla de éxito `src/app/checkout/success/page.tsx` con formato Voucher, barra de estado financiero, instrucciones dinámicas de transferencia y botón inteligente de WhatsApp del anfitrión.
+- Se desarrolló el Portal del Huésped `src/app/reserva/[id]/page.tsx` con contador regresivo, enlaces a Waze/Google Maps, desglose de cuenta corriente y botón interactivo para saldar el 50% restante con simulación de pago.
+- Se actualizó el modal de pagos del panel administrativo `src/app/admin/reservas/page.tsx` integrando los 5 métodos de pago (Mercado Pago Link, POS Point, Webpay, Transferencia y Efectivo) y botones generadores de mensajes directos por WhatsApp con 1 clic.
+- Se ejecutó el comando de compilación `npm run build` para validar cero errores de sintaxis y tipos TypeScript.
+[2026-08-14 20:28:00] Actividad de Antigravity:
+- Se corrigió la persistencia del abono simulado en `src/components/ui/CheckoutForm.tsx` para insertar automáticamente el registro en `booking_payments` y actualizar `bookings.payment_amount`, eliminando la discrepancia donde el panel de administración mostraba cobro pendiente tras simular pago.
+- Se implementó la persistencia en base de datos al saldar el 50% restante desde el Portal del Huésped `src/app/reserva/[id]/page.tsx`, actualizando el estado de cuenta en vivo a 100% Pagado ($Saldo = $0).
+- Se creó la página de búsqueda y consulta pública de reservas `src/app/reserva/page.tsx` (`/reserva`) para que los clientes puedan reingresar a su portal en cualquier momento ingresando su código o correo.
+- Se añadió el acceso directo "🔍 Mi Reserva" en la barra de navegación superior (Navbar) de la portada principal (`src/app/page.tsx`).
+- Se ejecutó `npm run build` para certificar la compilación sin errores.
+[2026-08-14 20:41:00] Actividad de Antigravity:
+- Se mejoró la navegación en el Portal del Huésped `src/app/reserva/[id]/page.tsx` agregando un botón explícito de "🏠 Ir al Inicio" en la cabecera superior y un enlace de retorno "← Volver a la Portada de Rancho Carmelitas" en el pie de página.
+- Se verificó la compilación de producción mediante `npm run build`.
+[2026-08-14 21:13:00] Actividad de Antigravity:
+- Se corrigió la consulta de búsqueda en `src/app/reserva/page.tsx` para soportar búsqueda por código corto hexadecimal de 8 caracteres (ej. `0B9C51AD`), UUIDs de 36 caracteres, correo electrónico, RUT y nombres, resolviendo la incompatibilidad de tipos UUID en PostgREST.
+- Se actualizó el cargador de datos en `src/app/reserva/[id]/page.tsx` para admitir tanto slugs de 8 caracteres como UUIDs completos.
+- Se ejecutó `npm run build` para validar el funcionamiento y la compilación.
+[2026-08-14 21:20:00] Actividad de Antigravity:
+- Se ajustaron los enlaces de WhatsApp del panel administrativo (`src/app/admin/reservas/page.tsx`) para usar el origen dinámico del navegador (`window.location.origin`), permitiendo probar y abrir los enlaces en `localhost:3005` durante desarrollo local y en `ranchocarmelitas.cl` en producción.
+- Se formateó la URL con el código corto de 8 caracteres (ej: `/reserva/5cdbfa69`) para mayor legibilidad del huésped.
+- Se ejecutó `npm run build` para validar la compilación sin errores.
+[2026-08-14 21:24:00] Actividad de Antigravity:
+- Se rediseñó la sección de liquidación de saldo en el Portal del Huésped `src/app/reserva/[id]/page.tsx` para incorporar y explicar transparentemente las 5 modalidades de pago del saldo restante:
+  1. Opciones Online Previas (Check-In Express): Mercado Pago, Transbank Webpay y Transferencia Bancaria (con desglose de cuenta y envío de comprobante por WhatsApp).
+  2. Opciones Presenciales al Check-In: Maquinita POS Point de Mercado Pago, Efectivo en recepción y Transferencia in situ.
+- Se verificó la compilación de producción mediante `npm run build`.
+[2026-09-26 20:18:00] Actividad de Antigravity:
+- Se configuraron las credenciales oficiales de Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN` y `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`) en `.env.local`.
+- Se ejecutó `npm install mercadopago` para integrar el SDK oficial de pagos de Mercado Pago en Next.js.
+- Se creó el módulo cliente `src/lib/mercadopago.ts` y el endpoint `src/app/api/mercadopago/create-preference/route.ts` para generar preferencias de Checkout Pro.
+- Se implementó el webhook `src/app/api/mercadopago/webhook/route.ts` para procesar notificaciones IPN y acreditar pagos automáticamente en Supabase y enviar comprobantes por correo.
+- Se conectó la pasarela oficial en `CheckoutForm.tsx` y en el Portal del Huésped `src/app/reserva/[id]/page.tsx`.
+- Se ejecutó `npm run build` para validar la compilación sin errores.
+[2026-09-26 20:23:00] Actividad de Antigravity:
+- Se inició el servidor de desarrollo local de Next.js (`npm run dev -- -p 3005`) en segundo plano para permitir pruebas interactivas en http://localhost:3005.
+- Se corrigió la propiedad `auto_return` en `src/app/api/mercadopago/create-preference/route.ts` para aplicarse condicionalmente solo sobre dominios HTTPS, resolviendo el error 400 de Mercado Pago en entorno de pruebas local (localhost).
+[2026-09-26 21:48:00] Actividad de Antigravity:
+- Se creó el endpoint `/api/mercadopago/sync` que consulta la API de Mercado Pago (`mpPayment.search`), reconcilia transacciones en `booking_payments`, actualiza el estado de las reservas a Confirmada y envía los correos de confirmación de pago.
+- Se integró el botón "🔄 Sincronizar Mercado Pago" y la auto-sincronización en el panel administrativo (`src/app/admin/reservas/page.tsx`).
+- Se integró la auto-reconciliación instantánea en `src/app/checkout/success/page.tsx` y en el Portal del Huésped `src/app/reserva/[id]/page.tsx`.
+- Se ejecutó `npm run build` para validar la compilación sin errores.
+[2026-09-26 22:25:00] Actividad de Antigravity:
+- Se guardaron de forma segura las credenciales de producción de Mercado Pago en `.env.local` (excluido estrictamente en `.gitignore`): `MERCADOPAGO_ACCESS_TOKEN`, `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_CLIENT_ID` y `MERCADOPAGO_CLIENT_SECRET`.
+- Se ajustaron `CheckoutForm.tsx` y `src/app/reserva/[id]/page.tsx` para redirigir directamente al `initPoint` oficial de Mercado Pago en entorno de producción.
+- Se ejecutó el comando de prueba `node scratch/test-production-mp.js` para certificar la comunicación con la API de Mercado Pago en Chile, obteniendo respuesta exitosa 200 con ID de preferencia e `init_point` oficial.
+- Se eliminaron los scripts temporales de prueba mediante comandos de shell `Remove-Item`.
+- Se ejecutó `npm run build` certificando compilación exitosa y limpia (0 errores) de todas las rutas dinámicas y estáticas.
+[2026-09-26 22:38:00] Actividad de Antigravity:
+- Se eliminó por completo toda la barra y estados de simulación de pruebas (Mock Aprobado, Mock Rechazo, etc.) de `src/components/ui/CheckoutForm.tsx`.
+- Se unificó la opción de pago a "💳 Pago Online (Tarjetas Débito / Crédito / Webpay)" y "🏦 Transferencia Bancaria Directa", eliminando el mock simulado de Transbank.
+- Se eliminó la simulación mock de pago de saldo de Webpay en el Portal del Huésped `src/app/reserva/[id]/page.tsx`, dejando un botón genérico "💳 Pagar Saldo Online" que conecta directamente a la pasarela oficial.
+- Se generalizaron todas las leyendas y textos visibles: el botón del panel administrativo ahora es "🔄 Sincronizar Pagos Online", y los vouchers y mensajes de confirmación registran y muestran "Pago Online".
+- Se ejecutó `npm run build` certificando compilación impecable y 0 errores en todas las rutas del sistema.
+[2026-09-26 22:55:00] Actividad de Antigravity:
+- Se auditó el repositorio con `git status` y se configuró `.gitignore` para excluir formalmente la carpeta `scratch/`.
+- Se conmutó `.env.local` a modo producción con credenciales oficiales respaldadas.
+- Se actualizaron los documentos de control del proyecto: `CHANGELOG.md` y `GEMINI.md` incorporando la versión [1.7.0].
+- Se redactó el Reporte de Hito en la Wiki LLM en `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\2026-09-26-integracion-mercadopago-produccion-reconciliacion-automatica.md`.

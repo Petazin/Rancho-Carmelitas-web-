@@ -1,5 +1,27 @@
 # Changelog - Rancho Carmelitas
 
+## [1.7.0] - 2026-09-26
+
+### Añadido / Mejorado (Integración Oficial de Mercado Pago Producción, Reconciliación Automática y Pasarela Online v1.7.0)
+
+- **Credenciales Oficiales de Producción de Mercado Pago:** Configuración e integración segura de las llaves productivas de Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN` y `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`), protegidas en variables de entorno sin exposición en el código fuente.
+- **Redirección Directa a Checkout Pro:** Los pagos de abono inicial (50%) en checkout y de liquidación de saldo (50%) en el Portal del Huésped se dirigen directamente a la pasarela oficial segura de Mercado Pago en Chile (`init_point`), admitiendo tarjetas de débito (Redcompra), crédito (con cuotas) y Webpay.
+- **Eliminación Total de Simulaciones y Mocks QA:** Remoción de los selectores de simulación (`Mock Aprobado`, `Mock Rechazado`, etc.) y de retardos artificiales, garantizando que el flujo opere 100% en vivo y con transacciones reales.
+- **Generalización y Sobriedad de Marca en UI:** Se estandarizó la interfaz para denominar el método como `💳 Pago Online (Tarjetas Débito / Crédito / Webpay)` y el botón del panel PMS como `🔄 Sincronizar Pagos Online`, evitando la sobreexposición de marcas.
+- **Reconciliación Automática y Webhook IPN:** Implementación de sincronización bajo demanda (`/api/mercadopago/sync`) y webhook (`/api/mercadopago/webhook`) para acreditar abonos automáticamente en `booking_payments`, actualizar `bookings` a Confirmada y emitir el correo de comprobante al instante.
+
+## [1.6.0] - 2026-08-14
+
+### Añadido / Mejorado (Sistema Multicanal de Pagos, Simulador QA, Portal del Huésped y Flujo Comunicacional v1.6.0)
+
+- **Selector Multicanal de Pagos en Checkout (`CheckoutForm.tsx`):** Tarjetas interactivas con selección de Mercado Pago (Tarjetas de crédito en cuotas, débito, Redcompra, dinero en cuenta), Transbank Webpay Plus y Transferencia Bancaria Directa para el abono del 50%.
+- **Simulador Interactivo de Pasarelas (Modo QA):** Barra de pruebas para simular respuestas en tiempo real (Aprobado, Pendiente, Rechazado) con animación de modal de pasarela y persistencia automática en base de datos.
+- **Rediseño de Voucher de Éxito (`/checkout/success`):** Barra de progreso financiero dinámico (50% Abono Acreditado vs. 50% Saldo Restante al Check-in), datos de cuenta bancaria y botón directo de contacto por WhatsApp al anfitrión con mensaje personalizado.
+- **Portal del Huésped (`/reserva/[id]`):** Vista pública personalizada para el cliente con contador de días para el viaje, accesos GPS directos a Waze y Google Maps, desglose de cuenta corriente en tiempo real y soporte completo para las 5 modalidades de pago de saldo (Mercado Pago, Webpay, Transferencia bancaria, POS Point presencial y Efectivo).
+- **Página Pública de Búsqueda de Reservas (`/reserva`):** Buscador multivariable que permite a los huéspedes consultar su portal en cualquier momento ingresando código de reserva corto de 8 dígitos, UUID completo, correo electrónico o RUT.
+- **Acceso Directo en Navbar (`page.tsx`):** Botón destacado "🔍 Mi Reserva" en la barra de navegación superior de la portada principal.
+- **Modalidades de Pago y Sello Humano en Panel Admin (`/admin/reservas`):** Soporte en el modal PMS para las 5 modalidades de pago y botones de 1 clic para generar mensajes directos de WhatsApp de "Bienvenida Cálida" y "Link de Cobro de Saldo Restante".
+
 ## [1.5.3] - 2026-08-14
 
 ### Añadido / Mejorado (Filtrado de Métricas del Administrador en Vercel Analytics v1.5.3)

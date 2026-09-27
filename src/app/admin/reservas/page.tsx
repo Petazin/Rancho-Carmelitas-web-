@@ -257,6 +257,38 @@ function ReservasContent() {
   const [reportYear, setReportYear] = useState<string>(new Date().getFullYear().toString());
   const [reportMonth, setReportMonth] = useState<string>((new Date().getMonth() + 1).toString());
 
+  // Estado para sincronización automática de Mercado Pago
+  const [isSyncingMP, setIsSyncingMP] = useState(false);
+
+  const handleSyncMercadoPago = async (silent = false) => {
+    if (!silent) setIsSyncingMP(true);
+    try {
+      const res = await fetch('/api/mercadopago/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const result = await res.json();
+      if (result.syncedCount > 0) {
+        await fetchBookings();
+        if (!silent) {
+          alert(`¡Sincronización Exitosa! Se acreditaron ${result.syncedCount} nuevo(s) pago(s) online.`);
+        }
+      } else if (!silent) {
+        alert('Sincronización al día: todos los pagos online ya están acreditados en el sistema.');
+      }
+    } catch (err: any) {
+      if (!silent) {
+        alert('Error al sincronizar pagos online: ' + err.message);
+      }
+    } finally {
+      if (!silent) setIsSyncingMP(false);
+    }
+  };
+
+  useEffect(() => {
+    handleSyncMercadoPago(true);
+  }, []);
 
   useEffect(() => {
     if (createModalOpen && createForm.cabin_id) {
@@ -1761,43 +1793,56 @@ function ReservasContent() {
           </div>
         </div>
       )}
-        <button
-          onClick={() => {
-            const defaultCabin = availableCabins[0];
-            setCreateForm({
-              guest_name: '',
-              guest_email: '',
-              guest_phone: '',
-              cabin_id: defaultCabin?.id || '',
-              check_in: '',
-              check_out: '',
-              adults: 1,
-              children: 0,
-              requires_invoice: false,
-              total_price: defaultCabin?.price_per_night?.toString() || '',
-              discount_type: 'fixed',
-              discount_value: '0',
-              plataforma_id: '',
-              plataforma_comision_aplicada: '0',
-              admin_comision_porcentaje: defaultCommission,
-              admin_notes: '',
-              status: 'Pendiente',
-              guest_rut: '',
-              vehicle_plate: '',
-              guest_nationality: '',
-              guest_preferences: '',
-              guest_birthdate: ''
-            });
-            setAllowOverCapacity(false);
-            setCreateModalOpen(true);
-          }}
-          className="bg-[#11d442] hover:bg-[#0fb337] text-white px-5 py-3 rounded-[12px] font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 self-start sm:self-auto"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-          </svg>
-          Nueva Reserva Manual
-        </button>
+        <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => handleSyncMercadoPago(false)}
+            disabled={isSyncingMP}
+            className="bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 px-4 py-3 rounded-[12px] font-bold text-sm shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            title="Consulta en vivo a la pasarela de pagos por cobros acreditados y actualiza automáticamente los abonos"
+          >
+            <span className={isSyncingMP ? 'animate-spin inline-block' : ''}>🔄</span>
+            <span>{isSyncingMP ? 'Sincronizando...' : 'Sincronizar Pagos Online'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const defaultCabin = availableCabins[0];
+              setCreateForm({
+                guest_name: '',
+                guest_email: '',
+                guest_phone: '',
+                cabin_id: defaultCabin?.id || '',
+                check_in: '',
+                check_out: '',
+                adults: 1,
+                children: 0,
+                requires_invoice: false,
+                total_price: defaultCabin?.price_per_night?.toString() || '',
+                discount_type: 'fixed',
+                discount_value: '0',
+                plataforma_id: '',
+                plataforma_comision_aplicada: '0',
+                admin_comision_porcentaje: defaultCommission,
+                admin_notes: '',
+                status: 'Pendiente',
+                guest_rut: '',
+                vehicle_plate: '',
+                guest_nationality: '',
+                guest_preferences: '',
+                guest_birthdate: ''
+              });
+              setAllowOverCapacity(false);
+              setCreateModalOpen(true);
+            }}
+            className="bg-[#11d442] hover:bg-[#0fb337] text-white px-5 py-3 rounded-[12px] font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva Reserva Manual
+          </button>
+        </div>
       </div>
 
       {bookingIdFilter && (
@@ -3604,9 +3649,11 @@ function ReservasContent() {
                             value={pmsPaymentForm.payment_method}
                             onChange={e => setPmsPaymentForm({...pmsPaymentForm, payment_method: e.target.value})}
                           >
-                            <option value="Transferencia">Transferencia Bancaria</option>
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
+                            <option value="Mercado Pago (Link)">💳 Mercado Pago (Link / QR)</option>
+                            <option value="POS Mercado Pago">📱 POS Mercado Pago (Point Counter)</option>
+                            <option value="Transbank Webpay">🔗 Transbank (Webpay Plus)</option>
+                            <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                            <option value="Efectivo">💵 Pago en Efectivo (Caja)</option>
                             <option value="Otro">Otro Método</option>
                           </select>
                         </div>
@@ -3614,7 +3661,7 @@ function ReservasContent() {
                           <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">ID / Referencia de Pago</label>
                           <input 
                             type="text"
-                            placeholder="Ej: Código de transferencia"
+                            placeholder="Ej: MP-782910 o Voucher POS"
                             className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white text-xs"
                             value={pmsPaymentForm.reference}
                             onChange={e => setPmsPaymentForm({...pmsPaymentForm, reference: e.target.value})}
@@ -3659,7 +3706,7 @@ function ReservasContent() {
                         return (
                           <button
                             type="button"
-                            disabled={isAddingPayment || !pmsPaymentForm.amount}
+                            disabled={isAddingPayment || !pmsPaymentForm.amount || Number(pmsPaymentForm.amount) <= 0}
                             onClick={() => handleAddPmsPayment(selectedBookingForPayments.id)}
                             className={buttonStyles}
                           >
@@ -3670,6 +3717,61 @@ function ReservasContent() {
                     </div>
                     </div>
                   )}
+
+                  {/* SECCIÓN DE COMUNICACIONES DE WHATSAPP (SELLO HUMANO DEL ANFITRIÓN) */}
+                  <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/70 space-y-3">
+                    <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>📲 Comunicaciones de WhatsApp (Sello Cercano del Rancho)</span>
+                    </h4>
+                    <p className="text-xs text-emerald-800">
+                      Envía mensajes cálidos y personalizados al huésped ({selectedBookingForPayments.guest_phone || 'Sin teléfono'}) con un solo clic:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* Botón 1: Bienvenida */}
+                      {selectedBookingForPayments.guest_phone && (() => {
+                        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ranchocarmelitas.cl';
+                        const portalUrl = `${baseUrl}/reserva/${selectedBookingForPayments.id.slice(0, 8)}`;
+                        const msg = `¡Hola ${selectedBookingForPayments.guest_name}! Te saludamos de Rancho Carmelitas 🌿🏡. Confirmamos la reserva de la Cabaña ${selectedBookingForPayments.cabin?.name || ''} para el ${new Date(selectedBookingForPayments.check_in).toLocaleDateString('es-ES')} al ${new Date(selectedBookingForPayments.check_out).toLocaleDateString('es-ES')}. Tu estadía está asegurada. Puedes ver tu portal con ubicación GPS y saldo aquí: ${portalUrl}. ¡Quedamos atentos a lo que necesites!`;
+                        return (
+                          <a
+                            href={`https://wa.me/${selectedBookingForPayments.guest_phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <button
+                              type="button"
+                              className="w-full py-2 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                            >
+                              💬 Enviar Bienvenida Cálida
+                            </button>
+                          </a>
+                        );
+                      })()}
+
+                      {/* Botón 2: Cobro Saldo Restante */}
+                      {selectedBookingForPayments.guest_phone && saldoPendiente > 0 && (() => {
+                        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ranchocarmelitas.cl';
+                        const portalUrl = `${baseUrl}/reserva/${selectedBookingForPayments.id.slice(0, 8)}`;
+                        const msg = `¡Hola ${selectedBookingForPayments.guest_name}! Te compartimos el enlace para revisar los detalles y saldar el restante (${formatMoney(saldoPendiente)}) de tu estadía en Rancho Carmelitas: ${portalUrl}. ¡Te esperamos con todo preparado!`;
+                        return (
+                          <a
+                            href={`https://wa.me/${selectedBookingForPayments.guest_phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <button
+                              type="button"
+                              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                            >
+                              💳 Enviar Link de Saldo
+                            </button>
+                          </a>
+                        );
+                      })()}
+                    </div>
+                  </div>
 
                   <div className="pt-2 border-t border-gray-150 flex justify-end">
                     <button 

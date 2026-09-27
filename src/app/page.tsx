@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { CabinCard } from "@/components/ui/CabinCard";
 import { supabase } from "@/lib/supabase";
 import { SocialSection } from "@/components/ui/SocialSection";
@@ -98,25 +99,25 @@ export default async function Home() {
 
   try {
     const { data: dbGallery, error: galleryError } = await supabase
-      .from('landing_gallery')
+      .from('landing_moments')
       .select('*')
-      .order('order_index', { ascending: true });
+      .order('position', { ascending: true });
 
     if (!galleryError && dbGallery && dbGallery.length > 0) {
-      galleryItems = dbGallery.map(item => ({
+      galleryItems = dbGallery.map((item: { image_url: string; caption?: string }) => ({
         src: item.image_url,
-        alt: item.alt_text || 'Foto de momentos Rancho Carmelitas'
+        alt: item.caption || 'Momento en Rancho Carmelitas'
       }));
     }
   } catch (err) {
-    console.warn("Advertencia cargando landing_gallery (usando fallback estático local):", err);
+    console.warn("Advertencia cargando landing_moments (usando fallback estático local):", err);
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header / Navbar */}
-      <header className="sticky top-0 z-50 w-full glass-effect border-b border-gray-200/50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col bg-surface font-sans">
+      {/* Header flotante minimalista */}
+      <header className="fixed top-0 z-50 w-full glass-effect border-b border-gray-200/50">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo className="w-10 h-10 rounded-full object-cover border border-gray-200/50 shadow-sm" logoUrl={heroSettings.logo_url} />
             <span className="text-xl font-bold tracking-tight text-gray-900">
@@ -128,9 +129,15 @@ export default async function Home() {
             <a href="#gallery" className="hover:text-[#11d442] transition-colors">Galería</a>
             <a href="#location-social" className="hover:text-[#11d442] transition-colors">Ubicación</a>
             <a href="#rules" className="hover:text-[#11d442] transition-colors">Reglas</a>
+            <Link href="/reserva" className="hover:text-[#11d442] transition-colors text-gray-800 font-semibold flex items-center gap-1">
+              <span>🔍 Mi Reserva</span>
+            </Link>
             <a href="/admin" className="hover:text-[#11d442] transition-colors text-gray-400">Admin</a>
           </nav>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/reserva" className="md:hidden text-xs font-bold text-gray-700 bg-gray-100 px-2.5 py-1.5 rounded-lg">
+              Mi Reserva
+            </Link>
             <a href="#cabins" className="btn-primary">
               Reservar Ahora
             </a>

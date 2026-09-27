@@ -77,7 +77,10 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
   const [guestPreferences, setGuestPreferences] = useState('');
   const [guestBirthdate, setGuestBirthdate] = useState('');
 
+  const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'transferencia'>('mercadopago');
+
   const [isLoading, setIsLoading] = useState(false);
+  const [simulationStep, setSimulationStep] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState('');
 
   // Cálculos reactivos
@@ -93,6 +96,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
+    let createdBookingId: string | null = null;
 
     try {
       // 1. VALIDACIÓN DE CONTACTO E IDENTIFICACIÓN
@@ -140,7 +144,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         return;
       }
 
-      // 2. INSERTAR EN DB
+      // 4. INSERTAR EN DB (Estado Inicial Pendiente)
       let finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
       
       if (requiresInvoice) {
@@ -166,10 +170,14 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             children,
             children_ages: hasChildren ? childrenAges : null,
             travel_reason: finalTravelReason,
-            special_requests: null, // Por ahora el special requests se usó para "otro"
+            special_requests: null,
             requires_invoice: requiresInvoice,
             total_price: totalConImpuestos,
             extra_guests_cost: extraCostTotal,
+            payment_amount: null,
+            payment_reference: null,
+            confirmed_at: null,
+            confirmed_by: null,
             status: 'Pendiente'
           }
         ])
@@ -179,7 +187,61 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
           throw new Error(error?.message || 'Error desconocido al guardar en base de datos.');
       }
 
-      // 3. Enviar correos de confirmación (Cliente y Dueño)
+      const bookingId = data[0].id;
+      createdBookingId = bookingId;
+
+      // 5. FLUJO SEGÚN MÉTODO DE PAGO
+      if (paymentMethod === 'mercadopago') {
+        setSimulationStep('Conectando con la pasarela de pagos segura...');
+        const prefRes = await fetch('/api/mercadopago/create-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId,
+            title: `Abono 50% - ${cabin.name} (Rancho Carmelitas)`,
+            amount: abono,
+            guestName,
+            guestEmail,
+            type: 'abono',
+            origin: window.location.origin
+          })
+        });
+
+        const prefData = await prefRes.json();
+
+        if (prefData.success && (prefData.initPoint || prefData.sandboxInitPoint)) {
+          // Enviar correo previo de solicitud de reserva recibida
+          try {
+            await fetch('/api/send-confirmation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                guestName,
+                guestEmail,
+                cabinName: cabin.name,
+                checkIn,
+                checkOut,
+                adults,
+                children,
+                totalPrice: totalConImpuestos,
+                bookingId
+              })
+            });
+          } catch (mErr) {
+            console.warn('Advertencia correo confirmación:', mErr);
+          }
+
+          // Redirigir a la pasarela de pago oficial
+          const targetUrl = prefData.initPoint || prefData.sandboxInitPoint;
+          window.location.href = targetUrl;
+          return;
+        } else {
+          throw new Error(prefData.error || 'No se pudo conectar con la pasarela de pagos.');
+        }
+      }
+
+      // Si el método es Transferencia Bancaria Directa
+      setSimulationStep('Registrando solicitud de reserva...');
       try {
         await fetch('/api/send-confirmation', {
           method: 'POST',
@@ -191,21 +253,38 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             checkIn: formatearFecha(checkIn),
             checkOut: formatearFecha(checkOut),
             totalPrice: totalConImpuestos,
-            bookingId: data[0].id
+            bookingId: bookingId
           })
         });
       } catch (emailErr) {
         console.error('Error al intentar enviar los correos:', emailErr);
-        // No bloqueamos al usuario si falla el mail, ya que la reserva está en DB.
       }
 
-      // Éxito, redirigir a página de confirmación
-      router.push(`/checkout/success?bookingId=${data[0].id}`);
+      // Redirigir a pantalla de éxito para transferencia bancaria
+      const queryParams = new URLSearchParams({
+        bookingId: bookingId,
+        method: 'transferencia',
+        status: 'pending',
+        amount: String(abono),
+        total: String(totalConImpuestos)
+      });
+
+      router.push(`/checkout/success?${queryParams.toString()}`);
+
 
     } catch (err: any) {
       console.warn('Error al guardar reserva:', err);
+      // Rollback: si se insertó la reserva pero falló la pasarela de pago, eliminar la reserva provisional para liberar fechas
+      if (createdBookingId) {
+        try {
+          await supabase.from('bookings').delete().eq('id', createdBookingId);
+        } catch (delErr) {
+          console.warn('Error en rollback de reserva provisional:', delErr);
+        }
+      }
       setErrorMsg(err.message || 'Ocurrió un error al procesar tu reserva. Inténtalo de nuevo.');
       setIsLoading(false);
+      setSimulationStep('');
     }
   };
 
@@ -224,8 +303,37 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Tus Datos</h2>
           
           {errorMsg && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium border border-red-100">
-              {errorMsg}
+            <div className="bg-rose-50 border-2 border-rose-300 text-rose-900 p-6 rounded-2xl mb-8 shadow-md animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm text-2xl">
+                  ⚠️
+                </div>
+                <div className="flex-1 space-y-2">
+                  <h3 className="font-extrabold text-base text-rose-950 flex items-center gap-2">
+                    <span>Fechas No Disponibles</span>
+                    <span className="bg-rose-200 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Conflicto de Ocupación
+                    </span>
+                  </h3>
+                  <p className="text-sm text-rose-800 leading-relaxed">
+                    {errorMsg}
+                  </p>
+                  <div className="pt-2 flex flex-wrap items-center gap-3">
+                    <a
+                      href={`/cabins/${cabin.id}`}
+                      className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm"
+                    >
+                      <span>📅 Seleccionar Otras Fechas</span>
+                    </a>
+                    <a
+                      href="/"
+                      className="inline-flex items-center gap-2 bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold px-4 py-2.5 rounded-xl transition-all"
+                    >
+                      <span>🏡 Explorar Otras Cabañas</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -495,6 +603,89 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                 </div>
               )}
             </div>
+
+            {/* SELECCIÓN DE MÉTODO DE PAGO */}
+            <div className="pt-6 border-t border-gray-100 space-y-4">
+              <div>
+                <label className="block text-base font-bold text-gray-900 flex items-center justify-between">
+                  <span>💳 Elige tu Método de Pago para el Abono del 50%</span>
+                  <span className="text-xs font-semibold text-[#11d442] bg-[#11d442]/10 px-2.5 py-1 rounded-full">
+                    Abono hoy: {formatMoney(abono)}
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  El 50% restante ({formatMoney(restante)}) se salda de forma presencial o por el portal antes del Check-in.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {/* Opción 1: Pago Online */}
+                <label 
+                  className={`relative flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'mercadopago' 
+                      ? 'border-[#009EE3] bg-[#009EE3]/5 shadow-sm' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                  onClick={() => setPaymentMethod('mercadopago')}
+                >
+                  <input 
+                    type="radio" 
+                    name="payment_method" 
+                    value="mercadopago"
+                    checked={paymentMethod === 'mercadopago'}
+                    onChange={() => setPaymentMethod('mercadopago')}
+                    className="mt-1 w-4 h-4 text-[#009EE3] focus:ring-[#009EE3]"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                        <span>💳 Pago Online (Tarjetas Débito / Crédito / Webpay)</span>
+                        <span className="bg-[#009EE3] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Inmediato
+                        </span>
+                      </span>
+                      <span className="text-xs font-bold text-gray-900">{formatMoney(abono)}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Paga de forma rápida y segura con <strong>Tarjetas de Débito, Redcompra, Tarjetas de Crédito (en cuotas) o Webpay</strong> a través de nuestra pasarela protegida. Confirmación e ingreso automático de tu reserva.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Opción 2: Transferencia Bancaria */}
+                <label 
+                  className={`relative flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'transferencia' 
+                      ? 'border-emerald-600 bg-emerald-50/40 shadow-sm' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                  onClick={() => setPaymentMethod('transferencia')}
+                >
+                  <input 
+                    type="radio" 
+                    name="payment_method" 
+                    value="transferencia"
+                    checked={paymentMethod === 'transferencia'}
+                    onChange={() => setPaymentMethod('transferencia')}
+                    className="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-600"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                        <span>🏦 Transferencia Bancaria Directa</span>
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Manual
+                        </span>
+                      </span>
+                      <span className="text-xs font-bold text-gray-900">{formatMoney(abono)}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Transfiere el abono directamente a nuestra cuenta bancaria. Te mostraremos los datos de la cuenta en el siguiente paso para enviar el comprobante por WhatsApp.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
             
           </form>
         </div>
@@ -520,9 +711,38 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
           fullWidth 
           onClick={handleSubmit} 
           disabled={isLoading}
+          className="relative py-4 text-base font-bold shadow-lg"
         >
-          {isLoading ? 'Procesando...' : 'Confirmar Reserva y Proceder al Pago del Abono'}
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {simulationStep || 'Procesando...'}
+            </span>
+          ) : (
+            paymentMethod === 'mercadopago' ? `Pagar Abono Online (${formatMoney(abono)})` :
+            `Confirmar Reserva y Ver Datos para Transferir (${formatMoney(abono)})`
+          )}
         </Button>
+
+        {/* MODAL DE PROCESAMIENTO (UX FEEDBACK) */}
+        {isLoading && simulationStep && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl border border-gray-100">
+              <div className="w-16 h-16 bg-[#009EE3]/10 rounded-full flex items-center justify-center mx-auto text-[#009EE3]">
+                <svg className="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Procesando Pago Seguro</h3>
+              <p className="text-sm text-gray-600 font-medium animate-pulse">{simulationStep}</p>
+              <div className="text-[11px] text-gray-400">Rancho Carmelitas • Transacción Segura y Encriptada</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Resumen Lateral */}
