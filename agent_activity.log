@@ -681,4 +681,37 @@
 - Se actualizaron los documentos de control del proyecto: `CHANGELOG.md` y `GEMINI.md` incorporando la versión [1.7.0].
 - Se redactó el Reporte de Hito en la Wiki LLM en `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\2026-09-26-integracion-mercadopago-produccion-reconciliacion-automatica.md`.
 [2026-09-26 22:59:00] Actividad de Antigravity:
-- Se ejecutaron los comandos de shell `git add .`, `git commit` y `git push origin master` desplegando exitosamente la versión 1.7.0 a GitHub y disparando la construcción automática en Vercel para producción.
+- Se ejecutaron los comandos de shell `git add .`, `git commit` y `git push origin master` desplegando exitosamente la versión 1.7.0 a GitHub y disparando la construcción automática en Vercel para producción.[2026-09-27 02:29:25] npx tsc --noEmit
+[2026-09-27 02:32:29] npm run dev (iniciando servidor Next.js)
+[2026-10-09 16:47:00] Actividad de Antigravity:
+- Se implementó la nueva página oficial de reglamentos en `src/app/reglamento/page.tsx` con diseño editorial, filtros de cabañas/piscina y soporte de impresión en PDF.
+- Se implementó el componente modal interactivo `src/components/ui/RulesModal.tsx` con las 14 normas oficiales de cabañas y el reglamento completo de piscina.
+- Se integró la aceptación obligatoria de reglamento con checkbox y validación en `src/components/ui/CheckoutForm.tsx`.
+- Se corrigió la presentación de errores en el checkout separando `conflictError`, `rulesError`, `formError` y `paymentError`, ubicando la alerta de aceptación directamente sobre el botón de pago y eliminando el falso "Conflicto de Ocupación".
+- Se corrigieron todas las incongruencias de textos en Supabase (tabla `landing_settings`), eliminando textos de prueba ("hola") y sincronizando la prohibición total de mascotas, check-out a las 12:00 hrs, check-in 15:00 a 21:00 hrs y prohibición de fiestas y parlantes.
+- Se agregó capa de sanitización defensiva en `src/app/page.tsx` para evitar que datos desactualizados en base de datos alteren las reglas oficiales.
+- Se actualizaron fallbacks y placeholders en `src/app/admin/landing/page.tsx` y `src/components/ui/CheckoutForm.tsx`.
+- Se ejecutó `npm run build` certificando compilación limpia con 0 errores de TypeScript y Next.js.
+[2026-10-09 19:12:00] Actividad de Antigravity:
+- Se implementó la política de cobro de huésped adicional con piso mínimo garantizado de $10.000 CLP / noche en `BookingForm.tsx`, `cabins/[id]/page.tsx`, `checkout/[id]/page.tsx` y en el PMS administrativo `admin/reservas/page.tsx`.
+- Se introdujo el cálculo reactivo con desglose en tiempo real `getExtraGuestDetails`: capacidad base, valor diario por persona, porcentaje de recargo, cálculo resultante y activación visual de bandera de piso mínimo ($10.000).
+- Se diseñó la tarjeta interactiva Stitch UI de gestión y explicación de adicionales tanto en la fila de edición inline de reservas como en el modal de creación manual (+ Nueva Reserva Manual), permitiendo al recepcionista entender y justificar el cobro al huésped con un clic para aplicar la tarifa sugerida.
+- Se agregó el soporte de modo de estadía adicional: estadía completa (todas las noches) vs días posteriores / noches parciales (con selector numérico de noches efectivas).
+- Se garantizó la persistencia de `adults`, `children`, `extra_guests_cost` y notas descriptivas automáticas en `admin_notes` en Supabase al guardar la edición o al crear la reserva manual.
+- Se sincronizaron todas las menciones públicas del cobro de huéspedes adicionales en `reglamento/page.tsx`, `RulesModal.tsx`, `CabinDetailTabs.tsx`, `CheckoutForm.tsx`, `ConfirmationTemplate.tsx` y `PaymentConfirmationTemplate.tsx` con la leyenda oficial "desde $10.000 por persona por noche previa coordinación".
+- Se verificó la compilación de TypeScript mediante `npx tsc --noEmit` (0 errores, código de salida 0).
+- Se ejecutó `npm run build` para certificar la compilación integral de producción de Next.js.
+[2026-10-09 20:16:00] Actividad de Antigravity:
+- Se implementó la selección y cálculo de fechas exactas de llegada y salida para huéspedes adicionales (`extra_check_in` y `extra_check_out`) en el PMS (`src/app/admin/reservas/page.tsx`).
+- Se acotaron reactivamente los calendarios de selección para impedir fechas fuera del rango de la cabaña.
+- Se calculan dinámicamente las noches pernoctadas y se inyectan en `admin_notes` glosas explicativas enriquecidas: `[Adicionales: X pers. del YYYY-MM-DD al YYYY-MM-DD (Z noches parciales) x $W/noche = $Total]`.
+- Se corrigió el reseteo de campos en el modal de nueva reserva manual y se validó compilación estricta con `npm run build` (código 0, 25/25 rutas).
+[2026-10-09 20:25:00] Actividad de Antigravity:
+- Se configuró la sección "Nuestro Equipo" para operar 100% bajo control del administrador: se eliminaron los integrantes de prueba hardcodeados (fotos de Unsplash) en `src/app/page.tsx`.
+- Se implementó renderizado condicional defensivo en `src/components/ui/TeamSection.tsx` (`return null` si no hay integrantes válidos) y en `src/app/page.tsx` para evitar que la sección aparezca vacía o con cuadros en blanco.
+- Se ocultó dinámicamente el enlace "Equipo" del navbar de la portada cuando no existen miembros registrados.
+- Se creó el script `scripts/clear_landing_team.mjs` para vaciar los registros de prueba en la tabla `landing_team` de Supabase.
+- Se ejecutó `npm run build` con Turbopack generando exitosamente 25/25 rutas estáticas y dinámicas sin errores.
+[2026-10-09 20:41:00] Actividad de Antigravity:
+- El usuario validó y confirmó la totalidad de las funcionalidades y la subida a producción.
+- Se ejecutan los comandos Git: `git add .`, `git commit` y `git push origin master` consolidando la versión v1.7.6 a GitHub y disparando el despliegue automático en Vercel.

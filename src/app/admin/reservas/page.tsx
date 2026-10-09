@@ -88,29 +88,87 @@ const formatRut = (rut: string) => {
   return `${formattedBody}-${dv}`;
 };
 
-const calcularTarifaOficial = (cabin: any, checkIn: string, checkOut: string, adults: number, children: number) => {
-  if (!cabin || !checkIn || !checkOut) return 0;
-  
+const getExtraGuestDetails = (
+  cabin: any,
+  checkIn: string,
+  checkOut: string,
+  adults: number,
+  children: number,
+  customExtraNights?: number,
+  extraCheckIn?: string,
+  extraCheckOut?: string
+) => {
+  if (!cabin) return null;
   const start = parseLocalDate(checkIn);
   const end = parseLocalDate(checkOut);
-  if (!start || !end || start >= end) return 0;
+  const nights = (start && end && start < end)
+    ? Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
 
-  const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   const totalGuests = (Number(adults) || 1) + (Number(children) || 0);
   const capacity = cabin.capacity || 2;
   const pricePerNight = cabin.price_per_night || 0;
-  const maxExtraGuests = cabin.max_extra_guests || 0;
   const surchargePercentage = cabin.extra_guest_surcharge_percentage || 100;
 
   const extraGuests = Math.max(0, totalGuests - capacity);
-  const pricePerPerson = pricePerNight / capacity;
-  const surchargePerExtraPerson = pricePerPerson * (surchargePercentage / 100);
-  const extraCostPerNight = extraGuests * surchargePerExtraPerson;
-  const finalPricePerNight = pricePerNight + extraCostPerNight;
+  const pricePerPerson = Math.round(pricePerNight / capacity);
+  const calculatedSurcharge = Math.round(pricePerPerson * (surchargePercentage / 100));
+  const surchargePerExtraPerson = Math.max(10000, calculatedSurcharge);
+  const isMinFloorApplied = surchargePerExtraPerson === 10000 && calculatedSurcharge < 10000;
 
-  const totalRaw = nights * finalPricePerNight;
-  // Redondear siempre hacia abajo a la decena (múltiplo de 10)
-  return Math.floor(totalRaw / 10) * 10;
+  // Cálculo de noches a partir de fechas explícitas de llegada y salida del adicional
+  let calculatedNightsFromDates: number | null = null;
+  if (extraCheckIn && extraCheckOut) {
+    const eStart = parseLocalDate(extraCheckIn);
+    const eEnd = parseLocalDate(extraCheckOut);
+    if (eStart && eEnd && eStart < eEnd) {
+      calculatedNightsFromDates = Math.ceil((eEnd.getTime() - eStart.getTime()) / (1000 * 60 * 60 * 24));
+    }
+  }
+
+  let effectiveExtraNights = nights;
+  if (calculatedNightsFromDates !== null) {
+    effectiveExtraNights = Math.min(nights, Math.max(1, calculatedNightsFromDates));
+  } else if (customExtraNights !== undefined && customExtraNights > 0) {
+    effectiveExtraNights = Math.min(nights, customExtraNights);
+  }
+
+  const totalExtraCost = extraGuests * surchargePerExtraPerson * effectiveExtraNights;
+  const totalBaseCabinCost = nights * pricePerNight;
+  const totalSuggested = Math.floor((totalBaseCabinCost + totalExtraCost) / 10) * 10;
+
+  return {
+    nights,
+    capacity,
+    totalGuests,
+    extraGuests,
+    pricePerNight,
+    pricePerPerson,
+    surchargePercentage,
+    calculatedSurcharge,
+    surchargePerExtraPerson,
+    isMinFloorApplied,
+    effectiveExtraNights,
+    extraCheckIn: extraCheckIn || checkIn,
+    extraCheckOut: extraCheckOut || checkOut,
+    totalBaseCabinCost,
+    totalExtraCost,
+    totalSuggested
+  };
+};
+
+const calcularTarifaOficial = (
+  cabin: any, 
+  checkIn: string, 
+  checkOut: string, 
+  adults: number, 
+  children: number,
+  customExtraNights?: number,
+  extraCheckIn?: string,
+  extraCheckOut?: string
+) => {
+  const details = getExtraGuestDetails(cabin, checkIn, checkOut, adults, children, customExtraNights, extraCheckIn, extraCheckOut);
+  return details ? details.totalSuggested : 0;
 };
 
 const getBookingBreakdown = (booking: Booking) => {
@@ -169,6 +227,12 @@ function ReservasContent() {
     cabin_id: '',
     check_in: '',
     check_out: '',
+    adults: 1,
+    children: 0,
+    extra_stay_mode: 'full' as 'full' | 'partial',
+    extra_nights: '' as string | number,
+    extra_check_in: '',
+    extra_check_out: '',
     discount_type: 'fixed',
     discount_value: '' as string | number,
     admin_notes: '',
@@ -196,6 +260,10 @@ function ReservasContent() {
     check_out: '',
     adults: 1,
     children: 0,
+    extra_stay_mode: 'full' as 'full' | 'partial',
+    extra_nights: '' as string | number,
+    extra_check_in: '',
+    extra_check_out: '',
     requires_invoice: false,
     total_price: '',
     discount_type: 'fixed',
@@ -708,20 +776,37 @@ function ReservasContent() {
       const nextForm = { ...prev, ...updatedFields };
       const cabin = availableCabins.find(c => c.id === nextForm.cabin_id);
       
+      if (updatedFields.extra_stay_mode === 'partial') {
+        if (!nextForm.extra_check_in) nextForm.extra_check_in = nextForm.check_in;
+        if (!nextForm.extra_check_out) nextForm.extra_check_out = nextForm.check_out;
+      }
+
       const shouldRecalculate = 'cabin_id' in updatedFields || 
                                 'check_in' in updatedFields || 
                                 'check_out' in updatedFields || 
                                 'adults' in updatedFields || 
-                                'children' in updatedFields;
+                                'children' in updatedFields ||
+                                'extra_stay_mode' in updatedFields ||
+                                'extra_nights' in updatedFields ||
+                                'extra_check_in' in updatedFields ||
+                                'extra_check_out' in updatedFields;
       
       if (shouldRecalculate && cabin) {
+        const isPartial = nextForm.extra_stay_mode === 'partial';
+        const customNights = isPartial ? (Number(nextForm.extra_nights) || 0) : undefined;
+        const eIn = isPartial ? nextForm.extra_check_in : undefined;
+        const eOut = isPartial ? nextForm.extra_check_out : undefined;
+
         const suggested = (nextForm.check_in && nextForm.check_out)
           ? calcularTarifaOficial(
               cabin,
               nextForm.check_in,
               nextForm.check_out,
               nextForm.adults,
-              nextForm.children
+              nextForm.children,
+              customNights,
+              eIn,
+              eOut
             )
           : (cabin.price_per_night || 0);
         
@@ -736,18 +821,37 @@ function ReservasContent() {
       const nextForm = { ...prev, ...updatedFields };
       const cabin = availableCabins.find(c => c.id === nextForm.cabin_id);
       
+      if (updatedFields.extra_stay_mode === 'partial') {
+        if (!nextForm.extra_check_in) nextForm.extra_check_in = nextForm.check_in;
+        if (!nextForm.extra_check_out) nextForm.extra_check_out = nextForm.check_out;
+      }
+
       const shouldRecalculate = 'cabin_id' in updatedFields || 
                                 'check_in' in updatedFields || 
-                                'check_out' in updatedFields;
+                                'check_out' in updatedFields ||
+                                'adults' in updatedFields || 
+                                'children' in updatedFields ||
+                                'extra_stay_mode' in updatedFields ||
+                                'extra_nights' in updatedFields ||
+                                'extra_check_in' in updatedFields ||
+                                'extra_check_out' in updatedFields;
       
       if (shouldRecalculate && cabin) {
+        const isPartial = nextForm.extra_stay_mode === 'partial';
+        const customNights = isPartial ? (Number(nextForm.extra_nights) || 0) : undefined;
+        const eIn = isPartial ? nextForm.extra_check_in : undefined;
+        const eOut = isPartial ? nextForm.extra_check_out : undefined;
+
         const suggested = (nextForm.check_in && nextForm.check_out)
           ? calcularTarifaOficial(
               cabin,
               nextForm.check_in,
               nextForm.check_out,
-              editingBooking?.adults || 1,
-              editingBooking?.children || 0
+              Number(nextForm.adults) || 1,
+              Number(nextForm.children) || 0,
+              customNights,
+              eIn,
+              eOut
             )
           : (cabin.price_per_night || 0);
         
@@ -1436,6 +1540,12 @@ function ReservasContent() {
       cabin_id: booking.cabin_id,
       check_in: formatDateString(booking.check_in),
       check_out: formatDateString(booking.check_out),
+      adults: booking.adults || 1,
+      children: booking.children || 0,
+      extra_stay_mode: 'full',
+      extra_nights: '',
+      extra_check_in: formatDateString(booking.check_in),
+      extra_check_out: formatDateString(booking.check_out),
       discount_type: 'fixed',
       discount_value: booking.discount_applied ?? '',
       admin_notes: booking.admin_notes ?? '',
@@ -1470,9 +1580,44 @@ function ReservasContent() {
       return;
     }
 
+    // 2. VALIDACIÓN DE CAPACIDAD MÁXIMA
+    const selectedCabin = availableCabins.find(c => c.id === editForm.cabin_id);
+    const maxTotalGuests = selectedCabin ? (selectedCabin.capacity || 2) + (selectedCabin.max_extra_guests || 0) : 0;
+    const totalGuestsRequested = Number(editForm.adults) + Number(editForm.children);
+    if (selectedCabin && totalGuestsRequested > maxTotalGuests) {
+      alert(`❌ Error: El total de huéspedes (${totalGuestsRequested}) excede la capacidad máxima permitida para la cabaña (${maxTotalGuests} personas). Ajusta la cantidad de huéspedes antes de guardar.`);
+      return;
+    }
+
+    const isPartial = editForm.extra_stay_mode === 'partial';
+    const customExtraNights = isPartial ? (Number(editForm.extra_nights) || 0) : undefined;
+    const extraDetails = getExtraGuestDetails(
+      selectedCabin,
+      editForm.check_in,
+      editForm.check_out,
+      Number(editForm.adults) || 1,
+      Number(editForm.children) || 0,
+      customExtraNights,
+      isPartial ? editForm.extra_check_in : undefined,
+      isPartial ? editForm.extra_check_out : undefined
+    );
+
     const precioBaseOriginal = Number(editForm.precio_base) || 0;
     let calculatedDiscount = 0;
-    let finalNotes = editForm.admin_notes;
+    let finalNotes = editForm.admin_notes || '';
+
+    // Glosa explicativa de adicionales en notas si aplica
+    const extraGuestsCost = extraDetails ? extraDetails.totalExtraCost : 0;
+    if (extraDetails && extraDetails.extraGuests > 0) {
+      const modeStr = isPartial 
+        ? `del ${editForm.extra_check_in || editForm.check_in} al ${editForm.extra_check_out || editForm.check_out} (${extraDetails.effectiveExtraNights} noches parciales)` 
+        : `estadía completa (${extraDetails.effectiveExtraNights} noches)`;
+      const floorStr = extraDetails.isMinFloorApplied ? ' [Piso mín $10k]' : '';
+      const extraGlosa = `[Adicionales: ${extraDetails.extraGuests} pers. ${modeStr} x $${extraDetails.surchargePerExtraPerson.toLocaleString('es-CL')}/noche${floorStr} = $${extraGuestsCost.toLocaleString('es-CL')}]`;
+      if (!finalNotes.includes(extraGlosa)) {
+        finalNotes = finalNotes ? `${finalNotes} ${extraGlosa}` : extraGlosa;
+      }
+    }
 
     const numericValue = Number(editForm.discount_value) || 0;
     if (numericValue > 0) {
@@ -1507,6 +1652,9 @@ function ReservasContent() {
         cabin_id: editForm.cabin_id,
         check_in: editForm.check_in,
         check_out: editForm.check_out,
+        adults: Number(editForm.adults) || 1,
+        children: Number(editForm.children) || 0,
+        extra_guests_cost: extraGuestsCost,
         discount_applied: Math.round(calculatedDiscount),
         admin_notes: finalNotes,
         plataforma_id: platId || null,
@@ -1534,6 +1682,9 @@ function ReservasContent() {
             cabin_id: editForm.cabin_id, 
             check_in: editForm.check_in, 
             check_out: editForm.check_out,
+            adults: Number(editForm.adults) || 1,
+            children: Number(editForm.children) || 0,
+            extra_guests_cost: extraGuestsCost,
             discount_applied: Math.round(calculatedDiscount),
             admin_notes: finalNotes,
             plataforma_id: platId || undefined,
@@ -1585,9 +1736,34 @@ function ReservasContent() {
         return;
       }
 
+      const isPartialCreate = createForm.extra_stay_mode === 'partial';
+      const customExtraNights = isPartialCreate ? (Number(createForm.extra_nights) || 0) : undefined;
+      const extraDetails = getExtraGuestDetails(
+        selectedCabin,
+        createForm.check_in,
+        createForm.check_out,
+        Number(createForm.adults) || 1,
+        Number(createForm.children) || 0,
+        customExtraNights,
+        isPartialCreate ? createForm.extra_check_in : undefined,
+        isPartialCreate ? createForm.extra_check_out : undefined
+      );
+
       const totalPriceNum = Number(createForm.total_price) || 0;
       let calculatedDiscount = 0;
       let finalNotes = createForm.admin_notes || '';
+
+      const extraGuestsCost = extraDetails ? extraDetails.totalExtraCost : 0;
+      if (extraDetails && extraDetails.extraGuests > 0) {
+        const modeStr = isPartialCreate 
+          ? `del ${createForm.extra_check_in || createForm.check_in} al ${createForm.extra_check_out || createForm.check_out} (${extraDetails.effectiveExtraNights} noches parciales)` 
+          : `estadía completa (${extraDetails.effectiveExtraNights} noches)`;
+        const floorStr = extraDetails.isMinFloorApplied ? ' [Piso mín $10k]' : '';
+        const extraGlosa = `[Adicionales: ${extraDetails.extraGuests} pers. ${modeStr} x $${extraDetails.surchargePerExtraPerson.toLocaleString('es-CL')}/noche${floorStr} = $${extraGuestsCost.toLocaleString('es-CL')}]`;
+        if (!finalNotes.includes(extraGlosa)) {
+          finalNotes = finalNotes ? `${finalNotes} ${extraGlosa}` : extraGlosa;
+        }
+      }
 
       const numericValue = Number(createForm.discount_value) || 0;
       if (numericValue > 0) {
@@ -1627,6 +1803,7 @@ function ReservasContent() {
           check_out: createForm.check_out,
           adults: Number(createForm.adults) || 1,
           children: Number(createForm.children) || 0,
+          extra_guests_cost: extraGuestsCost,
           requires_invoice: createForm.requires_invoice,
           total_price: nuevoTotalAPagar,
           discount_applied: Math.round(calculatedDiscount),
@@ -1827,6 +2004,10 @@ function ReservasContent() {
                 check_out: '',
                 adults: 1,
                 children: 0,
+                extra_stay_mode: 'full',
+                extra_nights: '',
+                extra_check_in: '',
+                extra_check_out: '',
                 requires_invoice: false,
                 total_price: defaultCabin?.price_per_night?.toString() || '',
                 discount_type: 'fixed',
@@ -2292,6 +2473,222 @@ function ReservasContent() {
                                 />
                               </div>
                             </div>
+
+                            {/* Control de Huéspedes en Edición */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Adultos *</label>
+                                <input 
+                                  type="number" 
+                                  min="1"
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  value={editForm.adults}
+                                  onChange={e => handleEditFormChange({ adults: Number(e.target.value) })}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold text-blue-700 mb-1">Niños</label>
+                                <input 
+                                  type="number" 
+                                  min="0"
+                                  className="p-2 border border-gray-200 rounded-xl text-sm w-full bg-white shadow-sm"
+                                  value={editForm.children}
+                                  onChange={e => handleEditFormChange({ children: Number(e.target.value) })}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Panel de Gestión y Explicación de Huéspedes Adicionales (Edición) */}
+                            {(() => {
+                              const selectedCabin = availableCabins.find(c => c.id === editForm.cabin_id);
+                              const isPartial = editForm.extra_stay_mode === 'partial';
+                              const customNights = isPartial ? (Number(editForm.extra_nights) || 0) : undefined;
+                              const details = getExtraGuestDetails(
+                                selectedCabin,
+                                editForm.check_in,
+                                editForm.check_out,
+                                Number(editForm.adults) || 1,
+                                Number(editForm.children) || 0,
+                                customNights,
+                                isPartial ? editForm.extra_check_in : undefined,
+                                isPartial ? editForm.extra_check_out : undefined
+                              );
+                              if (!selectedCabin || !details) return null;
+
+                              const isCapacityExceeded = (Number(editForm.adults) + Number(editForm.children)) > ((selectedCabin.capacity || 2) + (selectedCabin.max_extra_guests || 0));
+
+                              return (
+                                <div className="bg-gradient-to-br from-indigo-50/60 to-blue-50/40 p-4 rounded-2xl border border-blue-200/70 shadow-sm space-y-3.5">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-200/60 pb-2">
+                                    <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                      👥 Gestión de Huéspedes Adicionales & Explicación de Tarifa
+                                    </h4>
+                                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                      Capacidad Base: {details.capacity} pers. | Total: {details.totalGuests} pers.
+                                    </span>
+                                  </div>
+
+                                  {isCapacityExceeded && (
+                                    <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                                      <p className="text-xs font-bold text-red-700 flex items-center gap-1 leading-tight">
+                                        ❌ Capacidad máxima excedida ({selectedCabin.name} admite hasta {(selectedCabin.capacity || 2) + (selectedCabin.max_extra_guests || 0)} personas en total). Ajusta los huéspedes antes de guardar.
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {details.extraGuests > 0 ? (
+                                    <div className="space-y-3">
+                                      <div className="bg-white p-3 rounded-xl border border-blue-150 shadow-sm space-y-2">
+                                        <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wide">
+                                          ¿Cómo se hospeda el huésped adicional ({details.extraGuests} pers.)?
+                                        </label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEditFormChange({ extra_stay_mode: 'full' })}
+                                            className={`px-3 py-2 text-xs font-bold rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                              editForm.extra_stay_mode === 'full'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                          >
+                                            <span>🗓️ Estadía Completa</span>
+                                            <span className="text-[10px] opacity-80">({details.nights} noches)</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEditFormChange({ 
+                                              extra_stay_mode: 'partial',
+                                              extra_check_in: editForm.extra_check_in || editForm.check_in,
+                                              extra_check_out: editForm.extra_check_out || editForm.check_out
+                                            })}
+                                            className={`px-3 py-2 text-xs font-bold rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                              editForm.extra_stay_mode === 'partial'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                          >
+                                            <span>🌙 Días Posteriores / Noches Parciales</span>
+                                            <span className="text-[10px] opacity-80">(Elegir fechas)</span>
+                                          </button>
+                                        </div>
+
+                                        {editForm.extra_stay_mode === 'partial' && (
+                                          <div className="pt-2.5 border-t border-gray-150 space-y-2.5">
+                                            <div className="flex flex-wrap items-center justify-between gap-1">
+                                              <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">
+                                                🗓️ Fechas de permanencia del huésped adicional:
+                                              </span>
+                                              <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                                {details.effectiveExtraNights} noche(s) calculada(s)
+                                              </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              <div>
+                                                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">
+                                                  Llegada Adicional *
+                                                </label>
+                                                <input
+                                                  type="date"
+                                                  min={editForm.check_in}
+                                                  max={editForm.check_out}
+                                                  value={editForm.extra_check_in || editForm.check_in}
+                                                  onChange={e => handleEditFormChange({ extra_check_in: e.target.value })}
+                                                  className="w-full p-2 border border-blue-300 rounded-xl text-xs font-semibold bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">
+                                                  Salida Adicional *
+                                                </label>
+                                                <input
+                                                  type="date"
+                                                  min={editForm.extra_check_in || editForm.check_in}
+                                                  max={editForm.check_out}
+                                                  value={editForm.extra_check_out || editForm.check_out}
+                                                  onChange={e => handleEditFormChange({ extra_check_out: e.target.value })}
+                                                  className="w-full p-2 border border-blue-300 rounded-xl text-xs font-semibold bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                                />
+                                              </div>
+                                            </div>
+                                            <p className="text-[10.5px] text-gray-500 italic">
+                                              * El pasajero adicional pernocta del {editForm.extra_check_in || editForm.check_in} al {editForm.extra_check_out || editForm.check_out} ({details.effectiveExtraNights} noches de estadía).
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Cuadro Explicativo para el Recepcionista */}
+                                      <div className="bg-white/90 p-3.5 rounded-xl border border-blue-200 text-xs space-y-2">
+                                        <p className="font-bold text-blue-900 text-[11px] uppercase tracking-wide flex items-center gap-1">
+                                          💬 Guía Explicativa para el Cliente / Recepcionista:
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-600 text-[11.5px] leading-relaxed">
+                                          <div className="space-y-1">
+                                            <div>• Cabaña base: <strong className="text-gray-900">{formatMoney(details.pricePerNight)}/noche</strong> para hasta <strong className="text-gray-900">{details.capacity} huéspedes</strong>.</div>
+                                            <div>• Valor base por persona: <strong className="text-gray-900">{formatMoney(details.pricePerPerson)}/noche</strong>.</div>
+                                            <div>• Recargo cabaña ({details.surchargePercentage}%): <strong className="text-gray-900">{formatMoney(details.calculatedSurcharge)}</strong>.</div>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <div>
+                                              • Tarifa adicional aplicada:{' '}
+                                              <strong className="text-blue-900">{formatMoney(details.surchargePerExtraPerson)} / pers / noche</strong>
+                                              {details.isMinFloorApplied && (
+                                                <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                  ★ Piso mínimo $10.000 aplicado
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div>
+                                              • Noches aplicadas al adicional:{' '}
+                                              <strong className="text-gray-900">{details.effectiveExtraNights} noche(s)</strong>{' '}
+                                              <span className="text-[10.5px] text-gray-500">
+                                                ({editForm.extra_stay_mode === 'partial' 
+                                                  ? `Desde ${editForm.extra_check_in || editForm.check_in} hasta ${editForm.extra_check_out || editForm.check_out}` 
+                                                  : 'Estadía completa'})
+                                              </span>
+                                            </div>
+                                            <div className="font-semibold text-blue-800">
+                                              • Subtotal Adicionales: {details.extraGuests} pers. × {formatMoney(details.surchargePerExtraPerson)} × {details.effectiveExtraNights} noches ={' '}
+                                              <span className="font-bold underline">{formatMoney(details.totalExtraCost)}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="mt-2 pt-2 border-t border-blue-150 flex flex-wrap items-center justify-between gap-2">
+                                          <div className="text-xs">
+                                            <span className="text-gray-500">Tarifa Sugerida Oficial: </span>
+                                            <span className="font-extrabold text-blue-900 text-sm">{formatMoney(details.totalSuggested)}</span>{' '}
+                                            <span className="text-[10px] text-gray-400">
+                                              (Cabaña: {formatMoney(details.totalBaseCabinCost)} + Adicionales: {formatMoney(details.totalExtraCost)})
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditForm(prev => ({ ...prev, precio_base: details.totalSuggested.toString() }))}
+                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                                          >
+                                            ✨ Aplicar Tarifa Sugerida ({formatMoney(details.totalSuggested)}) al Precio Base
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="p-3 bg-white/70 rounded-xl border border-blue-100 text-xs text-gray-600 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <span>✅</span>
+                                        <span>
+                                          Ocupación estándar dentro de la capacidad base ({details.totalGuests} de {details.capacity} personas). No aplica cobro adicional.
+                                        </span>
+                                      </div>
+                                      <span className="text-[11px] text-gray-400">
+                                        Costo sugerido: {formatMoney(details.totalSuggested)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* Ficha de Registro de Huésped (Edición Check-in) */}
                             <div className="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm space-y-3">
@@ -3243,6 +3640,188 @@ function ReservasContent() {
                       </p>
                     </div>
                   )}
+
+                  {/* Panel de Gestión y Explicación de Huéspedes Adicionales (Creación Manual) */}
+                  {(() => {
+                    const selectedCabin = selectedCabinForCreate;
+                    const isPartialCreate = createForm.extra_stay_mode === 'partial';
+                    const customNights = isPartialCreate ? (Number(createForm.extra_nights) || 0) : undefined;
+                    const details = getExtraGuestDetails(
+                      selectedCabin,
+                      createForm.check_in,
+                      createForm.check_out,
+                      Number(createForm.adults) || 1,
+                      Number(createForm.children) || 0,
+                      customNights,
+                      isPartialCreate ? createForm.extra_check_in : undefined,
+                      isPartialCreate ? createForm.extra_check_out : undefined
+                    );
+                    if (!selectedCabin || !details) return null;
+
+                    return (
+                      <div className="sm:col-span-2 bg-gradient-to-br from-indigo-50/60 to-blue-50/40 p-4 rounded-2xl border border-blue-200/70 shadow-sm space-y-3.5 mt-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-200/60 pb-2">
+                          <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                            👥 Gestión de Huéspedes Adicionales & Explicación de Tarifa
+                          </h4>
+                          <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-200">
+                            Capacidad Base: {details.capacity} pers. | Total: {details.totalGuests} pers.
+                          </span>
+                        </div>
+
+                        {details.extraGuests > 0 ? (
+                          <div className="space-y-3">
+                            <div className="bg-white p-3 rounded-xl border border-blue-150 shadow-sm space-y-2">
+                              <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wide">
+                                ¿Cómo se hospeda el huésped adicional ({details.extraGuests} pers.)?
+                              </label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCreateFormChange({ extra_stay_mode: 'full' })}
+                                  className={`px-3 py-2 text-xs font-bold rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                    createForm.extra_stay_mode === 'full'
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <span>🗓️ Estadía Completa</span>
+                                  <span className="text-[10px] opacity-80">({details.nights} noches)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCreateFormChange({ 
+                                    extra_stay_mode: 'partial',
+                                    extra_check_in: createForm.extra_check_in || createForm.check_in,
+                                    extra_check_out: createForm.extra_check_out || createForm.check_out
+                                  })}
+                                  className={`px-3 py-2 text-xs font-bold rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                    createForm.extra_stay_mode === 'partial'
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <span>🌙 Días Posteriores / Noches Parciales</span>
+                                  <span className="text-[10px] opacity-80">(Elegir fechas)</span>
+                                </button>
+                              </div>
+
+                              {createForm.extra_stay_mode === 'partial' && (
+                                <div className="pt-2.5 border-t border-gray-150 space-y-2.5">
+                                  <div className="flex flex-wrap items-center justify-between gap-1">
+                                    <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">
+                                      🗓️ Fechas de permanencia del huésped adicional:
+                                    </span>
+                                    <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                      {details.effectiveExtraNights} noche(s) calculada(s)
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">
+                                        Llegada Adicional *
+                                      </label>
+                                      <input
+                                        type="date"
+                                        min={createForm.check_in}
+                                        max={createForm.check_out}
+                                        value={createForm.extra_check_in || createForm.check_in}
+                                        onChange={e => handleCreateFormChange({ extra_check_in: e.target.value })}
+                                        className="w-full p-2 border border-blue-300 rounded-xl text-xs font-semibold bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">
+                                        Salida Adicional *
+                                      </label>
+                                      <input
+                                        type="date"
+                                        min={createForm.extra_check_in || createForm.check_in}
+                                        max={createForm.check_out}
+                                        value={createForm.extra_check_out || createForm.check_out}
+                                        onChange={e => handleCreateFormChange({ extra_check_out: e.target.value })}
+                                        className="w-full p-2 border border-blue-300 rounded-xl text-xs font-semibold bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                  <p className="text-[10.5px] text-gray-500 italic">
+                                    * El pasajero adicional pernocta del {createForm.extra_check_in || createForm.check_in} al {createForm.extra_check_out || createForm.check_out} ({details.effectiveExtraNights} noches de estadía).
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Cuadro Explicativo para el Recepcionista */}
+                            <div className="bg-white/90 p-3.5 rounded-xl border border-blue-200 text-xs space-y-2">
+                              <p className="font-bold text-blue-900 text-[11px] uppercase tracking-wide flex items-center gap-1">
+                                💬 Guía Explicativa para el Cliente / Recepcionista:
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-600 text-[11.5px] leading-relaxed">
+                                <div className="space-y-1">
+                                  <div>• Cabaña base: <strong className="text-gray-900">{formatMoney(details.pricePerNight)}/noche</strong> para hasta <strong className="text-gray-900">{details.capacity} huéspedes</strong>.</div>
+                                  <div>• Valor base por persona: <strong className="text-gray-900">{formatMoney(details.pricePerPerson)}/noche</strong>.</div>
+                                  <div>• Recargo cabaña ({details.surchargePercentage}%): <strong className="text-gray-900">{formatMoney(details.calculatedSurcharge)}</strong>.</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div>
+                                    • Tarifa adicional aplicada:{' '}
+                                    <strong className="text-blue-900">{formatMoney(details.surchargePerExtraPerson)} / pers / noche</strong>
+                                    {details.isMinFloorApplied && (
+                                      <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                        ★ Piso mínimo $10.000 aplicado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    • Noches aplicadas al adicional:{' '}
+                                    <strong className="text-gray-900">{details.effectiveExtraNights} noche(s)</strong>{' '}
+                                    <span className="text-[10.5px] text-gray-500">
+                                      ({createForm.extra_stay_mode === 'partial' 
+                                        ? `Desde ${createForm.extra_check_in || createForm.check_in} hasta ${createForm.extra_check_out || createForm.check_out}` 
+                                        : 'Estadía completa'})
+                                    </span>
+                                  </div>
+                                  <div className="font-semibold text-blue-800">
+                                    • Subtotal Adicionales: {details.extraGuests} pers. × {formatMoney(details.surchargePerExtraPerson)} × {details.effectiveExtraNights} noches ={' '}
+                                    <span className="font-bold underline">{formatMoney(details.totalExtraCost)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 pt-2 border-t border-blue-150 flex flex-wrap items-center justify-between gap-2">
+                                <div className="text-xs">
+                                  <span className="text-gray-500">Tarifa Sugerida Oficial: </span>
+                                  <span className="font-extrabold text-blue-900 text-sm">{formatMoney(details.totalSuggested)}</span>{' '}
+                                  <span className="text-[10px] text-gray-400">
+                                    (Cabaña: {formatMoney(details.totalBaseCabinCost)} + Adicionales: {formatMoney(details.totalExtraCost)})
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setCreateForm(prev => ({ ...prev, total_price: details.totalSuggested.toString() }))}
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                                >
+                                  ✨ Aplicar Tarifa Sugerida ({formatMoney(details.totalSuggested)}) al Total
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-white/70 rounded-xl border border-blue-100 text-xs text-gray-600 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span>✅</span>
+                              <span>
+                                Ocupación estándar dentro de la capacidad base ({details.totalGuests} de {details.capacity} personas). No aplica cobro adicional.
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-gray-400">
+                              Costo sugerido: {formatMoney(details.totalSuggested)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

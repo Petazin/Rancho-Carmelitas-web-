@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
+import { RulesModal } from '@/components/ui/RulesModal';
 
 const formatMoney = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null) return '$0';
@@ -33,6 +34,7 @@ export default function GuestPortalPage() {
   const [mapsUrl, setMapsUrl] = useState('https://maps.google.com/?q=Rancho+Carmelitas');
   const [bankSettings, setBankSettings] = useState<Record<string, string>>({});
   const [showTransferDetails, setShowTransferDetails] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   // Estados de Simulación de Pago de Saldo Restante
   const [isPayingSaldo, setIsPayingSaldo] = useState(false);
@@ -517,6 +519,63 @@ export default function GuestPortalPage() {
             </div>
           )}
         </div>
+
+        {/* REGLAMENTO Y NORMAS DE CONVIVENCIA */}
+        <div className="bg-white rounded-3xl p-6 premium-shadow border border-gray-100 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl p-2.5 rounded-2xl bg-emerald-50 text-[#11d442] border border-emerald-100">
+                📜
+              </span>
+              <div>
+                <h4 className="text-base font-bold text-gray-900">
+                  Reglamento y Normas para tu Estadía
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Horarios oficiales, descanso, cuidado del recinto y uso de piscina
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowRulesModal(true)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Ver Reglamento
+              </button>
+              <Link
+                href="/reglamento"
+                target="_blank"
+                className="px-4 py-2 bg-[#11d442] hover:bg-[#0fb839] text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
+              >
+                <span>Página Oficial</span>
+                <span>↗</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Recordatorios rápidos */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-600">
+            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+              <span className="font-bold text-gray-900 block mb-0.5">⏰ Horarios Oficiales</span>
+              Check-in: 15:00 a 21:00 hrs<br />Check-out: hasta las 12:00 hrs
+            </div>
+            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+              <span className="font-bold text-gray-900 block mb-0.5">🔇 Descanso & Tranquilidad</span>
+              Prohibidas fiestas y música con parlantes en áreas comunes.
+            </div>
+            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+              <span className="font-bold text-gray-900 block mb-0.5">🚫 Mascotas & Visitas</span>
+              Prohibido ingreso de mascotas. No se aceptan visitas no coordinadas.
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Oficial de Reglamento */}
+        <RulesModal 
+          isOpen={showRulesModal} 
+          onClose={() => setShowRulesModal(false)} 
+        />
 
         {/* CONTACTO DIRECTO CON EL ANFITRIÓN */}
         <div className="bg-white rounded-3xl p-6 premium-shadow border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">

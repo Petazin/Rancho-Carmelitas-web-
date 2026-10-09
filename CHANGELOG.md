@@ -1,5 +1,31 @@
 # Changelog - Rancho Carmelitas
 
+## [1.7.6] - 2026-10-09
+
+### Añadido / Mejorado (Saneamiento Defensivo y Renderizado Condicional de la Sección Nuestro Equipo v1.7.6)
+
+- **Desacoplamiento Total de Datos Dummy en "Nuestro Equipo":** Se eliminaron de raíz los integrantes ficticios hardcodeados con fotografías de stock de Unsplash en la portada principal (`src/app/page.tsx`). La fuente de verdad ahora depende exclusivamente de los registros que el administrador gestione en Supabase (`landing_team`).
+- **Renderizado Condicional Estricto (Cero Secciones en Blanco):** En [`TeamSection.tsx`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/ui/TeamSection.tsx) y en `page.tsx`, si la tabla `landing_team` está vacía o no tiene integrantes válidos, el componente retorna `null` y no renderiza nada en el DOM. Esto previene completamente que la página muestre títulos huérfanos, marcos vacíos o secciones en blanco.
+- **Navegación Dinámica en Portada:** El enlace "Equipo" en el navbar superior solo se dibuja si existen integrantes registrados en el equipo, manteniendo la barra limpia y coherente.
+- **Script de Mantenimiento (`scripts/clear_landing_team.mjs`):** Script independiente para depurar y vaciar registros de prueba en la tabla `landing_team` de Supabase sin dependencias externas.
+
+## [1.7.5] - 2026-10-09
+
+### Añadido / Mejorado (Gestión de Fechas Parciales de Adicionales, Tarifa con Piso Mínimo de $10.000 y Módulo de Reglamento v1.7.5)
+
+- **Gestión de Fechas Exactas para Huéspedes Adicionales en PMS (`/admin/reservas`):**
+  - Implementación del selector de estadía en edición y creación manual: `🗓️ Estadía Completa` vs `🌙 Días Posteriores / Noches Parciales`.
+  - Controles de fecha dedicados para **Llegada Adicional** (`extra_check_in`) y **Salida Adicional** (`extra_check_out`), acotados reactivamente al rango de la reserva (`min` y `max`).
+  - Cálculo dinámico e instantáneo de noches pernoctadas y del valor proporcional total.
+  - Generación automática de glosas enriquecidas en notas administrativas (`admin_notes`): `[Adicionales: X pers. del YYYY-MM-DD al YYYY-MM-DD (Z noches parciales) x $W/noche = $Total]`.
+- **Fórmula de Cobro de Adicionales con Piso Mínimo de $10.000 CLP / noche:**
+  - Garantía de piso mínimo de $10.000 por persona por noche en todo el flujo de cotización: `BookingForm`, detalle de cabañas, checkout y panel de administración.
+  - Guía pedagógica interactiva para el recepcionista con desglose de capacidad base, valor por persona, recargo porcentual y botón directo de 1 clic `✨ Aplicar Tarifa Sugerida`.
+- **Módulo Oficial de Reglamento y Convivencia Sincronizado con Cartelería:**
+  - Nueva página pública `/reglamento` con filtros dinámicos (General y Piscina) y botón de impresión en PDF.
+  - Sincronización fiel de normas: prohibición absoluta de mascotas, check-out a las 12:00 hrs, no música ni parlantes en áreas comunes y adicionales coordinados desde $10.000.
+  - Validación obligatoria y contextualizada en checkout con scroll inteligente y diferenciación estricta frente a errores de ocupación.
+
 ## [1.7.3] - 2026-09-27
 
 ### Añadido / Mejorado (Unificación Cromática de Calendario y Tabla de Reservas, Soporte de Abonos y Filtro de Canceladas v1.7.3)

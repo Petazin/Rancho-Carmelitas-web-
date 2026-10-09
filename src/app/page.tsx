@@ -4,6 +4,7 @@ import { CabinCard } from "@/components/ui/CabinCard";
 import { supabase } from "@/lib/supabase";
 import { SocialSection } from "@/components/ui/SocialSection";
 import { Logo } from "@/components/ui/Logo";
+import { TeamSection, TeamMember } from "@/components/ui/TeamSection";
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ export default async function Home() {
    * COMENTARIO DEL DESARROLLADOR:
    * MEJORA ARQUITECTÓNICA - DESACOPLAMIENTO DE TEXTOS EN DURO
    * Para permitir la autogestión completa y evitar textos en duro (hardcoded), ampliamos la tabla única
-   * `landing_settings` con los textos del resto de la landing (Cabañas, Galería, SERNATUR y Reglas de Convivencia).
+   * `landing_settings` con los textos del resto de la landing (Cabañas, Galería, Equipo, SERNATUR y Reglas de Convivencia).
    * La descripción de cabañas se ha sanitizado removiendo la frase "de madera" por requerimiento del propietario.
    * Se mantiene una lógica defensiva: si los campos nuevos o la tabla fallan por falta de migración inicial,
    * se utilizan de forma transparente los fallbacks estáticos locales.
@@ -37,15 +38,17 @@ export default async function Home() {
     cabins_subtitle: 'Espacios diseñados para tu confort. Cabañas con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.',
     gallery_title: 'Galería de Momentos',
     gallery_subtitle: 'Vistas reales de nuestro entorno, piscina y confortables interiores.',
+    team_title: 'Nuestro Equipo',
+    team_subtitle: 'Conoce a las personas dedicadas a cuidar cada detalle de tu descanso y estadía en Rancho Carmelitas.',
     sernatur_title: 'Servicio Turístico Registrado',
     sernatur_subtitle: 'Vigencia hasta Enero 2026 • Registro № 71034',
     sernatur_badge: 'Calidad y Confianza',
     rules_title: 'Reglas de Convivencia',
     rules_list: [
-      'Check-in: 15:00 hrs. Check-out: 11:00 hrs.',
-      'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
-      'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
-      'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
+      'Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs.',
+      'Prohibido fumar: Por seguridad forestal e higiene, prohibido fumar en cabañas y piscina.',
+      'Mascotas: Está prohibido el ingreso de mascotas en todo el recinto.',
+      'Descanso y Música: Cabañas de descanso; prohibidas fiestas y uso de parlantes o música exterior.'
     ],
     contact_address: 'Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile',
     contact_phone: '+56 9 8401 2748',
@@ -62,10 +65,39 @@ export default async function Home() {
       .maybeSingle();
 
     if (!settingsError && settingsData) {
-      // Cruzamos los datos asegurándonos de rellenar con fallback si alguna columna está vacía
+      // Sanitización defensiva de textos para asegurar congruencia absoluta con el reglamento oficial
+      const sanitizedRulesTitle = (settingsData.rules_title || 'Reglas de Convivencia')
+        .replace(/\s*hola\b/gi, '')
+        .trim() || 'Reglas de Convivencia';
+
+      let sanitizedRulesList = settingsData.rules_list;
+      if (typeof sanitizedRulesList === 'string') {
+        try {
+          sanitizedRulesList = JSON.parse(sanitizedRulesList);
+        } catch {
+          sanitizedRulesList = null;
+        }
+      }
+      if (Array.isArray(sanitizedRulesList)) {
+        sanitizedRulesList = sanitizedRulesList.map((r: string) => {
+          if (/amigos peludos|mascota/i.test(r)) {
+            return 'Mascotas: Está prohibido el ingreso de mascotas en todo el recinto.';
+          }
+          if (/check-out:\s*11:00/i.test(r)) {
+            return 'Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs.';
+          }
+          if (/silencio nocturno/i.test(r)) {
+            return 'Descanso y Música: Cabañas de descanso; prohibidas las fiestas y el uso de parlantes o música al aire libre.';
+          }
+          return r.replace(/\s*hola\b/gi, '').trim();
+        });
+      }
+
       heroSettings = {
         ...heroSettings,
-        ...settingsData
+        ...settingsData,
+        rules_title: sanitizedRulesTitle,
+        rules_list: sanitizedRulesList && sanitizedRulesList.length > 0 ? sanitizedRulesList : heroSettings.rules_list
       };
     }
   } catch (err) {
@@ -113,6 +145,31 @@ export default async function Home() {
     console.warn("Advertencia cargando landing_moments (usando fallback estático local):", err);
   }
 
+  // 3. Cargar integrantes del equipo de trabajo desde Supabase (sin datos ficticios en duro)
+  let teamMembers: TeamMember[] = [];
+
+  try {
+    const { data: dbTeam, error: teamError } = await supabase
+      .from('landing_team')
+      .select('*')
+      .order('order_index', { ascending: true });
+
+    if (!teamError && dbTeam && dbTeam.length > 0) {
+      teamMembers = dbTeam
+        .filter((item: any) => item.name && item.name.trim().length > 0)
+        .map((item: any) => ({
+          id: String(item.id),
+          name: item.name,
+          role: item.role || '',
+          description: item.description || '',
+          image_url: item.image_url || null,
+          order_index: item.order_index
+        }));
+    }
+  } catch (err) {
+    console.warn("Advertencia cargando landing_team:", err);
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
       {/* Header flotante minimalista */}
@@ -127,8 +184,11 @@ export default async function Home() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="#cabins" className="hover:text-[#11d442] transition-colors">Cabañas</a>
             <a href="#gallery" className="hover:text-[#11d442] transition-colors">Galería</a>
+            {teamMembers.length > 0 && (
+              <a href="#team" className="hover:text-[#11d442] transition-colors">Equipo</a>
+            )}
             <a href="#location-social" className="hover:text-[#11d442] transition-colors">Ubicación</a>
-            <a href="#rules" className="hover:text-[#11d442] transition-colors">Reglas</a>
+            <Link href="/reglamento" className="hover:text-[#11d442] transition-colors">Reglamento</Link>
             <Link href="/reserva" className="hover:text-[#11d442] transition-colors text-gray-800 font-semibold flex items-center gap-1">
               <span>🔍 Mi Reserva</span>
             </Link>
@@ -234,6 +294,16 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Sección de Equipo de Trabajo y Hospitalidad (solo si el administrador ha registrado integrantes) */}
+        {teamMembers && teamMembers.length > 0 && (
+          <TeamSection 
+            title={heroSettings.team_title}
+            subtitle={heroSettings.team_subtitle}
+            logoUrl={heroSettings.logo_url}
+            members={teamMembers}
+          />
+        )}
+
         {/* Trust / SERNATUR Section */}
         <section className="py-12 bg-white border-y border-gray-100">
           <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-8 opacity-80 grayscale hover:grayscale-0 transition-all">
@@ -280,23 +350,37 @@ export default async function Home() {
                   <>
                     <li className="flex items-start gap-3">
                       <span className="text-[#11d442] mt-1">✓</span>
-                      <span><strong>Check-in:</strong> 15:00 hrs. <strong>Check-out:</strong> 11:00 hrs.</span>
+                      <span><strong>Check-in:</strong> 15:00 a 21:00 hrs. <strong>Check-out:</strong> hasta las 12:00 hrs.</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-[#11d442] mt-1">✓</span>
-                      <span><strong>Prohibido fumar:</strong> Por seguridad forestal, no se permite fumar dentro de las cabañas.</span>
+                      <span><strong>Prohibido fumar:</strong> En cabañas y sector de piscina por seguridad forestal e higiene.</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-[#11d442] mt-1">✓</span>
-                      <span><strong>Mascotas:</strong> Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.</span>
+                      <span><strong>Mascotas:</strong> Está prohibido el ingreso de mascotas en todo el recinto.</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-[#11d442] mt-1">✓</span>
-                      <span><strong>Silencio nocturno:</strong> Respetamos la paz del bosque después de las 23:00 hrs.</span>
+                      <span><strong>Descanso y Música:</strong> No se permiten fiestas ni música con parlantes en áreas comunes o exteriores.</span>
                     </li>
                   </>
                 )}
               </ul>
+
+              {/* Botón hacia el documento oficial completo */}
+              <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-xs text-gray-500 text-center sm:text-left">
+                  Consulta las 14 normas generales y el reglamento de uso de piscina oficiales.
+                </p>
+                <Link 
+                  href="/reglamento"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-gray-900 bg-gray-100 hover:bg-[#11d442] hover:text-white px-5 py-2.5 rounded-xl transition-all shadow-2xs"
+                >
+                  <span>Ver Reglamento Completo Oficial</span>
+                  <span>→</span>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -312,7 +396,8 @@ export default async function Home() {
                 Rancho<span className="text-[#11d442]">Carmelitas</span>
               </span>
             </div>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-6">
+              <Link href="/reglamento" className="hover:text-white transition-colors">Reglamento y Normas</Link>
               <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a>
               <a href="https://www.facebook.com/rancho.c.pullally?mibextid=ZbWKwL" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a>
               <a href="https://maps.app.goo.gl/6W1fhgChaMWaQzbK8" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Google Maps</a>

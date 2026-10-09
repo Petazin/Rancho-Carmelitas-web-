@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface CabinDetailTabsProps {
   cabin: {
@@ -17,7 +18,7 @@ interface CabinDetailTabsProps {
 }
 
 export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState<'estadia' | 'alma'>('estadia');
+  const [activeTab, setActiveTab] = useState<'estadia' | 'alma' | 'normas'>('estadia');
 
   const hasNarrative = !!(cabin.slogan || cabin.origin_description || cabin.fun_fact);
 
@@ -27,7 +28,7 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
       <div className="flex border-b border-gray-200/80 relative">
         <button
           onClick={() => setActiveTab('estadia')}
-          className={`flex-1 py-4 text-center font-bold text-sm md:text-base tracking-wide uppercase transition-all duration-300 relative flex items-center justify-center gap-2 outline-none ${
+          className={`flex-1 py-4 text-center font-bold text-sm md:text-base tracking-wide uppercase transition-all duration-300 relative flex items-center justify-center gap-2 outline-none cursor-pointer ${
             activeTab === 'estadia'
               ? 'text-gray-900 font-extrabold'
               : 'text-gray-400 hover:text-gray-600'
@@ -42,18 +43,32 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
         {hasNarrative && (
           <button
             onClick={() => setActiveTab('alma')}
-            className={`flex-1 py-4 text-center font-bold text-sm md:text-base tracking-wide uppercase transition-all duration-300 relative flex items-center justify-center gap-2 outline-none ${
+            className={`flex-1 py-4 text-center font-bold text-sm md:text-base tracking-wide uppercase transition-all duration-300 relative flex items-center justify-center gap-2 outline-none cursor-pointer ${
               activeTab === 'alma'
                 ? 'text-orange-900 font-extrabold'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            🌌 El Alma de {cabin.name}
+            🌌 El Alma
             {activeTab === 'alma' && (
               <span className="absolute bottom-0 left-0 right-0 h-1 bg-orange-500 rounded-full animate-in fade-in zoom-in-95 duration-200" />
             )}
           </button>
         )}
+
+        <button
+          onClick={() => setActiveTab('normas')}
+          className={`flex-1 py-4 text-center font-bold text-sm md:text-base tracking-wide uppercase transition-all duration-300 relative flex items-center justify-center gap-2 outline-none cursor-pointer ${
+            activeTab === 'normas'
+              ? 'text-gray-900 font-extrabold'
+              : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          📜 Normas
+          {activeTab === 'normas' && (
+            <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#11d442] rounded-full animate-in fade-in zoom-in-95 duration-200" />
+          )}
+        </button>
       </div>
 
       {/* 📦 Contenido de las Pestañas con Transición Suave */}
@@ -187,10 +202,49 @@ export function CabinDetailTabs({ cabin }: CabinDetailTabsProps) {
 
             {/* Footer de Pestaña: Invitación Turística */}
             <div className="pt-6 border-t border-orange-100/60 flex items-center gap-4 text-xs md:text-sm text-orange-850 bg-orange-50/20 p-4 rounded-2xl">
-              <span className="text-xl">🌿</span>
               <p className="font-semibold leading-relaxed">
                 Descubre el encanto rural y costero de la localidad de **Pullally** durante tu estadía en **Rancho Carmelitas**. Pregunta a tus anfitriones por recorridos recomendados.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* 📜 Pestaña 3: Normas Oficiales y Convivencia */}
+        {activeTab === 'normas' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-emerald-50/70 p-6 sm:p-8 rounded-3xl border border-emerald-100 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl p-2 rounded-xl bg-white shadow-2xs">📜</span>
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900">
+                    Reglamento de Estadía y Convivencia
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Normas oficiales orientadas al descanso, seguridad y armonía familiar
+                  </p>
+                </div>
+              </div>
+
+              <ul className="text-xs sm:text-sm text-gray-700 space-y-2.5 list-disc pl-5">
+                <li><strong>Horarios Oficiales:</strong> Check-in de 15:00 a 21:00 hrs • Check-out hasta las 12:00 hrs.</li>
+                <li><strong>Abono del 50%:</strong> 50% al reservar y 50% restante al momento del check-in.</li>
+                <li><strong>Mascotas:</strong> Está prohibido el ingreso de mascotas en todo el recinto.</li>
+                <li><strong>Descanso & Música:</strong> Cabañas destinadas al descanso; prohibidas las fiestas y el uso de parlantes o música al aire libre.</li>
+                <li><strong>Visitas & Pasajeros Adicionales:</strong> No se aceptan visitas no coordinadas; adicionales cancelan desde $10.000 por persona por noche previa coordinación.</li>
+                <li><strong>Piscina:</strong> Temporada sep-abr, de 9:00 a 20:00 hrs, con ducha previa obligatoria y supervisión de menores.</li>
+              </ul>
+
+              <div className="pt-3 border-t border-emerald-200/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span className="text-xs text-emerald-900 font-medium text-center sm:text-left">
+                  Conoce las 14 normas completas y prohibiciones/obligaciones de piscina:
+                </span>
+                <Link
+                  href="/reglamento"
+                  className="w-full sm:w-auto text-center px-4 py-2 text-xs font-bold bg-[#11d442] hover:bg-[#0fb839] text-white rounded-xl transition-all shadow-2xs"
+                >
+                  Ver Reglamento Oficial Completo →
+                </Link>
+              </div>
             </div>
           </div>
         )}

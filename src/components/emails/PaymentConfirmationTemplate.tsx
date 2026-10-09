@@ -253,6 +253,42 @@ export const PaymentConfirmationTemplate: React.FC<Readonly<PaymentConfirmationE
                         </div>
                       )}
 
+                      {/* Sección de Reglamento Oficial y Convivencia */}
+                      <div style={{ ...styles.card, borderLeft: '4px solid #11d442', marginTop: '20px' }}>
+                        <h2 style={{ ...styles.cardTitle, fontSize: '15px', color: '#111827' }}>
+                          📜 Reglamento de Estadía y Normas de Piscina
+                        </h2>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#4b5563', lineHeight: '1.5' }}>
+                          Para asegurar tu descanso y el de todas las familias en Rancho Carmelitas, ten presente las normas principales:
+                        </p>
+                        <ul style={{ margin: '0 0 14px 0', paddingLeft: '18px', fontSize: '12px', color: '#374151', lineHeight: '1.6' }}>
+                          <li><strong>Horarios:</strong> Check-in de 15:00 a 21:00 hrs • Check-out hasta las 12:00 hrs.</li>
+                          <li><strong>Mascotas:</strong> Está prohibido el ingreso de mascotas en todo el recinto.</li>
+                          <li><strong>Descanso & Silencio:</strong> Prohibidas fiestas y reproducción de música con parlantes en áreas exteriores.</li>
+                          <li><strong>Visitas & Pasajeros Adicionales:</strong> No se aceptan visitas no coordinadas; adicionales cancelan desde $10.000 por persona por noche previa coordinación.</li>
+                          <li><strong>Piscina:</strong> Horario de 9:00 a 20:00 hrs (temporada sep-abr) con ducha completa obligatoria antes de ingresar.</li>
+                        </ul>
+                        <div style={{ textAlign: 'center' }}>
+                          <a 
+                            href="https://ranchocarmelitas.cl/reglamento" 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{
+                              display: 'inline-block',
+                              backgroundColor: '#11d442',
+                              color: '#ffffff',
+                              textDecoration: 'none',
+                              padding: '10px 18px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            Ver Reglamento Oficial Completo
+                          </a>
+                        </div>
+                      </div>
+
                       <p style={styles.footerText}>
                         Si tienes alguna consulta, puedes contactarnos respondiendo este correo{companyPhone ? ` o llamando al ${companyPhone}` : ''}.
                       </p>

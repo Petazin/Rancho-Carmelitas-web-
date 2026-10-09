@@ -66,6 +66,19 @@ export const ConfirmationEmailTemplate = ({
               </Text>
             </Section>
 
+            <Section style={card}>
+              <Text style={cardTitle}>📜 Normas Clave de Convivencia</Text>
+              <Text style={cardItem}><strong>Check-in:</strong> 15:00 a 21:00 hrs • <strong>Check-out:</strong> hasta las 12:00 hrs</Text>
+              <Text style={cardItem}><strong>Mascotas:</strong> Prohibido el ingreso de mascotas en todo el recinto.</Text>
+              <Text style={cardItem}><strong>Descanso:</strong> Prohibidas las fiestas y el uso de parlantes o música.</Text>
+              <Text style={cardItem}><strong>Visitas & Adicionales:</strong> No se aceptan visitas no coordinadas; adicionales desde $10.000 por persona por noche previa coordinación.</Text>
+              <Text style={{ ...cardItem, marginTop: '8px', fontSize: '13px' }}>
+                <a href="https://ranchocarmelitas.cl/reglamento" style={{ color: '#11d442', fontWeight: 'bold', textDecoration: 'underline' }}>
+                  Ver Reglamento Oficial y Normas de Piscina →
+                </a>
+              </Text>
+            </Section>
+
             <Hr style={hr} />
             <Text style={footer}>
               ID de Referencia: {bookingId}<br />

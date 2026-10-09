@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
+import { RulesModal } from '@/components/ui/RulesModal';
 
 const formatMoney = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null) return '$0';
@@ -78,10 +79,15 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
   const [guestBirthdate, setGuestBirthdate] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'transferencia'>('mercadopago');
+  const [acceptedRules, setAcceptedRules] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [simulationStep, setSimulationStep] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [conflictError, setConflictError] = useState('');
+  const [rulesError, setRulesError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   // Cálculos reactivos
   const iva = requiresInvoice ? totalBase * 0.19 : 0;
@@ -95,20 +101,39 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrorMsg('');
+    setConflictError('');
+    setRulesError('');
+    setFormError('');
+    setPaymentError('');
     let createdBookingId: string | null = null;
 
     try {
+      // 0. VALIDACIÓN DE ACEPTACIÓN DE REGLAMENTO OFICIAL
+      if (!acceptedRules) {
+        setRulesError('Debes leer y marcar la casilla de aceptación del Reglamento General y Normas de Piscina para poder continuar con la reserva.');
+        setIsLoading(false);
+        setTimeout(() => {
+          document.getElementById('rules-checkbox-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+        return;
+      }
+
       // 1. VALIDACIÓN DE CONTACTO E IDENTIFICACIÓN
       if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim() || !guestRut.trim()) {
-        setErrorMsg('Por favor completa todos los datos de contacto e identificación obligatorios (Nombre, RUT/Pasaporte, Correo y Teléfono).');
+        setFormError('Por favor completa todos los datos de contacto e identificación obligatorios (Nombre, RUT/Pasaporte, Correo y Teléfono).');
         setIsLoading(false);
+        setTimeout(() => {
+          document.getElementById('checkout-contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
         return;
       }
 
       if (guestEmail !== confirmEmail) {
-        setErrorMsg('Los correos electrónicos no coinciden. Por favor revísalos.');
+        setFormError('Los correos electrónicos no coinciden. Por favor revísalos.');
         setIsLoading(false);
+        setTimeout(() => {
+          document.getElementById('checkout-contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
         return;
       }
 
@@ -123,8 +148,9 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       if (colError) throw colError;
 
       if (colisiones && colisiones.length > 0) {
-        setErrorMsg('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
+        setConflictError('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
         setIsLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -139,8 +165,9 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       if (cierresError) throw cierresError;
 
       if (cierres && cierres.length > 0) {
-        setErrorMsg(`Lo sentimos, la cabaña se encuentra cerrada temporalmente en el periodo seleccionado por: "${cierres[0].reason}". Por favor vuelve atrás y elige otras fechas.`);
+        setConflictError(`Lo sentimos, la cabaña se encuentra cerrada temporalmente en el periodo seleccionado por: "${cierres[0].reason}". Por favor vuelve atrás y elige otras fechas.`);
         setIsLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -282,7 +309,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
           console.warn('Error en rollback de reserva provisional:', delErr);
         }
       }
-      setErrorMsg(err.message || 'Ocurrió un error al procesar tu reserva. Inténtalo de nuevo.');
+      setPaymentError(err.message || 'Ocurrió un error al procesar tu reserva. Inténtalo de nuevo.');
       setIsLoading(false);
       setSimulationStep('');
     }
@@ -302,7 +329,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         <div className="bg-white rounded-3xl premium-shadow p-8 border border-gray-100 mb-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Tus Datos</h2>
           
-          {errorMsg && (
+          {conflictError && (
             <div className="bg-rose-50 border-2 border-rose-300 text-rose-900 p-6 rounded-2xl mb-8 shadow-md animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm text-2xl">
@@ -316,7 +343,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                     </span>
                   </h3>
                   <p className="text-sm text-rose-800 leading-relaxed">
-                    {errorMsg}
+                    {conflictError}
                   </p>
                   <div className="pt-2 flex flex-wrap items-center gap-3">
                     <a
@@ -337,7 +364,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form id="checkout-contact-form" className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de quién reserva (*)</label>
@@ -524,7 +551,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
                 </label>
                 <textarea 
                   className="input-premium w-full text-sm h-20 resize-none py-2" 
-                  placeholder="Ej. Requiero cama adicional, alérgico al gluten, viajo con mascota, etc." 
+                  placeholder="Ej. Requiero cama adicional, alérgico al gluten, horario estimado de llegada, etc." 
                   value={guestPreferences}
                   onChange={(e) => setGuestPreferences(e.target.value)}
                   disabled={isLoading}
@@ -690,21 +717,130 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
           </form>
         </div>
 
-        {/* Políticas de la casa */}
-        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-8">
-          <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Políticas de Rancho Carmelitas
-          </h3>
-          <ul className="text-sm text-gray-600 space-y-3 list-disc pl-5">
-            <li><strong>Cancelaciones:</strong> Se puede cancelar hasta 5 días previo al check-in y se devolverá el total de la reserva, pasado este periodo no se hará devolución del abono.</li>
-            <li><strong>Reagendamiento:</strong> Ofrecemos la opción de reagendar, sujeto a disponibilidad de cabañas.</li>
-            <li><strong>Edad Mínima:</strong> Sólo pueden hacer reservas mayores de 18 años.</li>
-            <li><strong>Horarios:</strong> Check in: de 15:00 a 21:00 hrs. Check out: 12:00 hrs.</li>
+        {/* Políticas y Reglamento de la casa */}
+        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Políticas y Convivencia en Rancho Carmelitas
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowRulesModal(true)}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>📜 Ver Reglamento Completo</span>
+            </button>
+          </div>
+          <ul className="text-xs sm:text-sm text-gray-600 space-y-2.5 list-disc pl-5">
+            <li><strong>Horarios:</strong> Check in: de 15:00 a 21:00 hrs. Check out: hasta las 12:00 hrs.</li>
+            <li><strong>Abono:</strong> 50% al reservar para confirmar y 50% restante al momento del check-in.</li>
+            <li><strong>Cancelaciones:</strong> Se puede cancelar hasta 5 días previo al check-in y se devolverá el total; pasado este periodo no se hará devolución del abono.</li>
+            <li><strong>Mascotas:</strong> Está prohibido el ingreso de mascotas en todo el recinto.</li>
+            <li><strong>Convivencia:</strong> Cabañas para descanso. Prohibidas celebraciones, fiestas y reproducción de música con parlantes.</li>
+            <li><strong>Visitas & Adicionales:</strong> No se aceptan visitas; huéspedes adicionales deben coordinarse previamente (desde $10.000 por persona por noche).</li>
+            <li><strong>Piscina:</strong> Temporada sep-abr, de 9:00 a 20:00 hrs, con ducha obligatoria antes de ingresar.</li>
           </ul>
         </div>
+
+        {/* Checkbox Obligatorio de Aceptación de Reglamento */}
+        <div 
+          id="rules-checkbox-container"
+          className={`rounded-2xl p-5 border-2 transition-all mb-4 ${
+            rulesError
+              ? 'bg-amber-50/70 border-amber-400 ring-4 ring-amber-200/70 shadow-md'
+              : acceptedRules 
+                ? 'bg-emerald-50/50 border-emerald-500' 
+                : 'bg-white border-gray-300 hover:border-gray-400'
+          }`}
+        >
+          <label className="flex items-start gap-3.5 cursor-pointer">
+            <input 
+              type="checkbox" 
+              className="mt-1 w-5 h-5 text-[#11d442] focus:ring-[#11d442] rounded border-gray-300 shrink-0 cursor-pointer"
+              checked={acceptedRules}
+              onChange={(e) => {
+                setAcceptedRules(e.target.checked);
+                if (e.target.checked) setRulesError('');
+              }}
+            />
+            <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+              <span className="font-bold text-gray-900 block text-sm mb-1 flex items-center justify-between">
+                <span>Aceptación Obligatoria de Reglamento General y Normas de Piscina (*)</span>
+                {rulesError && (
+                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    Falta Aceptar
+                  </span>
+                )}
+              </span>
+              He leído, comprendo y acepto íntegramente el{' '}
+              <button 
+                type="button" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowRulesModal(true);
+                }}
+                className="font-bold text-emerald-700 underline hover:text-emerald-900 cursor-pointer"
+              >
+                Reglamento General de Cabañas y Normas de Piscina
+              </button>{' '}
+              de Rancho Carmelitas, comprometiéndome a su cumplimiento y declarando conocer la prohibición de mascotas, música exterior y condiciones de uso de áreas comunes.
+            </div>
+          </label>
+        </div>
+
+        {/* Mensaje de Error de Reglas Cercano al Botón de Pago */}
+        {rulesError && (
+          <div className="bg-amber-50 border-2 border-amber-300 text-amber-950 p-4 rounded-2xl mb-4 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
+            <div className="flex-1">
+              <strong className="block text-sm font-bold text-amber-950">
+                Aceptación de Reglamento Obligatoria
+              </strong>
+              <p className="text-xs sm:text-sm text-amber-900 mt-0.5 leading-relaxed">
+                {rulesError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Mensaje de Error en Datos de Contacto Cercano al Botón */}
+        {formError && (
+          <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 p-4 rounded-2xl mb-4 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
+            <div className="flex-1">
+              <strong className="block text-sm font-bold text-rose-950">
+                Datos Requeridos Incompletos
+              </strong>
+              <p className="text-xs sm:text-sm text-rose-900 mt-0.5 leading-relaxed">
+                {formError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Mensaje de Error de Pago / Conexión Cercano al Botón */}
+        {paymentError && (
+          <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 p-4 rounded-2xl mb-4 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
+            <div className="flex-1">
+              <strong className="block text-sm font-bold text-rose-950">
+                Problema al Procesar la Reserva
+              </strong>
+              <p className="text-xs sm:text-sm text-rose-900 mt-0.5 leading-relaxed">
+                {paymentError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Interactivo de Reglamento Oficial */}
+        <RulesModal 
+          isOpen={showRulesModal} 
+          onClose={() => setShowRulesModal(false)} 
+        />
 
         <Button 
           size="lg" 

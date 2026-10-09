@@ -20,6 +20,8 @@ interface LandingSettings {
   cabins_subtitle?: string;
   gallery_title?: string;
   gallery_subtitle?: string;
+  team_title?: string;
+  team_subtitle?: string;
   sernatur_title?: string;
   sernatur_subtitle?: string;
   sernatur_badge?: string;
@@ -39,6 +41,15 @@ interface LandingGalleryItem {
   order_index: number;
 }
 
+interface LandingTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  image_url: string | null;
+  order_index: number;
+}
+
 export default function AdminLandingPage() {
   const [settings, setSettings] = useState<LandingSettings>({
     id: 1,
@@ -47,6 +58,7 @@ export default function AdminLandingPage() {
     hero_bg_url: '/gallery/hero.png'
   });
   const [gallery, setGallery] = useState<LandingGalleryItem[]>([]);
+  const [teamMembers, setTeamMembers] = useState<LandingTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -61,6 +73,8 @@ export default function AdminLandingPage() {
   const [cabinsSubtitle, setCabinsSubtitle] = useState('');
   const [galleryTitle, setGalleryTitle] = useState('');
   const [gallerySubtitle, setGallerySubtitle] = useState('');
+  const [teamTitle, setTeamTitle] = useState('');
+  const [teamSubtitle, setTeamSubtitle] = useState('');
   const [sernaturTitle, setSernaturTitle] = useState('');
   const [sernaturSubtitle, setSernaturSubtitle] = useState('');
   const [sernaturBadge, setSernaturBadge] = useState('');
@@ -71,6 +85,16 @@ export default function AdminLandingPage() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactMapsUrl, setContactMapsUrl] = useState('');
   const [contactLocationLegend, setContactLocationLegend] = useState('');
+
+  // Estados para modal y edición de miembros del equipo
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [editingTeamMember, setEditingTeamMember] = useState<LandingTeamMember | null>(null);
+  const [memberFormName, setMemberFormName] = useState('');
+  const [memberFormRole, setMemberFormRole] = useState('');
+  const [memberFormDescription, setMemberFormDescription] = useState('');
+  const [memberFormImageUrl, setMemberFormImageUrl] = useState('');
+  const [memberFormFile, setMemberFormFile] = useState<File | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -96,16 +120,43 @@ export default function AdminLandingPage() {
         setCabinsSubtitle(settingsData.cabins_subtitle || 'Espacios diseñados para tu confort. Cabañas con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.');
         setGalleryTitle(settingsData.gallery_title || 'Galería de Momentos');
         setGallerySubtitle(settingsData.gallery_subtitle || 'Vistas reales de nuestro entorno, piscina y confortables interiores.');
+        setTeamTitle(settingsData.team_title || 'Nuestro Equipo');
+        setTeamSubtitle(settingsData.team_subtitle || 'Conoce a las personas dedicadas a cuidar cada detalle de tu descanso y estadía en Rancho Carmelitas.');
         setSernaturTitle(settingsData.sernatur_title || 'Servicio Turístico Registrado');
         setSernaturSubtitle(settingsData.sernatur_subtitle || 'Vigencia hasta Enero 2026 • Registro № 71034');
         setSernaturBadge(settingsData.sernatur_badge || 'Calidad y Confianza');
-        setRulesTitle(settingsData.rules_title || 'Reglas de Convivencia');
-        setRulesList(settingsData.rules_list || [
-          'Check-in: 15:00 hrs. Check-out: 11:00 hrs.',
-          'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
-          'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
-          'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
-        ]);
+        const cleanRulesTitle = (settingsData.rules_title || 'Reglas de Convivencia')
+          .replace(/\s*hola\b/gi, '')
+          .trim() || 'Reglas de Convivencia';
+
+        let rawRulesList = settingsData.rules_list;
+        if (typeof rawRulesList === 'string') {
+          try {
+            rawRulesList = JSON.parse(rawRulesList);
+          } catch {
+            rawRulesList = null;
+          }
+        }
+        const cleanRulesList = Array.isArray(rawRulesList) && rawRulesList.length > 0 ? rawRulesList.map((r: string) => {
+          if (/amigos peludos|mascota/i.test(r)) {
+            return 'Mascotas: Está prohibido el ingreso de mascotas en todo el recinto.';
+          }
+          if (/check-out:\s*11:00/i.test(r)) {
+            return 'Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs.';
+          }
+          if (/silencio nocturno/i.test(r)) {
+            return 'Descanso y Música: Cabañas de descanso; prohibidas fiestas y uso de parlantes o música al aire libre.';
+          }
+          return r.replace(/\s*hola\b/gi, '').trim();
+        }) : [
+          'Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs.',
+          'Prohibido fumar: Por seguridad forestal e higiene, prohibido fumar en cabañas y piscina.',
+          'Mascotas: Está prohibido el ingreso de mascotas en todo el recinto.',
+          'Descanso y Música: Cabañas de descanso; prohibidas fiestas y uso de parlantes o música al aire libre.'
+        ];
+
+        setRulesTitle(cleanRulesTitle);
+        setRulesList(cleanRulesList);
         setContactAddress(settingsData.contact_address || 'Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile');
         setContactPhone(settingsData.contact_phone || '+56 9 8401 2748');
         setContactEmail(settingsData.contact_email || 'contacto@ranchocarmelitas.cl');
@@ -119,15 +170,17 @@ export default function AdminLandingPage() {
         setCabinsSubtitle('Espacios diseñados para tu confort. Cabañas con cocina equipada, aire acondicionado y todo lo necesario para tu descanso en Rancho Carmelitas.');
         setGalleryTitle('Galería de Momentos');
         setGallerySubtitle('Vistas reales de nuestro entorno, piscina y confortables interiores.');
+        setTeamTitle('Nuestro Equipo');
+        setTeamSubtitle('Conoce a las personas dedicadas a cuidar cada detalle de tu descanso y estadía en Rancho Carmelitas.');
         setSernaturTitle('Servicio Turístico Registrado');
         setSernaturSubtitle('Vigencia hasta Enero 2026 • Registro № 71034');
         setSernaturBadge('Calidad y Confianza');
         setRulesTitle('Reglas de Convivencia');
         setRulesList([
-          'Check-in: 15:00 hrs. Check-out: 11:00 hrs.',
-          'Prohibido fumar: Por seguridad forestal, no se permite fumar dentro de las cabañas.',
-          'Mascotas: Aceptamos amigos peludos con previo aviso y bajo responsabilidad del dueño.',
-          'Silencio nocturno: Respetamos la paz del bosque después de las 23:00 hrs.'
+          'Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs.',
+          'Prohibido fumar: Por seguridad forestal e higiene, prohibido fumar en cabañas y piscina.',
+          'Mascotas: Está prohibido el ingreso de mascotas en todo el recinto.',
+          'Descanso y Música: Cabañas de descanso; prohibidas fiestas y uso de parlantes o música al aire libre.'
         ]);
         setContactAddress('Avenida Las Salinas № 104 D-4, Pullally, Papudo, Región de Valparaíso, Chile');
         setContactPhone('+56 9 8401 2748');
@@ -146,6 +199,18 @@ export default function AdminLandingPage() {
         console.warn('Advertencia cargando landing_gallery (¿falta aplicar script SQL?):', galleryError);
       } else {
         setGallery(galleryData || []);
+      }
+
+      // 3. Obtener equipo de trabajo
+      const { data: teamData, error: teamError } = await supabase
+        .from('landing_team')
+        .select('*')
+        .order('order_index', { ascending: true });
+
+      if (teamError) {
+        console.warn('Advertencia cargando landing_team (¿falta aplicar script SQL?):', teamError);
+      } else {
+        setTeamMembers(teamData || []);
       }
     } catch (err) {
       console.error('Error general cargando datos de Landing:', err);
@@ -221,6 +286,8 @@ export default function AdminLandingPage() {
           cabins_subtitle: cabinsSubtitle,
           gallery_title: galleryTitle,
           gallery_subtitle: gallerySubtitle,
+          team_title: teamTitle,
+          team_subtitle: teamSubtitle,
           sernatur_title: sernaturTitle,
           sernatur_subtitle: sernaturSubtitle,
           sernatur_badge: sernaturBadge,
@@ -246,6 +313,152 @@ export default function AdminLandingPage() {
       console.error(err);
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Apertura de modal para nuevo integrante
+  const handleOpenAddMember = () => {
+    setEditingTeamMember(null);
+    setMemberFormName('');
+    setMemberFormRole('');
+    setMemberFormDescription('');
+    setMemberFormImageUrl('');
+    setMemberFormFile(null);
+    setIsTeamModalOpen(true);
+  };
+
+  // Apertura de modal para editar integrante existente
+  const handleOpenEditMember = (member: LandingTeamMember) => {
+    setEditingTeamMember(member);
+    setMemberFormName(member.name);
+    setMemberFormRole(member.role);
+    setMemberFormDescription(member.description);
+    setMemberFormImageUrl(member.image_url || '');
+    setMemberFormFile(null);
+    setIsTeamModalOpen(true);
+  };
+
+  // Guardar (crear o actualizar) un integrante del equipo
+  const handleSaveTeamMember = async () => {
+    if (!memberFormName.trim() || !memberFormRole.trim() || !memberFormDescription.trim()) {
+      alert('Por favor completa el nombre, el rol y la descripción del integrante.');
+      return;
+    }
+
+    setSavingMember(true);
+    try {
+      let finalImageUrl = memberFormImageUrl;
+
+      if (memberFormFile) {
+        const compressed = await compressImage(memberFormFile, 800, 0.85);
+        const fileExt = compressed.name.split('.').pop() || 'jpg';
+        const fileName = `team_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `team/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('cabin-images')
+          .upload(filePath, compressed);
+
+        if (uploadError) {
+          throw new Error(`Fallo al subir fotografía del integrante: ${uploadError.message}`);
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('cabin-images')
+          .getPublicUrl(filePath);
+
+        finalImageUrl = publicUrl;
+      }
+
+      if (editingTeamMember) {
+        const { error: updateError } = await supabase
+          .from('landing_team')
+          .update({
+            name: memberFormName.trim(),
+            role: memberFormRole.trim(),
+            description: memberFormDescription.trim(),
+            image_url: finalImageUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingTeamMember.id);
+
+        if (updateError) throw updateError;
+        alert('¡Integrante actualizado exitosamente!');
+      } else {
+        const nextOrder = teamMembers.length > 0 ? Math.max(...teamMembers.map(m => m.order_index)) + 1 : 0;
+        const { error: insertError } = await supabase
+          .from('landing_team')
+          .insert({
+            name: memberFormName.trim(),
+            role: memberFormRole.trim(),
+            description: memberFormDescription.trim(),
+            image_url: finalImageUrl,
+            order_index: nextOrder
+          });
+
+        if (insertError) throw insertError;
+        alert('¡Integrante añadido al equipo exitosamente!');
+      }
+
+      setIsTeamModalOpen(false);
+      setMemberFormFile(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Error al guardar integrante: ' + err.message);
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
+  // Eliminar un integrante del equipo
+  const handleDeleteTeamMember = async (member: LandingTeamMember) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar a ${member.name} del equipo?`)) return;
+
+    try {
+      const { error: dbError } = await supabase
+        .from('landing_team')
+        .delete()
+        .eq('id', member.id);
+
+      if (dbError) throw dbError;
+
+      if (member.image_url && member.image_url.includes('cabin-images/team/')) {
+        const pathParts = member.image_url.split('/cabin-images/');
+        if (pathParts[1]) {
+          const filePath = decodeURIComponent(pathParts[1]);
+          await supabase.storage.from('cabin-images').remove([filePath]);
+        }
+      }
+
+      fetchData();
+    } catch (err: any) {
+      alert('Error al eliminar integrante: ' + err.message);
+    }
+  };
+
+  // Intercambiar orden de dos integrantes
+  const handleSwapTeamOrder = async (index1: number, index2: number) => {
+    if (index1 < 0 || index1 >= teamMembers.length || index2 < 0 || index2 >= teamMembers.length) return;
+
+    const item1 = teamMembers[index1];
+    const item2 = teamMembers[index2];
+
+    try {
+      const { error: err1 } = await supabase
+        .from('landing_team')
+        .update({ order_index: item2.order_index })
+        .eq('id', item1.id);
+
+      const { error: err2 } = await supabase
+        .from('landing_team')
+        .update({ order_index: item1.order_index })
+        .eq('id', item2.id);
+
+      if (err1 || err2) throw new Error('Error al intercambiar orden de integrantes');
+
+      fetchData();
+    } catch (err: any) {
+      alert('Error al reordenar equipo: ' + err.message);
     }
   };
 
@@ -614,6 +827,33 @@ export default function AdminLandingPage() {
 
             <div className="pt-4 border-t border-gray-50">
               <h4 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-1.5">
+                <span>👥</span> Sección de Equipo de Trabajo
+              </h4>
+              <div className="space-y-3 mt-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título Sección Equipo</label>
+                  <input 
+                    type="text"
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                    value={teamTitle}
+                    onChange={e => setTeamTitle(e.target.value)}
+                    placeholder="Ej. Nuestro Equipo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subtítulo Descriptivo Equipo</label>
+                  <textarea 
+                    className="w-full px-3 py-2 bg-gray-50/50 border border-gray-250 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs text-gray-600 transition-all min-h-[70px] resize-none"
+                    value={teamSubtitle}
+                    onChange={e => setTeamSubtitle(e.target.value)}
+                    placeholder="Escribe el subtítulo de la sección de equipo..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-50">
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-1.5">
                 <span>🎖️</span> Sello de Confianza SERNATUR
               </h4>
               <div className="space-y-3 mt-3">
@@ -696,7 +936,7 @@ export default function AdminLandingPage() {
                         newList[idx] = e.target.value;
                         setRulesList(newList);
                       }}
-                      placeholder="Ej. Check-in: 15:00 hrs. Check-out: 11:00 hrs."
+                      placeholder="Ej. Check-in: 15:00 a 21:00 hrs. Check-out: hasta las 12:00 hrs."
                     />
                     
                     {/* Botones de control del array */}
@@ -968,6 +1208,285 @@ export default function AdminLandingPage() {
           )}
         </div>
       </div>
+
+      {/* SECCIÓN 3: EQUIPO DE TRABAJO Y HOSPITALIDAD */}
+      <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm space-y-6">
+        <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              👥 Equipo de Trabajo y Hospitalidad
+            </h3>
+            <p className="text-xs text-gray-400">Administra a las personas que atienden Rancho Carmelitas (fotografía, nombre, rol y breve descripción).</p>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleOpenAddMember}
+              className="bg-[#11d442] hover:bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2 text-xs"
+            >
+              <span>➕</span> Añadir Integrante
+            </button>
+          </div>
+        </div>
+
+        {/* Guía informativa de fotos */}
+        <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-2xl flex flex-col md:flex-row md:items-center gap-4 justify-between text-xs text-emerald-900">
+          <div className="space-y-0.5">
+            <p className="font-bold flex items-center gap-1.5">
+              <span>📐</span> Fotografía Recomendada (Aspect Ratio Vertical):
+            </p>
+            <p className="text-emerald-700">Aspecto vertical o tipo retrato de **800x1000 px (4:5)** o cuadrado de alta definición. El sistema optimiza y comprime automáticamente la imagen.</p>
+          </div>
+        </div>
+
+        {/* Listado de Miembros del Equipo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-2">
+          {teamMembers.map((member, index) => (
+            <div 
+              key={member.id} 
+              className="border border-gray-100 bg-white rounded-3xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-all group"
+            >
+              <div>
+                {/* Fotografía del Integrante */}
+                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden">
+                  {member.image_url ? (
+                    <img 
+                      src={member.image_url} 
+                      alt={member.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 text-gray-400">
+                      <span className="text-4xl">🌿</span>
+                      <span className="text-[10px] font-bold text-gray-500 mt-2">Sin Foto</span>
+                    </div>
+                  )}
+
+                  {/* Badge de Posición / Orden */}
+                  <span className="absolute top-2 left-2 bg-gray-900/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    #{index + 1}
+                  </span>
+
+                  {/* Acciones Rápidas en Hover */}
+                  <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => handleSwapTeamOrder(index, index - 1)}
+                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-sm transition-colors disabled:opacity-20"
+                      title="Mover a la izquierda / subir"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === teamMembers.length - 1}
+                      onClick={() => handleSwapTeamOrder(index, index + 1)}
+                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-sm transition-colors disabled:opacity-20"
+                      title="Mover a la derecha / bajar"
+                    >
+                      ▼
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditMember(member)}
+                      className="w-8 h-8 rounded-full bg-[#11d442] hover:bg-green-600 flex items-center justify-center text-xs transition-colors"
+                      title="Editar datos del integrante"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTeamMember(member)}
+                      className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-xs transition-colors"
+                      title="Eliminar integrante"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Datos del Integrante */}
+                <div className="p-4 space-y-2">
+                  <div>
+                    <span className="inline-block bg-[#11d442]/10 text-[#0fa836] border border-[#11d442]/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                      {member.role}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm">{member.name}</h4>
+                  <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">
+                    {member.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pie de tarjeta con botón rápido de edición */}
+              <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditMember(member)}
+                  className="text-gray-600 hover:text-[#11d442] font-semibold flex items-center gap-1"
+                >
+                  <span>✏️</span> Editar Ficha
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTeamMember(member)}
+                  className="text-red-500 hover:text-red-700 font-semibold"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {teamMembers.length === 0 && (
+            <div className="col-span-full text-center py-12 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50 space-y-2">
+              <span className="text-4xl">👥</span>
+              <p className="text-sm text-gray-600 font-bold">No hay integrantes registrados en la base de datos de Supabase.</p>
+              <p className="text-xs text-gray-400 max-w-md mx-auto">
+                Actualmente se muestran los 4 integrantes provisionales de muestra en la Landing Page pública. Haz clic en <strong>"Añadir Integrante"</strong> para registrar a tu equipo real.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL PARA AÑADIR / EDITAR INTEGRANTE DEL EQUIPO */}
+      {isTeamModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span>{editingTeamMember ? '✏️ Editar Integrante' : '➕ Añadir Nuevo Integrante'}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTeamModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Fotografía del Integrante */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-600 uppercase">Fotografía del Integrante</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-24 h-28 rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-inner flex items-center justify-center flex-shrink-0">
+                    {memberFormFile ? (
+                      <img 
+                        src={URL.createObjectURL(memberFormFile)} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : memberFormImageUrl ? (
+                      <img 
+                        src={memberFormImageUrl} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <span className="text-3xl text-gray-300">👤</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 flex-1">
+                    <label className="bg-white border border-gray-200 hover:border-[#11d442] hover:bg-green-50/30 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-sm">
+                      <span>📁 Subir Foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            setMemberFormFile(e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
+
+                    {memberFormFile && (
+                      <p className="text-[11px] text-[#11d442] font-semibold">
+                        ✓ Archivo seleccionado: {memberFormFile.name}
+                      </p>
+                    )}
+
+                    <div>
+                      <span className="text-[10px] text-gray-400 block mb-1">O ingresa una URL de imagen:</span>
+                      <input
+                        type="url"
+                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] text-xs font-medium text-gray-700 transition-all"
+                        placeholder="https://ejemplo.com/foto.jpg"
+                        value={memberFormImageUrl}
+                        onChange={e => setMemberFormImageUrl(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nombre Completo */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                  placeholder="Ej. Carmen Gloria Morales"
+                  value={memberFormName}
+                  onChange={e => setMemberFormName(e.target.value)}
+                />
+              </div>
+
+              {/* Rol / Cargo en el Rancho */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Rol / Cargo dentro del Rancho *</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs font-semibold text-gray-800 transition-all"
+                  placeholder="Ej. Anfitriona & Administración"
+                  value={memberFormRole}
+                  onChange={e => setMemberFormRole(e.target.value)}
+                />
+              </div>
+
+              {/* Pequeña Descripción */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Pequeña Descripción *</label>
+                <textarea
+                  required
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] focus:bg-white text-xs text-gray-700 transition-all resize-none"
+                  placeholder="Describe brevemente su labor y cómo contribuye al descanso y bienestar de los huéspedes..."
+                  value={memberFormDescription}
+                  onChange={e => setMemberFormDescription(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsTeamModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTeamMember}
+                disabled={savingMember}
+                className="bg-[#11d442] hover:bg-green-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {savingMember ? 'Guardando...' : '✓ Guardar Integrante'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

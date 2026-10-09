@@ -50,7 +50,8 @@ export default async function CabinDetailPage({ params }: { params: Promise<{ id
   const pricePerNight = cabin.price_per_night || 0;
   const surchargePct = cabin.extra_guest_surcharge_percentage || 100;
   const pricePerPerson = pricePerNight / baseCapacity;
-  const surchargePerExtraPerson = pricePerPerson * (surchargePct / 100);
+  const calculatedSurcharge = Math.round(pricePerPerson * (surchargePct / 100));
+  const surchargePerExtraPerson = Math.max(10000, calculatedSurcharge);
 
   const formatMoney = (amount: number) => {
     const formatted = new Intl.NumberFormat('es-CL', {

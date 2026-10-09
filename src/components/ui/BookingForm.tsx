@@ -286,7 +286,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   const totalGuests = adults + children;
   const extraGuests = Math.max(0, totalGuests - cabin.capacity);
   const pricePerPerson = cabin.price / cabin.capacity;
-  const surchargePerExtraPerson = pricePerPerson * (surchargePercentage / 100);
+  const calculatedSurcharge = Math.round(pricePerPerson * (surchargePercentage / 100));
+  const surchargePerExtraPerson = Math.max(10000, calculatedSurcharge);
   const extraCostPerNight = extraGuests * surchargePerExtraPerson;
   const finalPricePerNight = cabin.price + extraCostPerNight;
 

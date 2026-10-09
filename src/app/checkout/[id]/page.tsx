@@ -58,7 +58,8 @@ export default async function CheckoutPage({
   const totalGuests = adults + children;
   const extraGuests = Math.max(0, totalGuests - cabin.capacity);
   const pricePerPerson = cabin.price / cabin.capacity;
-  const surchargePerExtraPerson = pricePerPerson * (cabin.extra_guest_surcharge_percentage / 100);
+  const calculatedSurcharge = Math.round(pricePerPerson * (cabin.extra_guest_surcharge_percentage / 100));
+  const surchargePerExtraPerson = Math.max(10000, calculatedSurcharge);
   const extraCostPerNight = extraGuests * surchargePerExtraPerson;
   const extraCostTotal = extraCostPerNight * nights;
 
