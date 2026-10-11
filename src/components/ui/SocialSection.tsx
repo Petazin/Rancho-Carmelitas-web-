@@ -89,7 +89,20 @@ export function SocialSection({
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">Escríbenos</p>
-                        <a href={`mailto:${email}`} className="text-sm font-semibold hover:text-[#11d442] transition-colors break-all">{email}</a>
+                        <a 
+                          href={`mailto:${email.replace('@', '%40')}`} 
+                          className="text-sm font-semibold hover:text-[#11d442] transition-colors break-all"
+                        >
+                          {email.includes('@') ? (
+                            <>
+                              <span>{email.split('@')[0]}</span>
+                              <span>&#64;</span>
+                              <span>{email.split('@')[1]}</span>
+                            </>
+                          ) : (
+                            email
+                          )}
+                        </a>
                       </div>
                     </div>
                   </div>

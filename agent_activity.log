@@ -715,3 +715,17 @@
 [2026-10-09 20:41:00] Actividad de Antigravity:
 - El usuario validó y confirmó la totalidad de las funcionalidades y la subida a producción.
 - Se ejecutan los comandos Git: `git add .`, `git commit` y `git push origin master` consolidando la versión v1.7.6 a GitHub y disparando el despliegue automático en Vercel.
+- A solicitud del usuario, se detuvo el servidor de desarrollo local de Next.js liberando el puerto 3000 de forma segura.
+[2026-10-09 21:55:00] Actividad de Antigravity (v1.8.0 - Suite Integral de Optimización SEO y Redes):
+- Se analizó el reporte de auditoría de SEOSiteCheckup sobre ranchocarmelitas.com (nota inicial 69/100, 15 fallos).
+- Se implementaron metadatos Open Graph y Twitter Cards completos en `src/app/layout.tsx` con portada institucional `public/og-image.png` (1200x630 px).
+- Se crearon rutas dinámicas de rastreo de Next.js App Router: `src/app/sitemap.ts` (con indexación de cabañas activas desde Supabase) y `src/app/robots.ts` (protegiendo /admin y /api).
+- Se inyectaron esquemas JSON-LD Schema.org para `LodgingBusiness` (con geolocalización, horarios, precios, amenidades y redes sociales) y `FAQPage` (sección de preguntas frecuentes agregada en `src/app/page.tsx`).
+- Se optimizó el Largest Contentful Paint (LCP) del Hero banner sustituyendo el background CSS por `<Image fill priority />` de Next.js y habilitando AVIF/WebP en `next.config.ts`.
+- Se implementó la página 404 personalizada `src/app/not-found.tsx` con acentos de marca `#11d442` y rutas de rescate.
+- Se ofuscó el email de contacto en `src/components/ui/SocialSection.tsx` para proteger contra spam scrapers.
+- Se añadieron layouts con metadatos dedicados para `/reglamento` y `/reserva`, y `generateMetadata` dinámico para `/cabins/[id]`.
+- Se actualizaron `GEMINI.md`, `README.md`, `CHANGELOG.md` en la Wiki LLM y se redactó el reporte de hito correspondiente.
+- Se ejecutó `npm run build` certificando compilación exitosa (código 0, 27/27 rutas generadas limpiamente con soporte estático para /robots.txt, /sitemap.xml y /_not-found).
+- El usuario validó la compilación y autorizó el despliegue a producción.
+- Se ejecutan los comandos Git: `git add .`, `git commit -m "feat(seo): suite integral de optimizacion seo, open graph, rendimiento lcp y schema json-ld v1.8.0"` y `git push origin master` consolidando la versión v1.8.0 a GitHub y disparando el despliegue a producción en Vercel.

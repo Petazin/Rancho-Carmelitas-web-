@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { CabinCard } from "@/components/ui/CabinCard";
 import { supabase } from "@/lib/supabase";
 import { SocialSection } from "@/components/ui/SocialSection";
@@ -170,6 +171,43 @@ export default async function Home() {
     console.warn("Advertencia cargando landing_team:", err);
   }
 
+  // 4. Preguntas Frecuentes con Schema.org FAQPage para Rich Snippets en Google
+  const faqs = [
+    {
+      q: "¿Cuáles son los horarios de Check-in y Check-out?",
+      a: "El Check-in se realiza entre las 15:00 y las 21:00 hrs. El Check-out es hasta las 12:00 hrs para garantizar la preparación higiénica óptima de cada cabaña."
+    },
+    {
+      q: "¿Cómo se confirma la reserva y qué formas de pago aceptan?",
+      a: "Para reservar solicitamos un abono inicial del 50% vía transferencia bancaria o Mercado Pago. El 50% restante se cancela directamente al momento de realizar el check-in en el rancho."
+    },
+    {
+      q: "¿Se permite el ingreso de mascotas?",
+      a: "Por respeto a la tranquilidad de los huéspedes, resguardo de la fauna del bosque y motivos de higiene, está estrictamente prohibido el ingreso de mascotas en todo el recinto."
+    },
+    {
+      q: "¿Qué comodidades y equipamiento incluyen las cabañas?",
+      a: "Cada cabaña cuenta con cocina totalmente equipada (refrigerador, encimera y vajilla), baño privado con agua caliente, aire acondicionado frío/calor, televisión satelital, parrilla individual, estacionamiento privado y acceso libre a piscina y áreas verdes."
+    },
+    {
+      q: "¿A qué distancia está Rancho Carmelitas de la playa de Papudo y de Santiago?",
+      a: "Estamos ubicados en Pullally, a sólo 2 horas de Santiago por la Ruta 5 Norte. Las playas y la bahía de Papudo están a escasos 10 a 15 minutos en vehículo."
+    }
+  ];
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map((f) => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": f.a
+      }
+    }))
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
       {/* Header flotante minimalista */}
@@ -188,6 +226,7 @@ export default async function Home() {
               <a href="#team" className="hover:text-[#11d442] transition-colors">Equipo</a>
             )}
             <a href="#location-social" className="hover:text-[#11d442] transition-colors">Ubicación</a>
+            <a href="#faq" className="hover:text-[#11d442] transition-colors">Preguntas</a>
             <Link href="/reglamento" className="hover:text-[#11d442] transition-colors">Reglamento</Link>
             <Link href="/reserva" className="hover:text-[#11d442] transition-colors text-gray-800 font-semibold flex items-center gap-1">
               <span>🔍 Mi Reserva</span>
@@ -208,11 +247,18 @@ export default async function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="relative min-h-[85vh] py-20 sm:py-24 md:py-28 flex items-center justify-center bg-gray-900">
-          {/* Background image autogestionable */}
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center"
-            style={{ backgroundImage: `url("${heroSettings.hero_bg_url}")` }}
-          />
+          {/* Background image optimizada con Next.js Image y priority para máximo rendimiento LCP */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <Image
+              src={heroSettings.hero_bg_url || "/gallery/hero.png"}
+              alt="Cabañas y piscina en Rancho Carmelitas, Pullally, Papudo"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-center"
+              quality={85}
+            />
+          </div>
           <div className="absolute inset-0 bg-gradient-to-br from-black/80 to-black/30 z-10" />
           
           <div className="relative z-20 text-center px-4 max-w-4xl mx-auto mt-16 hover-lift flex flex-col items-center justify-center">
@@ -330,6 +376,48 @@ export default async function Home() {
           locationLegend={heroSettings.contact_location_legend}
         />
 
+        {/* Sección de Preguntas Frecuentes (FAQ) optimizada para SEO y Rich Snippets de Google */}
+        <section id="faq" className="py-24 bg-white border-t border-gray-100">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <div className="text-center mb-16">
+              <span className="text-[#11d442] font-semibold text-sm uppercase tracking-widest">
+                Resolvemos tus Dudas
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold mt-3 text-gray-900 tracking-tight">
+                Preguntas Frecuentes
+              </h2>
+              <p className="text-gray-500 mt-4 text-base md:text-lg font-light max-w-2xl mx-auto">
+                Todo lo que necesitas saber para planificar tu escapada y descanso en Rancho Carmelitas, Pullally.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <details
+                  key={index}
+                  className="group bg-surface rounded-2xl p-6 border border-gray-100 transition-all open:shadow-xs"
+                >
+                  <summary className="font-bold text-gray-900 text-base md:text-lg cursor-pointer flex items-center justify-between list-none">
+                    <span>{faq.q}</span>
+                    <span className="text-[#11d442] text-xl font-bold transition-transform group-open:rotate-45 ml-4 shrink-0">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-4 text-gray-600 text-sm md:text-base font-light leading-relaxed border-t border-gray-100/80 pt-4">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+
+            {/* Structured Data JSON-LD para Google Rich Results FAQPage */}
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+            />
+          </div>
+        </section>
+
         {/* Rules Section */}
         <section id="rules" className="py-24 bg-surface border-t border-gray-100">
           <div className="container mx-auto px-4">
@@ -397,7 +485,9 @@ export default async function Home() {
               </span>
             </div>
             <div className="flex flex-wrap justify-center gap-6">
-              <Link href="/reglamento" className="hover:text-white transition-colors">Reglamento y Normas</Link>
+              <a href="#cabins" className="hover:text-white transition-colors">Cabañas</a>
+              <a href="#faq" className="hover:text-white transition-colors">Preguntas Frecuentes</a>
+              <Link href="/reglamento" className="hover:text-white transition-colors">Reglamento</Link>
               <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a>
               <a href="https://www.facebook.com/rancho.c.pullally?mibextid=ZbWKwL" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a>
               <a href="https://maps.app.goo.gl/6W1fhgChaMWaQzbK8" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Google Maps</a>

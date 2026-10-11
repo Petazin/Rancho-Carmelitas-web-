@@ -1,12 +1,55 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import { BookingForm } from "@/components/ui/BookingForm";
 import { CabinDetailTabs } from "@/components/ui/CabinDetailTabs";
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const { data: cabinData } = await supabase
+    .from('cabins')
+    .select('name, description, gallery_urls')
+    .eq('id', id)
+    .single();
+
+  if (!cabinData) {
+    return {
+      title: "Cabaña • Rancho Carmelitas",
+    };
+  }
+
+  const imageUrl = cabinData.gallery_urls?.[0] || "/og-image.png";
+
+  return {
+    title: `${cabinData.name} • Cabañas en Pullally, Papudo`,
+    description: cabinData.description || `Reserva ${cabinData.name} en Rancho Carmelitas, Pullally, Papudo. Cabaña equipada con piscina y descanso en la naturaleza.`,
+    alternates: {
+      canonical: `/cabins/${id}`,
+    },
+    openGraph: {
+      title: `${cabinData.name} • Rancho Carmelitas`,
+      description: cabinData.description || `Cabaña totalmente equipada en Pullally, Papudo.`,
+      url: `https://ranchocarmelitas.com/cabins/${id}`,
+      images: [
+        {
+          url: imageUrl,
+          alt: cabinData.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${cabinData.name} • Rancho Carmelitas`,
+      description: cabinData.description || `Cabaña en Pullally, Papudo.`,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function CabinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
