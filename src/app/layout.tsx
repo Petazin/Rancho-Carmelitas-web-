@@ -52,6 +52,12 @@ export const metadata: Metadata = {
       "Descubre nuestras exclusivas cabañas totalmente equipadas en el corazón de Pullally, Papudo. Tu refugio de descanso perfecto entre el bosque, la piscina y el mar.",
     images: [
       {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Rancho Carmelitas • Cabañas y piscina en Pullally, Papudo",
+      },
+      {
         url: "/og-image.png",
         width: 1200,
         height: 630,
@@ -64,7 +70,7 @@ export const metadata: Metadata = {
     title: "Rancho Carmelitas • Exclusivas Cabañas en Pullally, Papudo",
     description:
       "Descubre nuestras exclusivas cabañas totalmente equipadas en Pullally, Papudo. Piscina, descanso y naturaleza.",
-    images: ["/og-image.png"],
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,

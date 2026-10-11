@@ -122,12 +122,12 @@ export default async function Home() {
 
   // 2. Cargar fotos de la galería de momentos de forma defensiva
   let galleryItems = [
-    { src: '/gallery/hero.png', alt: 'Vista panorámica de la piscina y cabañas' },
-    { src: '/gallery/interior.png', alt: 'Interior acogedor y cocina equipada' },
-    { src: '/gallery/piscina_hd.png', alt: 'Piscina principal con áreas verdes' },
-    { src: '/gallery/piscina.png', alt: 'Nuestros huéspedes disfrutando de la piscina' },
+    { src: '/gallery/piscina_principal.jpg', alt: 'Piscina principal y entorno familiar en Rancho Carmelitas' },
+    { src: '/gallery/areas_verdes.jpg', alt: 'Jardines, toldos de sombra y áreas verdes' },
+    { src: '/gallery/entorno_hd.png', alt: 'Senderos y áreas verdes exteriores' },
     { src: '/gallery/dormitorio.png', alt: 'Dormitorio matrimonial confortable' },
-    { src: '/gallery/entorno_hd.png', alt: 'Terraza y zona de relajación exterior' },
+    { src: '/gallery/interior.png', alt: 'Cocina equipada y comodidades' },
+    { src: '/gallery/piscina.png', alt: 'Diversión familiar en la piscina' },
   ];
 
   try {
@@ -250,7 +250,7 @@ export default async function Home() {
           {/* Background image optimizada con Next.js Image y priority para máximo rendimiento LCP */}
           <div className="absolute inset-0 z-0 overflow-hidden">
             <Image
-              src={heroSettings.hero_bg_url || "/gallery/hero.png"}
+              src={heroSettings.hero_bg_url || "/gallery/piscina_principal.jpg"}
               alt="Cabañas y piscina en Rancho Carmelitas, Pullally, Papudo"
               fill
               priority

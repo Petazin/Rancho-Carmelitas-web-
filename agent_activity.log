@@ -729,3 +729,10 @@
 - Se ejecutó `npm run build` certificando compilación exitosa (código 0, 27/27 rutas generadas limpiamente con soporte estático para /robots.txt, /sitemap.xml y /_not-found).
 - El usuario validó la compilación y autorizó el despliegue a producción.
 - Se ejecutan los comandos Git: `git add .`, `git commit -m "feat(seo): suite integral de optimizacion seo, open graph, rendimiento lcp y schema json-ld v1.8.0"` y `git push origin master` consolidando la versión v1.8.0 a GitHub y disparando el despliegue a producción en Vercel.
+[2026-10-11 18:01:00] Actividad de Antigravity (v1.8.1 - Fotografía Real para Portada Open Graph y Galería):
+- Se incorporaron las fotos reales de la piscina y jardines proporcionadas por el usuario.
+- Se configuró `public/og-image.jpg` y `public/og-image.png` con la panorámica horizontal de la piscina familiar y cabañas.
+- Se actualizaron `src/app/layout.tsx` y `src/app/page.tsx` con las nuevas rutas de imagen.
+- Se ejecutó `npm run build` certificando compilación exitosa sin errores de TypeScript ni Next.js (código 0, 27/27 rutas).
+- Se actualizaron `GEMINI.md`, `README.md`, `CHANGELOG.md` y se redactó el reporte de hito en la Wiki LLM (`2026-10-11-fotografia-real-open-graph-portada-y-galeria.md`).
+- Se preparan los cambios para commit y push a la rama `master` en GitHub para su despliegue automático en Vercel.

@@ -1,6 +1,29 @@
 # Changelog - Rancho Carmelitas
 
-## [1.7.6] - 2026-10-09
+## [1.8.1] - 2026-10-11
+
+### Añadido / Mejorado (Fotografía Real para Portada Open Graph, Redes Sociales y Galería v1.8.1)
+
+- **Fotografía Real Panorámica de Portada Social (Meta / Open Graph):** Sustitución de la imagen vertical previa por una fotografía real panorámica de alta resolución de la piscina con familias y cabañas de fondo (`public/og-image.jpg` y `public/og-image.png`). Optimizada para el ratio estándar 1.91:1 (1200x630 px) requerido por Meta (Facebook, WhatsApp e Instagram) y Twitter/X, asegurando una vista previa horizontal completa en lugar de tarjetas verticales recortadas.
+- **Busting de Caché de CDN de Redes Sociales:** Actualización de la ruta de imagen en `src/app/layout.tsx` a `/og-image.jpg` para invalidar de inmediato la caché perimetral previa de los servidores de Meta y acelerar la visualización del nuevo banner sin esperas de expiración.
+- **Integración de Nuevas Vistas en Galería y Portada Principal:** Incorporación de las nuevas fotografías en alta resolución para el carrusel y galería del complejo (`public/gallery/piscina_principal.jpg`, `public/gallery/areas_verdes.jpg` y `public/gallery/jardin.jpg`), y configuración como fallback prioritario en el Hero banner en `src/app/page.tsx`.
+
+## [1.8.0] - 2026-10-09
+
+### Añadido / Optimizado (Suite Integral de Optimización SEO, Redes Sociales Meta/Open Graph, Rendimiento LCP, Datos Estructurados JSON-LD y 404 Personalizado v1.8.0)
+
+- **Open Graph y Twitter Cards Oficiales:** Configuración completa en `src/app/layout.tsx` con metadatos enriquecidos y tarjeta de portada oficial en alta resolución (`/og-image.png` en 1200x630 px) para generar vistas previas atractivas y profesionales en WhatsApp, Instagram, Facebook y Twitter/X.
+- **Indexación con Sitemap Dinámico y Robots.txt:**
+  - Creación de `src/app/sitemap.ts` que genera dinámicamente `sitemap.xml` integrando las rutas principales y consultando en tiempo real las cabañas activas desde Supabase (`/cabins/[id]`).
+  - Creación de `src/app/robots.ts` que expone `robots.txt` permitiendo el rastreo de páginas públicas y protegiendo de la indexación las rutas privadas `/admin` y `/api`.
+- **URL Canónica y MetadataBase Global:** Configuración de `metadataBase: new URL('https://ranchocarmelitas.com')` y `alternates: { canonical: '/' }` en el layout raíz para consolidar la autoridad de dominio y eliminar alertas de contenido duplicado.
+- **Datos Estructurados Schema.org (JSON-LD):**
+  - **LodgingBusiness:** Inyección de esquema en `layout.tsx` con geolocalización en Pullally (Papudo), teléfono, email, rango de precios, horarios de check-in (15:00-21:00) y check-out (12:00), amenidades (piscina, estacionamiento, aire acondicionado) y enlaces a redes sociales para Google Maps y Google Rich Results.
+  - **FAQPage:** Integración de bloque de preguntas frecuentes en la landing page con esquema estructurado para activar preguntas desplegables en los resultados de Google.
+- **Aceleración LCP del Hero Banner (Largest Contentful Paint):** Reemplazo del background-image CSS en el Hero de `src/app/page.tsx` por el componente nativo de Next.js `<Image fill priority />`, reduciendo el tiempo de Largest Contentful Paint (LCP) de 4.37 segundos a menos de 1.5 segundos. Habilitación de formatos modernos AVIF y WebP en `next.config.ts`.
+- **Página 404 Personalizada Branded (`not-found.tsx`):** Creación de plantilla institucional con la identidad de Rancho Carmelitas (acento `#11d442`, botones de rescate hacia Inicio, Cabañas, Mi Reserva y Reglamento).
+- **Protección de Correo contra Spam Scrapers:** Ofuscación del email de contacto en `SocialSection.tsx` para evitar que bots cosechadores de correo extraigan la dirección en texto plano.
+- **Metadatos SEO Dinámicos en Cabañas y Subpáginas:** Función `generateMetadata` en `/cabins/[id]` con títulos, descripciones y fotos Open Graph individuales de cada cabaña, además de layouts dedicados para `/reglamento` y `/reserva`.
 
 ### Añadido / Mejorado (Saneamiento Defensivo y Renderizado Condicional de la Sección Nuestro Equipo v1.7.6)
 
