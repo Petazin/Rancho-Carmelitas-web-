@@ -137,17 +137,17 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         return;
       }
 
-      // 2. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo
-      const { data: colisiones, error: colError } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('cabin_id', cabin.id)
-        .neq('status', 'Cancelada')
-        .or(`and(check_in.lt.${checkOut},check_out.gt.${checkIn})`);
+      // 2. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo mediante RPC segura
+      const { data: hasOverlap, error: colError } = await supabase
+        .rpc('check_dates_overlap', {
+          p_cabin_id: cabin.id,
+          p_check_in: checkIn,
+          p_check_out: checkOut
+        });
 
       if (colError) throw colError;
 
-      if (colisiones && colisiones.length > 0) {
+      if (hasOverlap) {
         setConflictError('Lo sentimos, alguien acaba de reservar estas fechas hace un momento. Por favor vuelve atrás y elige otras fechas.');
         setIsLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -171,50 +171,39 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         return;
       }
 
-      // 4. INSERTAR EN DB (Estado Inicial Pendiente)
+      // 4. INSERTAR EN DB (Estado Inicial Pendiente mediante RPC Segura)
       let finalTravelReason = motivoViaje === 'otro' ? `Otro: ${specialRequests}` : motivoViaje;
       
       if (requiresInvoice) {
         finalTravelReason += ` | DATOS FACTURA: RUT: ${invoiceRut}, Razón Social: ${invoiceName}, Giro: ${invoiceGiro}`;
       }
 
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert([
-          {
-            cabin_id: cabin.id,
-            guest_name: guestName,
-            guest_email: guestEmail,
-            guest_phone: guestPhone,
-            guest_rut: guestRut,
-            vehicle_plate: vehiclePlate || null,
-            guest_nationality: guestNationality || null,
-            guest_preferences: guestPreferences || null,
-            guest_birthdate: guestBirthdate || null,
-            check_in: checkIn,
-            check_out: checkOut,
-            adults,
-            children,
-            children_ages: hasChildren ? childrenAges : null,
-            travel_reason: finalTravelReason,
-            special_requests: null,
-            requires_invoice: requiresInvoice,
-            total_price: totalConImpuestos,
-            extra_guests_cost: extraCostTotal,
-            payment_amount: null,
-            payment_reference: null,
-            confirmed_at: null,
-            confirmed_by: null,
-            status: 'Pendiente'
-          }
-        ])
-        .select();
+      const { data: bookingId, error } = await supabase
+        .rpc('create_public_booking', {
+          p_cabin_id: cabin.id,
+          p_guest_name: guestName,
+          p_guest_email: guestEmail,
+          p_guest_phone: guestPhone,
+          p_guest_rut: guestRut,
+          p_vehicle_plate: vehiclePlate || null,
+          p_guest_nationality: guestNationality || null,
+          p_guest_preferences: guestPreferences || null,
+          p_guest_birthdate: guestBirthdate || null,
+          p_check_in: checkIn,
+          p_check_out: checkOut,
+          p_adults: adults,
+          p_children: children,
+          p_children_ages: (hasChildren && childrenAges && childrenAges.trim()) ? childrenAges.trim() : null,
+          p_travel_reason: finalTravelReason,
+          p_requires_invoice: requiresInvoice,
+          p_total_price: totalConImpuestos,
+          p_extra_guests_cost: extraCostTotal
+        });
 
-      if (error || !data || data.length === 0) {
+      if (error || !bookingId) {
           throw new Error(error?.message || 'Error desconocido al guardar en base de datos.');
       }
 
-      const bookingId = data[0].id;
       createdBookingId = bookingId;
 
       // 5. FLUJO SEGÚN MÉTODO DE PAGO
@@ -768,7 +757,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
             />
             <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
               <span className="font-bold text-gray-900 block text-sm mb-1 flex items-center justify-between">
-                <span>Aceptación Obligatoria de Reglamento General y Normas de Piscina (*)</span>
+                <span>Aceptación Obligatoria de Reglamento y Privacidad de Datos (*)</span>
                 {rulesError && (
                   <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md uppercase tracking-wider">
                     Falta Aceptar
@@ -786,7 +775,16 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
               >
                 Reglamento General de Cabañas y Normas de Piscina
               </button>{' '}
-              de Rancho Carmelitas, comprometiéndome a su cumplimiento y declarando conocer la prohibición de mascotas, música exterior y condiciones de uso de áreas comunes.
+              y la{' '}
+              <a
+                href="/privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-emerald-700 underline hover:text-emerald-900"
+              >
+                Política de Tratamiento y Privacidad de Datos
+              </a>{' '}
+              de Rancho Carmelitas, autorizando el uso de mis datos de contacto exclusivamente para la gestión y resguardo de mi estadía conforme a la Ley N° 19.628.
             </div>
           </label>
         </div>

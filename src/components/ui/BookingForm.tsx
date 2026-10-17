@@ -41,12 +41,9 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
     async function fetchData() {
       setIsChecking(true);
       
-      // Cargar reservas
+      // Cargar reservas mediante función RPC segura (sin exponer datos personales de clientes)
       const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select('check_in, check_out')
-        .eq('cabin_id', cabinId)
-        .neq('status', 'Cancelada');
+        .rpc('get_occupied_dates', { p_cabin_id: cabinId });
       
       // Cargar cierres (individuales y totales)
       const { data: closuresData } = await supabase
@@ -246,9 +243,10 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
                 <button 
                   type="button"
                   onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-[#11d442] cursor-pointer"
+                  aria-label="Ver mes anterior"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  <svg className="w-5 h-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <div className="font-bold text-gray-900 capitalize">
                   {currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
@@ -256,9 +254,10 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
                 <button 
                   type="button"
                   onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-[#11d442] cursor-pointer"
+                  aria-label="Ver mes siguiente"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  <svg className="w-5 h-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
             </div>
             <div className="grid grid-cols-7 mb-2">

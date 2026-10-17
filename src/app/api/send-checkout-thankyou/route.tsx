@@ -3,6 +3,7 @@ import { CheckoutThankYouTemplate } from '@/components/emails/CheckoutThankYouTe
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import React from 'react';
+import { isStaffOrAdmin } from '@/lib/server-auth';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -14,6 +15,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
+    // Blindaje de seguridad: exigir sesión activa de administrador o staff
+    if (!await isStaffOrAdmin()) {
+      return NextResponse.json({ error: 'No autorizado para enviar agradecimiento de check-out' }, { status: 401 });
+    }
+
     const body = await req.json();
     
     if (!process.env.RESEND_API_KEY) {
@@ -30,8 +36,19 @@ export async function POST(req: Request) {
       bookingId 
     } = body;
 
-    if (!guestEmail) {
-      return NextResponse.json({ error: 'Falta el correo del huésped' }, { status: 400 });
+    if (!guestEmail || !bookingId) {
+      return NextResponse.json({ error: 'Faltan parámetros de la reserva' }, { status: 400 });
+    }
+
+    // Validar que la reserva realmente exista en la base de datos
+    const { data: booking, error: bError } = await supabaseAdmin
+      .from('bookings')
+      .select('id, guest_email')
+      .eq('id', bookingId)
+      .single();
+
+    if (bError || !booking) {
+      return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
     }
 
     // Leer datos de la empresa desde Supabase settings

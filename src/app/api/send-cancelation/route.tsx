@@ -3,6 +3,7 @@ import { CancelationEmailTemplate } from '@/components/emails/CancelationTemplat
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import React from 'react';
+import { isStaffOrAdmin } from '@/lib/server-auth';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -14,6 +15,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
+    // Blindaje de seguridad: exigir sesión de personal autorizado (admin/staff)
+    if (!await isStaffOrAdmin()) {
+      return NextResponse.json({ error: 'No autorizado para despachar cancelaciones' }, { status: 401 });
+    }
+
     const body = await req.json();
     
     if (!process.env.RESEND_API_KEY) {

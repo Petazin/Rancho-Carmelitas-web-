@@ -488,6 +488,7 @@ export default async function Home() {
               <a href="#cabins" className="hover:text-white transition-colors">Cabañas</a>
               <a href="#faq" className="hover:text-white transition-colors">Preguntas Frecuentes</a>
               <Link href="/reglamento" className="hover:text-white transition-colors">Reglamento</Link>
+              <Link href="/privacidad" className="hover:text-white transition-colors">Privacidad</Link>
               <a href="https://www.instagram.com/ranchocarmelitas/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a>
               <a href="https://www.facebook.com/rancho.c.pullally?mibextid=ZbWKwL" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a>
               <a href="https://maps.app.goo.gl/6W1fhgChaMWaQzbK8" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Google Maps</a>

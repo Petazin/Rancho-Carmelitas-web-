@@ -32,6 +32,25 @@ export async function POST(req: Request) {
 
     const { guestName, guestEmail, cabinName, checkIn, checkOut, totalPrice, bookingId } = body;
 
+    if (!bookingId || !guestEmail) {
+      return NextResponse.json({ error: 'Faltan parámetros obligatorios de la reserva' }, { status: 400 });
+    }
+
+    // Blindaje de seguridad: Validar que la reserva exista en Supabase y que el email coincida exactamente
+    const { data: booking, error: bError } = await supabaseAdmin
+      .from('bookings')
+      .select('id, guest_email, status')
+      .eq('id', bookingId)
+      .single();
+
+    if (bError || !booking) {
+      return NextResponse.json({ error: 'Reserva no encontrada en la base de datos' }, { status: 404 });
+    }
+
+    if (booking.guest_email.toLowerCase().trim() !== guestEmail.toLowerCase().trim()) {
+      return NextResponse.json({ error: 'El correo electrónico no coincide con la reserva registrada' }, { status: 403 });
+    }
+
     // Leer datos de la empresa y configuración de correo desde la base de datos (settings)
     const { data: settingsData } = await supabaseAdmin
       .from('settings')

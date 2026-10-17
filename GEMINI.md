@@ -37,6 +37,17 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 
 El sistema ahora soporta:
 
+- **Suite Integral de Blindaje de Seguridad y Privacidad (v1.9.0):**
+  - **Blindaje de Supabase Row Level Security (RLS):** Eliminación total del acceso permisivo `USING (true)` en la tabla `bookings` para usuarios anónimos (`anon`). Los datos personales de huéspedes (RUT/Pasaporte, patentes de vehículos, teléfonos, correos y registros financieros) quedan 100% inaccesibles para visitantes o bots desde la consola web.
+  - **Funciones RPC Protegidas en Servidor:**
+    - `get_occupied_dates(p_cabin_id)`: Consulta segura de disponibilidad que retorna exclusivamente rangos de fechas (`check_in`, `check_out`) sin exponer identidades ni datos sensibles.
+    - `check_dates_overlap(p_cabin_id, check_in, check_out)`: Verificación atómica de colisiones para evitar overbookings de último segundo.
+    - `create_public_booking(...)`: Inserción atómica y segura de reservas con conversión nativa de `children_ages` a `INTEGER[]` (`integer[]`).
+  - **Protección de Endpoints de Correo (Resend):**
+    - Autenticación administrativa obligatoria (`isStaffOrAdmin()`) en `/api/send-cancelation` y `/api/send-checkout-thankyou` (responde `401 Unauthorized` si no hay sesión).
+    - Verificación estricta de base de datos en `/api/send-confirmation` y `/api/send-payment-confirmation`, validando que el `bookingId` exista y coincida con el email del titular antes de despachar emails.
+  - **Marco Legal y Política de Privacidad (Ley N° 19.628):** Creación de la página `/privacidad` con directrices oficiales de tratamiento, finalidad exclusiva y seguridad financiera; integración de checkbox legal obligatorio en `CheckoutForm.tsx` con enlaces a políticas y reglamento.
+  - **Accesibilidad Web (WCAG 2.1):** Incorporación de atributos `aria-label` descriptivos y foco accesible por teclado en los botones de navegación del calendario interactivo en `BookingForm.tsx`.
 - **Fotografía Real Panorámica para Portada Open Graph y Redes Sociales (v1.8.1):**
   - **Sustitución de Tarjeta Social por Fotografía Real:** Reemplazo de portadas preliminares por la fotografía panorámica horizontal de la piscina familiar y cabañas (`public/og-image.jpg` y `public/og-image.png` en ratio 1.91:1 / 1200x630 px) para generar previsualizaciones ricas y atractivas en WhatsApp, Meta (Facebook e Instagram) y Twitter/X.
   - **Busting de Caché en CDN de Meta:** Cambio de extensión a `/og-image.jpg` en los metadatos de `layout.tsx` para forzar a los scrapers de Meta a actualizar su caché perimetral sin demoras.
