@@ -1,5 +1,54 @@
 # Changelog - Rancho Carmelitas
 
+## [2.1.0] - 2026-11-21
+
+### Añadido / Optimizado (Arriendo de Recinto Completo 8h: Fotos Dinámicas, Pestañas en Landing y Blindaje Zero-Trust v2.1.0)
+
+- **Fase 1 (Seguridad y Base de Datos):**
+  - Columna `category TEXT DEFAULT 'general'` en la tabla `landing_gallery` para segregar fotos de cabañas (`general`) de eventos (`recinto`).
+  - Sembrado e inicialización de parámetros en la tabla `settings`: `venue_pricing_tiers`, `venue_bouncy_castle_fee`, `venue_deposit_percentage` y `venue_max_capacity`.
+  - Triggers antiruido para `settings` y `landing_gallery` hacia `audit_logs` con condición `WHEN (OLD.* IS DISTINCT FROM NEW.*)`, garantizando cero registros duplicados en guardados masivos.
+  - Función RPC `create_public_event_quote` blindada con modelo **Zero-Trust Client**: cálculo y validación autoritativa de precios en PostgreSQL, impidiendo inyección de montos fraudulentos desde el cliente.
+- **Fase 2 (Rediseño Modular de `/admin/landing` y Galería de Recinto):**
+  - Implementación de la barra superior de navegación por pestañas en `/admin/landing` estilo `/admin/reservas`: `🌌 Hero & Portada`, `🖼️ Galería Portada`, `🎉 Galería Recinto (8h)`, `📋 Textos & Reglas`, `👥 Equipo`, `📍 Contacto & Ubicación`, eliminando por completo el scroll vertical excesivo.
+  - Montaje persistente de formularios con CSS `hidden` para evitar la pérdida silenciosa de datos no guardados al alternar entre pestañas.
+  - Módulo de subida de fotos de recinto a `landing/recinto/`, reordenamiento con flechas ▲▼, edición de títulos y eliminación con purga limpia en Supabase Storage (sanitización de query strings).
+  - Integración dinámica de fotos en la sección "Instalaciones Reales" y Hero de `/recinto-completo` con fallback defensivo elegante.
+- **Mailing y Excepciones:**
+  - Envío automático de confirmaciones por correo en reservas manuales y supresión de alertas de conflicto para excepciones conversadas en fechas de eventos.
+
+## [2.0.0] - 2026-11-17
+
+### Añadido / Transformación Mayor (Sistema de Arriendo de Recinto Completo, Auditoría Forense EGM y Reconstrucción Documental 360° v2.0.0)
+
+- **Módulo Integral de Arriendo de Recinto Completo (Eventos Diurnos):**
+  - Modelo de negocio para eventos diurnos (8 horas) con uso exclusivo de las 4 cabañas y áreas comunes (piscina, quincho, áreas verdes).
+  - Cotizador y checkout dedicado (`/recinto-completo`, `/recinto-completo/cotizar`, `/recinto-completo/checkout`, `/recinto-completo/pago`).
+  - Lógica de precios por tramos de asistentes: Tramo 1 (hasta 40 personas: $450.000), Tramo 2 (hasta 60 personas: $650.000), personas adicionales ($10.000/persona hasta 100 personas máx.), inflables ($40.000) y exención total para menores de 3 años.
+  - Gestión operativa en PMS (`/admin/recinto-completo`) con estados (`solicitada`, `aprobada`, `rechazada`, `confirmada`), registro de pagos y bloqueo automático total de todas las cabañas en `cabin_closures` al confirmarse el evento.
+  - Sistema de cotización con expiración a 48h y notificaciones multicanal (correo y WhatsApp).
+- **Reconstrucción Integral de la Biblioteca Documental (`/documentacion`):**
+  - **Portal Maestro y Glosario:** Creación de [`documentacion/README.md`](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/README.md) con mapa interactivo y glosario terminológico.
+  - **Documentación Técnica (8 Runbooks Exhaustivos):** Arquitectura, Modelo de Datos y ER, Seguridad RLS y Auth, APIs y Route Handlers, Pasarela Mercado Pago, Sistema Mailing Resend, Sistema Recinto Completo e Infraestructura/DevOps.
+  - **Manual de Usuario y Operativo PMS (14 Guías Detalladas):** Cubriendo todos los roles y módulos del PMS (Dashboard, Cabañas, Cierres, Reservas, Recinto Completo, Housekeeping, Contabilidad/SII, Canales, Equipo, Auditoría, Landing, Desarrollo y Acceso).
+  - **Auditoría Forense EGM:** Informe de 20 inconsistencias detectadas con plan de acción priorizado en 5 fases (`documentacion/auditoria-egm/`).
+
+## [1.9.0] - 2026-10-25
+
+### Añadido / Blindaje de Seguridad (Suite Integral de Blindaje RLS, Privacidad de Datos y Accesibilidad v1.9.0)
+
+- **Blindaje Total de Row Level Security (RLS) en Supabase:**
+  - Revocación del acceso permisivo público (`USING true`) en la tabla `bookings` para usuarios anónimos (`anon`), protegiendo RUT, pasaportes, teléfonos, patentes y registros contables de extracciones indebidas.
+  - Implementación de funciones RPC con `SECURITY DEFINER` para operaciones públicas seguras: `get_occupied_dates`, `check_dates_overlap` y `create_public_booking` (con conversión estricta a `integer[]` para edades de niños).
+- **Protección de Endpoints de Correo (Next.js App Router & Resend):**
+  - Autenticación administrativa mandatoria (`isStaffOrAdmin()`) en `/api/send-cancelation` y `/api/send-checkout-thankyou`.
+  - Verificación estricta de propiedad y existencia de reserva en `/api/send-confirmation` y `/api/send-payment-confirmation`.
+- **Marco Legal y Cumplimiento de Privacidad (Ley N° 19.628):**
+  - Portal institucional `/privacidad` con directrices de tratamiento, finalidad exclusiva y seguridad de datos.
+  - Checkbox legal obligatorio en checkout vinculado a políticas y reglamento.
+- **Accesibilidad Web (WCAG 2.1):**
+  - Incorporación de atributos `aria-label` descriptivos y navegación por teclado en el selector de fechas de `BookingForm.tsx`.
+
 ## [1.8.1] - 2026-10-11
 
 ### Añadido / Mejorado (Fotografía Real para Portada Open Graph, Redes Sociales y Galería v1.8.1)

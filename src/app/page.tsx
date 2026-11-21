@@ -221,6 +221,9 @@ export default async function Home() {
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="#cabins" className="hover:text-[#11d442] transition-colors">Cabañas</a>
+            <Link href="/recinto-completo" className="text-[#11d442] font-semibold hover:text-[#0fb839] transition-colors flex items-center gap-1">
+              <span>🎉 Recinto Completo</span>
+            </Link>
             <a href="#gallery" className="hover:text-[#11d442] transition-colors">Galería</a>
             {teamMembers.length > 0 && (
               <a href="#team" className="hover:text-[#11d442] transition-colors">Equipo</a>
@@ -276,10 +279,12 @@ export default async function Home() {
               <a href="#cabins" className="btn-primary text-center text-lg px-8 py-4 w-full sm:w-auto">
                 Ver Disponibilidad
               </a>
+              <Link href="/recinto-completo" className="bg-[#11d442]/20 text-white border border-[#11d442]/50 hover:bg-[#11d442]/30 transition-colors backdrop-blur-sm rounded-xl px-8 py-4 font-semibold w-full sm:w-auto text-center flex items-center justify-center gap-2">
+                <span>🎉 Recinto Completo (8h)</span>
+              </Link>
               <a href="#gallery" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors backdrop-blur-sm rounded-xl px-8 py-4 font-semibold w-full sm:w-auto text-center">
                 Ver Instalaciones
               </a>
-
             </div>
           </div>
         </section>
@@ -314,6 +319,43 @@ export default async function Home() {
                   <p>Aún no hay cabañas publicadas en el sistema.</p>
                 </div>
               )}
+            </div>
+
+            {/* Banner Destacado: Arriendo Exclusivo de Recinto Completo */}
+            <div className="mt-16 bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 md:p-12 text-white shadow-xl relative overflow-hidden border border-gray-700/50">
+              <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-20 pointer-events-none hidden lg:block">
+                <Image
+                  src="/gallery/piscina_principal.jpg"
+                  alt="Piscina Rancho Carmelitas"
+                  fill
+                  className="object-cover object-center"
+                />
+              </div>
+              <div className="relative z-10 max-w-2xl">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#11d442] bg-[#11d442]/10 border border-[#11d442]/30 px-3.5 py-1.5 rounded-full inline-block mb-4">
+                  Modalidad Especial para Grupos
+                </span>
+                <h3 className="text-2xl md:text-3xl font-extrabold mb-3 text-white">
+                  ¿Buscas el Rancho exclusivo para tu Paseo de Curso o Celebración?
+                </h3>
+                <p className="text-gray-300 text-sm md:text-base mb-6 leading-relaxed">
+                  Arrienda el recinto completo por <strong>8 horas seguidas</strong> (hasta las 20:00 hrs). Incluye piscina principal, áreas verdes, quincho cerrado equipado, mesas y sillas para 70 personas, taca-taca, ping-pong y air hockey. ¡Sin otros huéspedes en el lugar!
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <Link
+                    href="/recinto-completo"
+                    className="w-full sm:w-auto btn-primary text-center px-6 py-3.5 font-bold text-sm shadow-lg hover:scale-105 transition-transform"
+                  >
+                    Cotizar Recinto Completo
+                  </Link>
+                  <Link
+                    href="/recinto-completo#cotizador"
+                    className="w-full sm:w-auto text-center px-6 py-3.5 font-semibold text-sm text-gray-300 hover:text-white transition-colors"
+                  >
+                    Ver Tarifas por Tramos →
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -486,6 +528,7 @@ export default async function Home() {
             </div>
             <div className="flex flex-wrap justify-center gap-6">
               <a href="#cabins" className="hover:text-white transition-colors">Cabañas</a>
+              <Link href="/recinto-completo" className="hover:text-white transition-colors font-medium text-[#11d442]">Recinto Completo</Link>
               <a href="#faq" className="hover:text-white transition-colors">Preguntas Frecuentes</a>
               <Link href="/reglamento" className="hover:text-white transition-colors">Reglamento</Link>
               <Link href="/privacidad" className="hover:text-white transition-colors">Privacidad</Link>

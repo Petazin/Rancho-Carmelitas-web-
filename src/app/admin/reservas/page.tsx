@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/image-compress';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AdminEventQuotes } from '@/components/admin/AdminEventQuotes';
 
 interface Booking {
   id: string;
@@ -420,10 +421,28 @@ function ReservasContent() {
     });
   };
 
-  const isDateClosedAdmin = (dateStr: string) => {
-    return existingClosuresForSelectedCabin.some(c => {
-      return dateStr >= c.start_date && dateStr <= c.end_date;
+  const getPhysicalClosure = (dateStr: string) => {
+    return existingClosuresForSelectedCabin.find(c => {
+      const inRange = dateStr >= c.start_date && dateStr <= c.end_date;
+      return inRange && !c.reason?.toLowerCase().includes('evento exclusivo recinto');
     });
+  };
+
+  const getVenueEventClosure = (dateStr: string) => {
+    return existingClosuresForSelectedCabin.find(c => {
+      const inRange = dateStr >= c.start_date && dateStr <= c.end_date;
+      return inRange && c.reason?.toLowerCase().includes('evento exclusivo recinto');
+    });
+  };
+
+  // Cierre físico estricto (mantención/reparación de cabaña)
+  const isDateClosedAdmin = (dateStr: string) => {
+    return !!getPhysicalClosure(dateStr);
+  };
+
+  // Evento diurno de recinto completo (bloqueo público, pero autorizable en PMS bajo excepción conversada)
+  const isDateVenueEventAdmin = (dateStr: string) => {
+    return !isDateClosedAdmin(dateStr) && !!getVenueEventClosure(dateStr);
   };
 
   const getClosureReasonAdmin = (dateStr: string) => {
@@ -441,7 +460,8 @@ function ReservasContent() {
   };
 
   const handleDateClickAdmin = (dateStr: string) => {
-    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return; // Ignorar ocupados y cerrados
+    // Solo bloquea clic si ya está reservada por otro huésped o tiene cierre físico de mantención
+    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return;
 
     const checkIn = createForm.check_in;
     const checkOut = createForm.check_out;
@@ -457,7 +477,7 @@ function ReservasContent() {
         // Clic en el mismo día
         handleCreateFormChange({ check_in: '', check_out: '' });
       } else {
-        // Verificar solapamiento en el medio (reservas o cierres)
+        // Verificar solapamiento en el medio (reservas o cierres físicos)
         const inDate = new Date(checkIn);
         const outDate = new Date(dateStr);
         let hasOverlap = false;
@@ -473,6 +493,8 @@ function ReservasContent() {
 
         if (!hasOverlap) {
             for (const c of existingClosuresForSelectedCabin) {
+                // Si es un evento de recinto, el administrador puede pasar por encima (excepción conversada)
+                if (c.reason?.toLowerCase().includes('evento exclusivo recinto')) continue;
                 const cIn = new Date(c.start_date);
                 const cOut = new Date(c.end_date);
                 if (inDate <= cOut && outDate >= cIn) {
@@ -511,7 +533,9 @@ function ReservasContent() {
         const isPast = dateStr < todayStr;
         const booked = isDateBookedAdmin(dateStr);
         const closed = isDateClosedAdmin(dateStr);
-        const closureReason = closed ? getClosureReasonAdmin(dateStr) : '';
+        const venueEvent = getVenueEventClosure(dateStr);
+        const isVenueEvent = !closed && !booked && !!venueEvent;
+        const closureReason = closed ? getClosureReasonAdmin(dateStr) : venueEvent ? venueEvent.reason : '';
         const isCheckIn = createForm.check_in === dateStr;
         const isCheckOut = createForm.check_out === dateStr;
         const inRange = isDateInSelectedRangeAdmin(dateStr);
@@ -528,6 +552,8 @@ function ReservasContent() {
             cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
         } else if (inRange) {
             cellClasses += "bg-[#11d442]/10 text-[#11d442]";
+        } else if (isVenueEvent) {
+            cellClasses += "bg-purple-100 text-purple-900 border-2 border-dashed border-purple-400 hover:bg-purple-200 font-extrabold shadow-xs";
         } else {
             cellClasses += "text-gray-700 hover:bg-gray-100";
         }
@@ -553,9 +579,12 @@ function ReservasContent() {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
-                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
+                  title={isVenueEvent ? `⚠️ Evento de Recinto: ${closureReason}. Haz clic para autorizar estadía bajo Excepción Conversada.` : closed ? `Cerrado por: ${closureReason}` : undefined}
                 >
                   {d}
+                  {isVenueEvent && !isCheckIn && !isCheckOut && (
+                    <span className="absolute bottom-0.5 w-1 h-1 bg-purple-700 rounded-full" />
+                  )}
                 </button>
             </div>
         );
@@ -590,10 +619,11 @@ function ReservasContent() {
             <div className="grid grid-cols-7 gap-y-1">
                 {days}
             </div>
-            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
+            <div className="flex flex-wrap gap-3 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Reservado</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado Físico</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-200 border border-purple-400"></span> 🟣 Evento Recinto (Permite Excepción)</span>
             </div>
         </div>
     );
@@ -610,7 +640,7 @@ function ReservasContent() {
   };
 
   const handleDateClickEditAdmin = (dateStr: string) => {
-    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return; // Ignorar ocupados y cerrados
+    if (isDateBookedAdmin(dateStr) || isDateClosedAdmin(dateStr)) return; // Solo ignora ocupados y cierres físicos
 
     const checkIn = editForm.check_in;
     const checkOut = editForm.check_out;
@@ -626,7 +656,7 @@ function ReservasContent() {
         // Clic en el mismo día
         handleEditFormChange({ check_in: '', check_out: '' });
       } else {
-        // Verificar solapamiento en el medio (reservas o cierres)
+        // Verificar solapamiento en el medio (reservas o cierres físicos)
         const inDate = new Date(checkIn);
         const outDate = new Date(dateStr);
         let hasOverlap = false;
@@ -642,6 +672,7 @@ function ReservasContent() {
 
         if (!hasOverlap) {
             for (const c of existingClosuresForSelectedCabin) {
+                if (c.reason?.toLowerCase().includes('evento exclusivo recinto')) continue;
                 const cIn = new Date(c.start_date);
                 const cOut = new Date(c.end_date);
                 if (inDate <= cOut && outDate >= cIn) {
@@ -680,7 +711,9 @@ function ReservasContent() {
         const isPast = dateStr < todayStr;
         const booked = isDateBookedAdmin(dateStr);
         const closed = isDateClosedAdmin(dateStr);
-        const closureReason = closed ? getClosureReasonAdmin(dateStr) : '';
+        const venueEvent = getVenueEventClosure(dateStr);
+        const isVenueEvent = !closed && !booked && !!venueEvent;
+        const closureReason = closed ? getClosureReasonAdmin(dateStr) : venueEvent ? venueEvent.reason : '';
         const isCheckIn = editForm.check_in === dateStr;
         const isCheckOut = editForm.check_out === dateStr;
         const inRange = isDateInSelectedRangeEditAdmin(dateStr);
@@ -697,6 +730,8 @@ function ReservasContent() {
             cellClasses += "bg-[#11d442] text-white shadow-md z-10 font-bold";
         } else if (inRange) {
             cellClasses += "bg-[#11d442]/10 text-[#11d442]";
+        } else if (isVenueEvent) {
+            cellClasses += "bg-purple-100 text-purple-900 border-2 border-dashed border-purple-400 hover:bg-purple-200 font-extrabold shadow-xs";
         } else {
             cellClasses += "text-gray-700 hover:bg-gray-100";
         }
@@ -722,9 +757,12 @@ function ReservasContent() {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
-                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
+                  title={isVenueEvent ? `⚠️ Evento de Recinto: ${closureReason}. Haz clic para autorizar estadía bajo Excepción Conversada.` : closed ? `Cerrado por: ${closureReason}` : undefined}
                 >
                   {d}
+                  {isVenueEvent && !isCheckIn && !isCheckOut && (
+                    <span className="absolute bottom-0.5 w-1 h-1 bg-purple-700 rounded-full" />
+                  )}
                 </button>
             </div>
         );
@@ -759,10 +797,11 @@ function ReservasContent() {
             <div className="grid grid-cols-7 gap-y-1">
                 {days}
             </div>
-            <div className="flex gap-4 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
+            <div className="flex flex-wrap gap-3 mt-4 text-[9px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100 animate-in fade-in">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> Seleccionado</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></span> Reservado</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-dashed border-gray-300"></span> Cerrado Físico</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-200 border border-purple-400"></span> 🟣 Evento Recinto (Permite Excepción)</span>
             </div>
         </div>
     );
@@ -941,6 +980,11 @@ function ReservasContent() {
       if (b.status === 'Cancelada') return;
 
       const matchingClosure = activeClosures.find((c: any) => {
+        // Los eventos de recinto no son cierres físicos de cabaña; son arriendos diurnos bajo excepción conversada
+        if (c.reason?.toLowerCase().includes('evento exclusivo recinto')) {
+          return false;
+        }
+
         const bIn = new Date(b.check_in);
         const bOut = new Date(b.check_out);
         const cIn = new Date(c.start_date);
@@ -1565,7 +1609,7 @@ function ReservasContent() {
   const saveEdit = async () => {
     if (!editingBooking) return;
 
-    // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES AL EDITAR
+    // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES CON SOPORTE DE EXCEPCIÓN CONVERSADA
     const { data: cierresCol, error: cierresError } = await supabase
       .from('cabin_closures')
       .select('reason')
@@ -1575,9 +1619,21 @@ function ReservasContent() {
 
     if (cierresError) throw cierresError;
 
+    let exceptionApproved = false;
     if (cierresCol && cierresCol.length > 0) {
-      alert(`❌ Error Absoluto: No se puede guardar la modificación debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
-      return;
+      const isVenueEvent = cierresCol.some(c => c.reason?.toLowerCase().includes('evento exclusivo recinto'));
+      if (isVenueEvent) {
+        const confirmException = window.confirm(
+          `⚠️ ¡ATENCIÓN DE EXCEPCIÓN CONVERSADA!\n\n` +
+          `En las fechas seleccionadas hay un EVENTO DE RECINTO COMPLETO:\n"${cierresCol[0].reason}".\n\n` +
+          `¿Confirmas que esta excepción fue acordada y autorizada con el cliente para permitir el guardado?`
+        );
+        if (!confirmException) return;
+        exceptionApproved = true;
+      } else {
+        alert(`❌ Error Absoluto: No se puede guardar la modificación debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
+        return;
+      }
     }
 
     // 2. VALIDACIÓN DE CAPACIDAD MÁXIMA
@@ -1605,6 +1661,9 @@ function ReservasContent() {
     const precioBaseOriginal = Number(editForm.precio_base) || 0;
     let calculatedDiscount = 0;
     let finalNotes = editForm.admin_notes || '';
+    if (exceptionApproved && cierresCol && cierresCol[0]) {
+      finalNotes = `[EXCEPCIÓN AUTORIZADA: Huésped aceptó estadía durante Evento de Recinto (${cierresCol[0].reason})] ${finalNotes}`.trim();
+    }
 
     // Glosa explicativa de adicionales en notas si aplica
     const extraGuestsCost = extraDetails ? extraDetails.totalExtraCost : 0;
@@ -1710,7 +1769,7 @@ function ReservasContent() {
   const createBooking = async () => {
     setIsCreating(true);
     try {
-      // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES
+      // 1. VALIDACIÓN ESTRICTA DE CIERRES TEMPORALES CON SOPORTE DE EXCEPCIÓN CONVERSADA
       const { data: cierresCol, error: cierresError } = await supabase
         .from('cabin_closures')
         .select('reason')
@@ -1720,10 +1779,26 @@ function ReservasContent() {
 
       if (cierresError) throw cierresError;
 
+      let exceptionApproved = false;
       if (cierresCol && cierresCol.length > 0) {
-        alert(`❌ Error Absoluto: No se puede guardar la reserva debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
-        setIsCreating(false);
-        return;
+        const isVenueEvent = cierresCol.some(c => c.reason?.toLowerCase().includes('evento exclusivo recinto'));
+        if (isVenueEvent) {
+          const confirmException = window.confirm(
+            `⚠️ ¡ATENCIÓN DE EXCEPCIÓN CONVERSADA!\n\n` +
+            `En las fechas seleccionadas hay un EVENTO DE RECINTO COMPLETO:\n"${cierresCol[0].reason}".\n\n` +
+            `Según la directiva del dueño, las cabañas no se arriendan al público general salvo EXCEPCIONES CONVERSADAS explícitamente con el cliente (quien acepta la presencia del paseo/evento diurno).\n\n` +
+            `¿Confirmas que esta excepción fue acordada y autorizada con el cliente para permitir el guardado?`
+          );
+          if (!confirmException) {
+            setIsCreating(false);
+            return;
+          }
+          exceptionApproved = true;
+        } else {
+          alert(`❌ Error Absoluto: No se puede guardar la reserva debido a que la cabaña se encuentra bajo un CIERRE TEMPORAL programado por: "${cierresCol[0].reason}".`);
+          setIsCreating(false);
+          return;
+        }
       }
 
       // 2. VALIDACIÓN DE CAPACIDAD MÁXIMA
@@ -1752,6 +1827,9 @@ function ReservasContent() {
       const totalPriceNum = Number(createForm.total_price) || 0;
       let calculatedDiscount = 0;
       let finalNotes = createForm.admin_notes || '';
+      if (exceptionApproved && cierresCol && cierresCol[0]) {
+        finalNotes = `[EXCEPCIÓN AUTORIZADA: Huésped aceptó estadía durante Evento de Recinto (${cierresCol[0].reason})] ${finalNotes}`.trim();
+      }
 
       const extraGuestsCost = extraDetails ? extraDetails.totalExtraCost : 0;
       if (extraDetails && extraDetails.extraGuests > 0) {
@@ -1827,6 +1905,27 @@ function ReservasContent() {
 
       if (error) throw error;
 
+      // Despachar correos de notificación automática (confirmación al cliente + alerta a la administración)
+      if (data?.guest_email) {
+        try {
+          fetch('/api/send-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guestName: data.guest_name,
+              guestEmail: data.guest_email,
+              cabinName: data.cabin?.name || 'Cabaña Rancho Carmelitas',
+              checkIn: data.check_in,
+              checkOut: data.check_out,
+              totalPrice: data.total_price,
+              bookingId: data.id
+            })
+          }).catch(mailErr => console.warn('[createBooking] Advertencia en segundo plano enviando correos:', mailErr));
+        } catch (mailErr) {
+          console.warn('[createBooking] Error enviando correo de confirmación:', mailErr);
+        }
+      }
+
       setBookings([data, ...bookings]);
       setCreateModalOpen(false);
     } catch (err: any) {
@@ -1901,11 +2000,23 @@ function ReservasContent() {
 
 
 
-  const [activeTab, setActiveTab] = useState<'todas' | 'conflictos' | 'contabilidad'>('todas');
+  const initialTab = searchParams.get('tab') === 'eventos' ? 'eventos' : 'todas';
+  const [activeTab, setActiveTab] = useState<'todas' | 'conflictos' | 'contabilidad' | 'eventos'>(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'eventos' || tab === 'conflictos' || tab === 'contabilidad' || tab === 'todas') {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
 
   const checkHasClosureConflict = (b: Booking) => {
     if (b.status === 'Cancelada') return false;
     return closures.some((c: any) => {
+      // Los eventos de recinto no son cierres físicos de cabaña; son arriendos diurnos bajo excepción conversada
+      if (c.reason?.toLowerCase().includes('evento exclusivo recinto')) {
+        return false;
+      }
       const bIn = new Date(b.check_in);
       const bOut = new Date(b.check_out);
       const cIn = new Date(c.start_date);
@@ -2125,6 +2236,13 @@ function ReservasContent() {
           <span>📊 Reporte Financiero & SII</span>
           {activeTab === 'contabilidad' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
         </button>
+        <button
+          onClick={() => setActiveTab('eventos')}
+          className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'eventos' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          <span>🎉 Arriendos de Recinto (8h)</span>
+          {activeTab === 'eventos' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-full" />}
+        </button>
       </div>
 
       {activeTab === 'contabilidad' ? (
@@ -2286,6 +2404,8 @@ function ReservasContent() {
             );
           })()}
         </div>
+      ) : activeTab === 'eventos' ? (
+        <AdminEventQuotes highlightId={searchParams.get('tab') === 'eventos' ? (searchParams.get('id') || undefined) : undefined} />
       ) : (
         <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -3612,6 +3732,31 @@ function ReservasContent() {
                       value={createForm.check_out}
                     />
                   </div>
+
+                  {/* Banner de Excepción Conversada de Recinto */}
+                  {(() => {
+                    const checkIn = createForm.check_in;
+                    const checkOut = createForm.check_out;
+                    if (!checkIn) return null;
+                    const eventClosure = existingClosuresForSelectedCabin.find(c => {
+                      const isVenue = c.reason?.toLowerCase().includes('evento exclusivo recinto');
+                      const effectiveCheckOut = checkOut || checkIn;
+                      const overlap = checkIn <= c.end_date && effectiveCheckOut >= c.start_date;
+                      return isVenue && overlap;
+                    });
+                    if (!eventClosure) return null;
+                    return (
+                      <div className="sm:col-span-2 p-3.5 bg-purple-50 border border-purple-200 rounded-2xl text-xs text-purple-950 space-y-1 animate-in fade-in">
+                        <div className="font-extrabold flex items-center gap-1.5 text-purple-900">
+                          <span>🟣</span> EXCEPCIÓN CONVERSADA DE RECINTO COMPLETO
+                        </div>
+                        <p className="text-[11px] leading-relaxed">
+                          La fecha seleccionada coincide con un Evento de Recinto: <strong>"{eventClosure.reason}"</strong>.
+                          Como administrador, puedes guardar esta reserva bajo <strong>Excepción Conversada</strong> acordada con el cliente (quien acepta la presencia del paseo/evento diurno). Al guardar, se dejará constancia en las notas.
+                        </p>
+                      </div>
+                    );
+                  })()}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5">Adultos *</label>
                     <input 

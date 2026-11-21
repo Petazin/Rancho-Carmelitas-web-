@@ -8,8 +8,23 @@ Este proyecto es una plataforma integral desarrollada con las últimas tecnolog�
 
 El diseño se basa en un concepto _Premium_, con uso intensivo de modulares CSS (Vanilla) y animaciones fluidas (Tipografía: Inter, Acentos: #11d442).
 
+## Biblioteca de Documentación Oficial (v2.0.0)
+
+El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente:
+
+*   📖 **[Portal Maestro de Documentación](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/README.md)**: Mapa general, glosario de términos y guía de navegación.
+*   🛠️ **[Documentación Técnica](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/tecnica/)**: 8 runbooks de arquitectura, bases de datos (ER), RLS, endpoints API, pasarela Mercado Pago, mailing Resend, recinto completo y DevOps.
+*   👥 **[Manual de Usuario y Operativo PMS](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/)**: 14 manuales funcionales para administradores, recepcionistas y personal de operaciones.
+*   🔍 **[Auditoría Forense EGM](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/auditoria-egm/)**: Informe de 20 inconsistencias detectadas y plan de acción priorizado en 5 fases.
+
 ## Características Principales
 
+*   **Arriendo de Recinto Completo 8h y Rediseño Modular de Landing (v2.1.0):**
+    *   **Pestañas en Administración (`/admin/landing`):** Navegación compacta por selectores horizontales (`Hero & Portada`, `Galería Portada`, `Galería Recinto`, `Textos & Reglas`, `Equipo`, `Contacto & Ubicación`), eliminando el scroll vertical con persistencia en memoria (CSS `hidden`).
+    *   **Galería Dinámica de Recinto:** Subida y gestión de fotos exclusivas para eventos con purga automática en Supabase Storage y visualización pública en `/recinto-completo` con fallback resiliente.
+    *   **Seguridad Financiera Zero-Trust:** Cálculo y validación autoritativa de montos en PostgreSQL en la RPC `create_public_event_quote`, impidiendo inyecciones de precios desde el cliente.
+    *   **Trazabilidad Limpia:** Triggers antiruido para `settings` y `landing_gallery` hacia `audit_logs`.
+*   **Sistema de Arriendo de Recinto Completo (v2.0.0):** Modelo de negocio para eventos diurnos (8 horas) con uso exclusivo de las 4 cabañas e instalaciones. Incluye cotizador paramétrico por tramos (40 y 60 personas), adicionales por persona e inflables, exención a menores de 3 años, pasarela de pago y bloqueo atómico de todas las cabañas en `cabin_closures` al confirmarse el evento.
 *   **Suite Integral de Blindaje de Seguridad, Privacidad de Datos y Accesibilidad Web (v1.9.0):** Cierre total de políticas RLS públicas permisivas (`USING true`) sobre la tabla de reservas en Supabase PostgreSQL. Consultas y registro de reservas mediante funciones RPC blindadas en el servidor (`get_occupied_dates`, `check_dates_overlap` y `create_public_booking` con casteo nativo a `integer[]`); protección de endpoints de correo en Next.js App Router (Resend) contra abuso de bots y cobros imprevistos de API; cumplimiento legal bajo la Ley N° 19.628 con portal institucional de `/privacidad` y checkbox legal en el checkout; y soporte de accesibilidad WCAG 2.1 con etiquetas ARIA en controles interactivos.
 *   **Fotografía Real Panorámica para Portada Open Graph, Redes Sociales y Galería (v1.8.1):** Sustitución de portadas previas por la imagen oficial panorámica de alta definición de la piscina familiar y cabañas (`og-image.jpg` y `og-image.png` en ratio 1.91:1 / 1200x630 px) para previsualizaciones impecables en WhatsApp, Meta (Facebook e Instagram) y Twitter/X. Incorporación de nuevas vistas de jardines y áreas verdes en la galería del sitio y fallback prioritario en el Hero banner.
 *   **Optimización Integral de SEO, Redes Sociales y Rendimiento Web (v1.8.0):** Implementación de Open Graph y Twitter Cards con imagen de portada oficial (`og-image.png` en 1200x630 px) para previsualizaciones en WhatsApp, Instagram y Facebook; generación automática de `sitemap.xml` con rastreo dinámico de cabañas y `robots.txt`; datos estructurados Schema.org (`LodgingBusiness` y `FAQPage`) para Google Maps y Google Rich Snippets; pantalla de error 404 personalizada branded (`not-found.tsx`); y aceleración de Largest Contentful Paint (LCP) en portada con Next.js `<Image fill priority />`.

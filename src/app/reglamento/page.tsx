@@ -1,11 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
+import { supabase } from '@/lib/supabase';
 
 export default function ReglamentoPage() {
   const [filter, setFilter] = useState<'all' | 'cabins' | 'pool'>('all');
+  const [whatsappNumber, setWhatsappNumber] = useState('56994168853');
+
+  useEffect(() => {
+    async function loadWhatsapp() {
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'whatsapp_number')
+          .maybeSingle();
+        if (data?.value) {
+          const clean = data.value.replace(/[^0-9]/g, '');
+          if (clean) setWhatsappNumber(clean);
+        }
+      } catch (e) {
+        console.warn('Error al cargar whatsapp_number:', e);
+      }
+    }
+    loadWhatsapp();
+  }, []);
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
@@ -381,13 +402,13 @@ export default function ReglamentoPage() {
             </p>
             <div className="pt-2 flex flex-wrap justify-center gap-4">
               <a
-                href="https://wa.me/56984012748?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20reglamento%20de%20Rancho%20Carmelitas"
+                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Hola, tengo una consulta sobre el reglamento de Rancho Carmelitas')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs"
               >
                 <span>💬</span>
-                <span>Contactar por WhatsApp (+56 9 8401 2748)</span>
+                <span>Contactar por WhatsApp</span>
               </a>
               <Link
                 href="/#cabins"

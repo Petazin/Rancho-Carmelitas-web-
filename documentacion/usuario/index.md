@@ -1,64 +1,43 @@
-# 🏡 Manual Funcional del PMS — Índice y Flujos Operativos
+# 📖 Manual de Usuario y Operaciones del PMS — Rancho Carmelitas
 
-Bienvenido al manual del usuario del PMS de **Rancho Carmelitas**. Este documento detalla la estructura lógica del sistema y el flujo de vida operativo de una reserva dentro del Rancho.
-
----
-
-## 🗺️ Mapa del Sitio del Panel de Administración
-
-El menú de navegación lateral del panel de administración está estructurado jerárquicamente de la siguiente forma:
-
-1. **📊 Dashboard (`/admin`):** Resumen visual rápido, métricas de ocupación del día, próximas llegadas inminentes y banners parpadeantes de overbookings o conflictos.
-2. **📅 Reservas (`/admin/reservas`):** Tabla centralizada de estancias, cotizador de reservas manuales, registro de abonos múltiples y Reporte Financiero & SII.
-3. **🏡 Cabañas (`/admin/cabanas`):** Catálogo de alojamientos, precios por noche, carga de fotos de portada principal e integración de la Galería Narrativa de Pullally.
-4. **👥 Usuarios (`/admin/usuarios`):** Registro del staff de colaboradores, invitaciones de acceso por correo y matriz interactiva de Roles & Permisos.
-5. **📜 Bitácora de Auditoría (`/admin/auditoria`):** Línea de tiempo que narra en lenguaje natural los cambios realizados por cada miembro del equipo (Logs).
-6. **🔌 Canales de Venta (`/admin/configuracion`):** Administrador de comisiones de plataformas de venta externas (Airbnb, Booking.com).
-7. **🌌 Gestión de Landing (`/admin/landing`):** Panel para editar los textos y fotos del Hero de la página pública, carrusel de momentos y Logotipo Oficial del Rancho.
-8. **⚙️ Configuraciones (`/admin/configuraciones`):** Contacto de WhatsApp, Dirección, RUT, Correo público y Comisión Administrativa por defecto.
-9. **🛡️ Gobernanza y Servidores (`/admin/infraestructura`):** Llavero seguro de contraseñas (Vault) y rotación de claves del servidor.
+**Dirigido a:** Administradores, Recepcionistas y Personal Operativo de Rancho Carmelitas  
+**Versión del Sistema:** v2.0.0 (Noviembre 2026)  
+**Acceso al Sistema:** [`https://ranchocarmelitas.cl/admin`](https://ranchocarmelitas.cl/admin) (o entorno local en desarrollo)  
 
 ---
 
-## 🔄 Flujo de Vida Operativo de una Reserva
+## 1. Propósito de este Manual
 
-El ciclo de vida de una reserva en Rancho Carmelitas es un flujo financiero y operativo cerrado que se divide en los siguientes estados secuenciales:
+Este manual está diseñado para brindar una guía clara, práctica y sin tecnicismos para la operación diaria del complejo Rancho Carmelitas. Aquí aprenderás a gestionar reservas, recibir abonos, realizar ingresos y salidas de huéspedes, administrar el estado de limpieza de las cabañas y gestionar arriendos de recinto completo para eventos masivos.
 
-```
-[Cliente en Landing / Recepción]
-       │
-       ▼
- 🟡 1. PENDIENTE (Espera de Abono 50%)
-       │
-       ├─► 🔴 Expirada y Cancelada (Si no abona en 24 horas - Se libera cabaña)
-       │
-       ▼ (Se registra Abono >= 50% de la tarifa cobrada)
- 🟠 2. CONFIRMADA (Gatilla correo de confirmación de pago al cliente)
-       │
-       ▼ (Check-in: Huésped llega y salda deuda total + Ficha completa)
- 🟢 3. EN CABAÑA (Registrado en el Rancho con Check-in)
-       │
-       ▼ (Check-out: Auditoría de llaves y cabaña + Registro de daños)
- 🔵 4. COMPLETADA (Check-out registrado exitosamente)
-       │
-       └─► 🧼 Cabaña cambia a "Necesita Aseo" ──► Restablecida a "Disponible"
-```
+---
 
-### 1. Estado Pendiente (`🟡`)
-- Se genera automáticamente cuando un cliente cotiza y pre-reserva desde la Landing Page pública, o cuando el Administrador crea un registro manual.
-- **Expiración de 24 Horas:** Las reservas pendientes que no ingresan el abono mínimo (50%) en 24 horas entran en estado crítico. El sistema despliega una alerta visual interactiva de reloj de arena `⏳ Expirar y Liberar` en la tabla para facilitar la cancelación masiva de reservas morosas y desocupar la cabaña.
+## 2. Mapa de Módulos del Sistema
 
-### 2. Estado Confirmada (`🟠`)
-- Ocurre automáticamente cuando los abonos registrados (individuales o acumulados) en el modal de la reserva igualan o superan el **50% del total**.
-- Al confirmarse, el servidor despacha de forma desatendida y automática el correo definitivo de confirmación con el desglose del abono al huésped.
+| Módulo | Ruta en el Sistema | ¿Quién lo usa? | Función Principal |
+| :--- | :--- | :--- | :--- |
+| **[01. Acceso y Seguridad](01-acceso-y-seguridad.md)** | `/login` | Todo el equipo | Inicio de sesión, recuperación de contraseña y cambio seguro de clave. |
+| **[02. Dashboard y Calendario](02-dashboard-y-calendario.md)** | `/admin` | Todos | Resumen general, ingresos estimados, calendario con código de colores y llegadas del día. |
+| **[03. Gestión de Cabañas y Tarifas](03-gestion-cabanas-y-tarifas.md)** | `/admin/cabanas` | Administradores | Ajuste de precios por noche, fotos de portada/galería, capacidad y narrativas locales. |
+| **[04. Cierres y Bloqueos de Fechas](04-cierres-y-bloqueos.md)** | `/admin/cabanas` | Administradores | Declarar mantenciones de cabañas específicas o vacaciones totales del complejo. |
+| **[05. Gestión de Reservas de Cabañas](05-reservas-cabanas.md)** | `/admin/reservas` | Administradores y Recepcionistas | Creación manual, registro de abonos, check-in restrictivo, check-out asistido y cancelaciones. |
+| **[06. Arriendo de Recinto Completo (8h)](06-arriendo-recinto-completo.md)** | `/admin/reservas?tab=eventos` | Administradores | Cotizaciones de colegios y adultos mayores, aprobación, cobro de abonos y cabaña de apoyo. |
+| **[07. Housekeeping y Limpieza](07-housekeeping-y-limpieza.md)** | `/admin/cabanas` | Personal de Aseo y Recepción | Control de cabañas que necesitan limpieza y liberación a estado disponible. |
+| **[08. Contabilidad y Reportes SII](08-contabilidad-reportes-sii.md)** | `/admin/reservas?tab=contabilidad` | Administradores | Cálculo de IVA 19%, comisiones de plataformas y liquidación neta mensual para el dueño. |
+| **[09. Canales de Venta Externos](09-canales-venta-externos.md)** | `/admin/configuracion` | Administradores | Gestión de plataformas (Booking.com, Airbnb, Directo) y sus comisiones pactadas. |
+| **[10. Equipo de Trabajo y Roles](10-equipo-y-roles.md)** | `/admin/usuarios` | Administradores | Invitar a nuevos integrantes, asignar permisos y bloquear accesos si corresponde. |
+| **[11. Bitácora de Auditoría](11-bitacora-auditoria.md)** | `/admin/auditoria` | Administradores | Historial transparente que explica en español quién modificó cada registro del sistema. |
+| **[12. Gestión de la Landing Page](12-gestion-landing-page.md)** | `/admin/landing` | Administradores | Modificar títulos del inicio, foto panorámica, galería de fotos y logotipo oficial. |
+| **[13. Desarrollo y Roadmap](13-desarrollo-y-roadmap.md)** | `/admin/desarrollo` | Administradores | Proponer mejoras, reportar fallos pegando capturas con `Ctrl+V` y ordenar prioridades. |
 
-### 3. Estado En Cabaña (`🟢`)
-- Ocurre cuando el huésped ingresa físicamente a las dependencias del Rancho.
-- **Check-in Defensivo:** El sistema bloquea el registro de Check-in a menos que:
-  1. Se completen los 5 campos obligatorios de la Ficha de Huésped (RUT, Patente, Nacionalidad, Cumpleaños, Preferencias).
-  2. El saldo pendiente por pagar sea **cero**. El modal permite ingresar pagos de saldo en caliente para saldar de inmediato e iniciar la estadía.
+---
 
-### 4. Estado Completada (`🔵`)
-- Ocurre al finalizar la estadía física del huésped.
-- **Check-out Asistido:** Requiere que el staff confirme físicamente la recepción de llaves e inspección de daños en la cabaña.
-- **Flujo de Limpieza (Housekeeping):** Al completarse, el sistema cambia dinámicamente el estado de la cabaña afectada a "Necesita Aseo", desplegando un aviso rojo en el panel de Cabañas para que el personal de aseo lo limpie y lo restablezca a "Disponible".
+## 3. Reglas de Oro Operativas de Rancho Carmelitas
+
+1. **Abono del 50% Obligatorio:** Ninguna reserva o evento queda confirmada hasta que el huésped haya pagado al menos el 50% de la tarifa acordada.
+2. **Entrega de Cabaña con Saldo Cero ($0):** Está estrictamente prohibido realizar el Check-in y entregar las llaves de la cabaña si el pasajero mantiene saldo pendiente de pago.
+3. **Cartelería y Normas de Convivencia:**
+   - 🚫 **No se admiten mascotas** de ninguna especie en el complejo.
+   - ⏰ **Check-out:** Máximo a las **12:00 horas**.
+   - 🔇 **Horario de Silencio:** Desde las 23:00 hrs para garantizar el descanso familiar.
+   - 👥 **Pasajeros Adicionales:** Se cobra un piso mínimo garantizado de **$10.000 CLP** por noche por persona no incluida en la capacidad base.

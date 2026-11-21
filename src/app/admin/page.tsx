@@ -20,9 +20,10 @@ interface Booking {
   check_out: string;
   total_price: number;
   status: string;
-  cabin_id: string;
+  cabin_id?: string;
   cabin?: { name: string };
   isConflict?: boolean;
+  isEvent?: boolean;
   payment_amount?: number;
   discount_applied?: number;
   booking_payments?: Array<{ amount: number }>;
@@ -35,6 +36,7 @@ export default function AdminDashboard() {
     totalRevenue: 0,
   });
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  const [eventQuotes, setEventQuotes] = useState<any[]>([]);
   const [closureConflicts, setClosureConflicts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -83,6 +85,7 @@ export default function AdminDashboard() {
         total_price,
         status,
         cabin_id,
+        admin_notes,
         payment_amount,
         discount_applied,
         cabin:cabins (name),
@@ -104,6 +107,16 @@ export default function AdminDashboard() {
 
     const activeClosures = closuresData || [];
 
+    // Cargar eventos diurnos de recinto completo del mes
+    const { data: eventsData } = await supabase
+      .from('event_quotes')
+      .select('*')
+      .gte('event_date', startDate)
+      .lte('event_date', endDate)
+      .neq('status', 'Cancelada');
+
+    setEventQuotes(eventsData || []);
+
     // Lógica de detección de conflictos (overbooking entre reservas)
     const bookingsWithConflicts = rawBookings.map((b: Booking) => {
       const conflict = rawBookings.find((other: Booking) => {
@@ -123,6 +136,11 @@ export default function AdminDashboard() {
       if (b.status === 'Cancelada') return;
 
       const matchingClosure = activeClosures.find((c: any) => {
+        // Los eventos de recinto no son cierres físicos de cabaña; son arriendos diurnos bajo excepción conversada
+        if (c.reason?.toLowerCase().includes('evento exclusivo recinto')) {
+          return false;
+        }
+
         const bIn = new Date(b.check_in);
         const bOut = new Date(b.check_out);
         const cIn = new Date(c.start_date);
@@ -197,6 +215,9 @@ export default function AdminDashboard() {
              // asumiendo check_out es salida por la mañana, por lo que la noche anterior cuenta.
              return dateStr >= b.check_in && dateStr < b.check_out && b.status?.toLowerCase() !== 'cancelada'; 
         });
+
+        // Eventos diurnos de recinto completo en este día
+        const dayEvents = eventQuotes.filter(e => e.event_date === dateStr);
         
         const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
@@ -206,6 +227,38 @@ export default function AdminDashboard() {
                   {d}
                 </div>
                 <div className="flex flex-col gap-1">
+                    {/* Renderizado de Eventos de Recinto Completo (8h) */}
+                    {dayEvents.map(e => {
+                      const isPending = e.status === 'Cotizacion_Pendiente';
+                      const isApproved = e.status === 'Aprobada';
+                      const isConfirmed = e.status === 'Confirmada';
+
+                      let badgeColor = "bg-yellow-50 text-yellow-800 border-yellow-300 border-dashed";
+                      let prefix = "🟡 ";
+                      let label = "Deseo de Arriendo (8h)";
+
+                      if (isConfirmed) {
+                        badgeColor = "bg-emerald-100 text-emerald-900 border-emerald-400 font-extrabold shadow-2xs";
+                        prefix = "🟢 ";
+                        label = "Recinto Completo Confirmado (8h)";
+                      } else if (isApproved) {
+                        badgeColor = "bg-blue-50 text-blue-800 border-blue-300 font-bold";
+                        prefix = "🔵 ";
+                        label = "Aprobada (Esperando Abono)";
+                      }
+
+                      return (
+                        <Link
+                          key={e.id}
+                          href={`/admin/reservas?tab=eventos&id=${e.id}`}
+                          className={`text-[9.5px] px-1.5 py-1 rounded font-bold truncate border transition-all block cursor-pointer hover:scale-102 ${badgeColor}`}
+                          title={`[RECINTO COMPLETO] ${e.group_name || e.organizer_name} - ${label} (${e.total_guests} pers. • ${e.start_time?.slice(0, 5)} a ${e.end_time?.slice(0, 5)} hrs) Total: ${formatMoney(e.total_amount)}`}
+                        >
+                          {prefix}[RECINTO] {e.group_name || e.organizer_name}
+                        </Link>
+                      );
+                    })}
+
                     {dayBookings.map(b => {
                         const statusLower = (b.status || 'Pendiente').toLowerCase();
                         const isCancelled = statusLower === 'cancelada';
@@ -280,6 +333,7 @@ export default function AdminDashboard() {
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span> 🟠 Confirmada (Sin Abono)</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#11d442]"></span> 🟢 Abonada (50%)</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> 🔵 Totalmente Pagada</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> 🟣 [RECINTO] Eventos (8h)</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> 🔴 Conflicto de Fechas</span>
             </div>
         </div>
@@ -294,14 +348,31 @@ export default function AdminDashboard() {
     );
   }
 
-  // Filtrar próximas llegadas a partir de HOY para la vista de lista (max 5, excluyendo canceladas)
+  // Filtrar próximas llegadas a partir de HOY para la vista de lista (incluyendo eventos de recinto)
   const localDate = new Date();
   const todayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
   
-  const nextListBookings = upcomingBookings
+  const nextListEvents: Booking[] = eventQuotes
+    .filter(e => e.event_date >= todayStr && e.status !== 'Cancelada')
+    .map(e => ({
+      id: e.id,
+      guest_name: `[RECINTO] ${e.group_name || e.organizer_name}`,
+      cabin: { name: 'Recinto Completo (8h)' },
+      check_in: e.event_date,
+      check_out: e.event_date,
+      status: e.status === 'Cotizacion_Pendiente' ? 'Pendiente' : e.status === 'Aprobada' ? 'Confirmada (Sin Abono)' : 'Confirmada',
+      isConflict: false,
+      isEvent: true,
+      total_price: e.total_amount,
+      payment_amount: e.deposit_paid,
+      discount_applied: 0,
+      booking_payments: []
+    }));
+
+  const nextListBookings = [...upcomingBookings, ...nextListEvents]
     .filter(b => b.check_in >= todayStr && b.status?.toLowerCase() !== 'cancelada')
     .sort((a, b) => a.check_in.localeCompare(b.check_in))
-    .slice(0, 5);
+    .slice(0, 6);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
@@ -435,25 +506,30 @@ export default function AdminDashboard() {
                       </td>
                     </tr>
                   ) : (
-                    nextListBookings.map((booking) => (
-                      <tr key={booking.id} className="hover:bg-gray-50/80 transition-all">
-                        <td className="px-6 py-4 font-bold text-[#11d442] hover:underline text-sm">
-                          <Link href={`/admin/reservas?id=${booking.id}`} className="flex items-center gap-2">
-                            {booking.guest_name}
-                            {booking.isConflict && (
-                              <span className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] uppercase whitespace-nowrap" title="Conflicto de fechas en la misma cabaña">
-                                ⚠️ Conflicto
-                              </span>
-                            )}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {booking.cabin?.name || 'Cabaña Desconocida'}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {new Date(booking.check_in).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
-                        </td>
-                        <td className="px-6 py-4">
+                    nextListBookings.map((booking) => {
+                      const bookingHref = booking.isEvent
+                        ? `/admin/reservas?tab=eventos&id=${booking.id}`
+                        : `/admin/reservas?id=${booking.id}`;
+
+                      return (
+                        <tr key={booking.id} className="hover:bg-gray-50/80 transition-all">
+                          <td className="px-6 py-4 font-bold text-[#11d442] hover:underline text-sm">
+                            <Link href={bookingHref} className="flex items-center gap-2">
+                              {booking.guest_name}
+                              {booking.isConflict && (
+                                <span className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] uppercase whitespace-nowrap" title="Conflicto de fechas en la misma cabaña">
+                                  ⚠️ Conflicto
+                                </span>
+                              )}
+                            </Link>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {booking.cabin?.name || 'Cabaña Desconocida'}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                            {new Date(booking.check_in).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
+                          </td>
+                          <td className="px-6 py-4">
                           {(() => {
                             const status = booking.status || 'Pendiente';
                             const statusLower = status.toLowerCase();
@@ -498,7 +574,8 @@ export default function AdminDashboard() {
                           })()}
                         </td>
                       </tr>
-                    ))
+                    );
+                  })
                   )}
                 </tbody>
               </table>

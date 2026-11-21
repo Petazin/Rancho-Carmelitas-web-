@@ -1,47 +1,56 @@
-# 📚 Centro de Documentación — Rancho Carmelitas
+# 📚 Centro de Documentación Integral — Rancho Carmelitas
 
-Bienvenido al centro de documentación técnica y funcional del PMS (Property Management System) y Landing Page de **Rancho Carmelitas**. Este espacio ha sido estructurado meticulosamente por el equipo de ingeniería para garantizar la autonomía operativa, la gobernanza de infraestructura y el correcto mantenimiento del software.
+Bienvenido al centro oficial de documentación técnica, operacional y arquitectónica de la plataforma web y el Sistema de Gestión de Propiedades (PMS) de **Rancho Carmelitas**.
+
+Este repositorio documental ha sido estructurado meticulosamente bajo la metodología **EGM (Executive Governance Model)** para garantizar la autonomía operativa del personal del rancho, la gobernanza de la infraestructura en la nube y el mantenimiento del software con estándares de calidad de producción.
 
 ---
 
 ## 📂 Organización de la Documentación
 
-La documentación está dividida en dos niveles de especialización:
-
 ```
 /documentacion
 │
-├── 📂 usuario                          # NIVEL 1 - Manual Funcional para el Administrador del PMS
-│   ├── index.md                        # Índice de la guía, mapa del sitio y flujos lógicos de negocio.
-│   ├── login.md                        # Acceso y recuperación de contraseñas.
-│   ├── dashboard.md                    # Panel de control de métricas, KPIs y ocupación inminente.
-│   ├── reservas.md                     # Creación manual, flujo de abonos, cancelaciones y lógica matemática.
-│   ├── cabanas.md                      # Control de tarifas por temporada y narrativas de Pullally.
-│   ├── usuarios.md                     # Administración del equipo de trabajo, roles y permisos.
-│   ├── auditoria.md                    # Bitácora de trazabilidad de cambios en lenguaje natural.
-│   ├── configuraciones-globales.md     # Datos del Rancho, empresa y contacto (WhatsApp, RUT).
-│   └── canales-venta.md                # Configuración de comisiones y canales externos (Airbnb, Booking).
+├── 📂 tecnica                             # NIVEL 1: DOCUMENTACIÓN TÉCNICA Y DE INGENIERÍA
+│   ├── 01-arquitectura-general.md        # Stack tecnológico fidedigno, topología y flujo de datos
+│   ├── 02-modelo-datos-y-base-de-datos.md# Esquema PostgreSQL completo: tablas, campos, triggers y RPCs
+│   ├── 03-seguridad-rls-y-autenticacion.md# Modelo Zero-Trust, RLS, middleware, RBAC y funciones seguras
+│   ├── 04-apis-y-servicios-backend.md     # Catálogo exhaustivo de API Routes (Next.js App Router)
+│   ├── 05-pasarela-mercadopago.md         # Checkout Pro, preferencias, webhooks, sincronización e idempotencia
+│   ├── 06-sistema-mailing-resend.md       # Plantillas React-Email, anti-trimming y disparadores automáticos
+│   ├── 07-sistema-recinto-completo.md     # Eventos diurnos 8h: cotizador, RPCs y sincronización de cierres
+│   └── 08-infraestructura-y-despliegue.md # Vercel, Supabase, dominios DNS, backups y variables de entorno
 │
-└── 📂 infraestructura                  # NIVEL 2 - Runbook de Servidores y Sistemas Satélite
-    ├── index.md                        # Resumen de arquitectura global y modelo Zero-Trust.
-    ├── 1-supabase.md                   # Operación de base de datos relacional y autenticación Auth.
-    ├── 2-resend.md                     # Configuración de mailing transaccional unidireccional (saliente).
-    ├── 3-vercel.md                     # Hosting de Next.js, despliegues automáticos y variables de entorno.
-    ├── 4-dominios.md                   # Gestión de dominios en DominiosChile, delegación DNS y SSL.
-    ├── checklist-handover.md           # Guía secuencial para la entrega definitiva de contraseñas nucleares.
-    └── procedimientos-emergencia.md    # Planes de acción ante caídas del servidor o rotación de claves.
+├── 📂 usuario                             # NIVEL 2: MANUAL FUNCIONAL Y OPERATIVO DEL PMS
+│   ├── index.md                           # Índice general, roles y reglas de oro de operación
+│   ├── 01-acceso-y-seguridad.md           # Inicio de sesión, auto-servicio y recuperación de contraseñas
+│   ├── 02-dashboard-y-calendario.md       # Métricas, KPIs, código de colores homologado y llegadas del día
+│   ├── 03-gestion-cabanas-y-tarifas.md    # Tarifas por noche, recargos de adicionales y narrativas locales
+│   ├── 04-cierres-y-bloqueos.md           # Cierres temporales por mantención o vacaciones del complejo
+│   ├── 05-reservas-cabanas.md             # Creación manual, pagos múltiples, check-in restrictivo y check-out
+│   ├── 06-arriendo-recinto-completo.md    # Cotizaciones de eventos 8h, aprobación, pagos y cabaña de apoyo
+│   ├── 07-housekeeping-y-limpieza.md      # Estado de aseo y liberación de cabañas limpias
+│   ├── 08-contabilidad-reportes-sii.md    # Cálculo de IVA 19%, comisiones de canales y liquidación neta
+│   ├── 09-canales-venta-externos.md       # Gestión de OTAs (Airbnb, Booking.com) y comisiones pactadas
+│   ├── 10-equipo-y-roles.md               # Invitación de colaboradores, asignación de roles y suspensiones
+│   ├── 11-bitacora-auditoria.md           # Trazabilidad en lenguaje natural y auditoría de cambios
+│   ├── 12-gestion-landing-page.md         # Textos del Hero, imagen de fondo, galería y logotipo oficial
+│   └── 13-desarrollo-y-roadmap.md         # Requerimientos, reporte de bugs con Ctrl+V y Drag & Drop
+│
+└── 📂 auditoria-egm                       # NIVEL 3: EVALUACIÓN DE INCONGRUENCIAS Y CÓDIGO FANTASMA
+    ├── informe-incongruencias-codigo.md   # Diagnóstico exhaustivo de contradicciones, dead code y riesgos
+    └── plan-mejoras-priorizadas.md        # Hoja de ruta para resolver las inconsistencias detectadas
 ```
 
 ---
 
-## 📖 Glosario de Términos Técnicos
+## 📖 Glosario de Términos del Sistema
 
 - **PMS (Property Management System):** Sistema informático de gestión de propiedades hoteleras y cabañas, utilizado para centralizar la ocupación, cobros y estado de limpieza del Rancho.
-- **Sistemas Satélite:** Servicios externos en la nube en los que se apoya la aplicación para funcionar (Vercel, Supabase, Resend y DominiosChile).
 - **RLS (Row Level Security):** Mecanismo de seguridad a nivel de base de datos en PostgreSQL (Supabase) que limita qué registros puede ver o editar un usuario en base a su rol administrativo, bloqueando accesos no autorizados.
-- **Stitch UI:** Filosofía de diseño de interfaz de usuario de Rancho Carmelitas caracterizada por acabados tipo cristal (glassmorphism), bordes ultra redondeados (24px), micro-animaciones en botones y color verde Rancho (#11d442).
-- **Zero-Trust (Confianza Cero):** Paradigma de seguridad informática que asume que ninguna solicitud es segura por defecto y requiere validación rigurosa (como la re-autenticación in-app al consultar contraseñas).
-- **Abono Parcial (50%):** Monto mínimo obligatorio exigido por las políticas del Rancho para congelar las fechas de reserva de una cabaña.
+- **RPC (Remote Procedure Call):** Funciones almacenadas en el servidor PostgreSQL que ejecutan lógica atómica con privilegios elevados (`SECURITY DEFINER`) sin exponer las tablas completas a la web.
+- **Idempotencia:** Propiedad de las operaciones de software que garantiza que procesar un mismo pago o evento múltiples veces produce exactamente el mismo resultado que procesarlo una sola vez, impidiendo cobros duplicados.
+- **Stitch UI:** Filosofía de diseño de interfaz de usuario de Rancho Carmelitas caracterizada por acabados tipo cristal (glassmorphism), bordes redondeados (12px a 24px), micro-animaciones en botones y color verde Rancho (`#11d442`).
+- **Abono Parcial (50%):** Monto mínimo obligatorio exigido por las políticas del Rancho para congelar las fechas de reserva de una cabaña o un evento diurno.
 - **Ficha de Liquidación Interna:** Panel de visualización privado del administrador que desglosa el costo bruto de la reserva, el IVA retenido (19%), la comisión cobrada por canales externos (ej. Booking.com) y la comisión neta del PMS.
-- **Narrativas de Pullally:** Historias, lemas y datos curiosos locales integrados de forma dinámica en las cabañas del Rancho para potenciar la experiencia y el arraigo cultural del huésped.
-- **Housekeeping (Aseo de Cabañas):** Ciclo operativo que cambia el estado de una cabaña a "Necesita Aseo" tras un Check-out y permite al personal de limpieza restablecerlo a "Disponible" una vez terminado el aseo.
+- **Housekeeping:** Ciclo operativo que cambia el estado de una cabaña a "Necesita Aseo" tras un Check-out y permite al personal de limpieza restablecerlo a "Disponible" una vez terminado el aseo.

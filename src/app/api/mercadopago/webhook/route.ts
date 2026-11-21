@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { mpPayment } from '@/lib/mercadopago';
+import { sendEventEmails } from '@/lib/send-event-emails';
 
 // Supabase con Service Role para acceso seguro de backend
 const supabaseAdmin = createClient(
@@ -37,7 +38,35 @@ export async function POST(req: Request) {
     console.log(`[MercadoPago Webhook] Pago ${paymentId}: Estado = ${status}, Ref = ${external_reference}`);
 
     if (status === 'approved' && external_reference) {
-      // Parsear la referencia externa: "bookingId__type__amount"
+      // Caso Especial: Pago de Evento Diurno de Recinto Completo ("EVENT__quoteId__amount")
+      if (external_reference.startsWith('EVENT__')) {
+        const [, quoteId, expectedAmount] = external_reference.split('__');
+        if (quoteId) {
+          const amountToRegister = Number(transaction_amount) || Number(expectedAmount) || 0;
+          const { error: eventUpdateError } = await supabaseAdmin
+            .from('event_quotes')
+            .update({
+              deposit_paid: amountToRegister,
+              status: 'Confirmada',
+              payment_method: `Mercado Pago (${payment_method_id || 'ONLINE'})`,
+              payment_reference: `MP-${paymentId}`
+            })
+            .eq('id', quoteId);
+
+          if (eventUpdateError) {
+            console.error('[MercadoPago Webhook] Error actualizando event_quotes:', eventUpdateError);
+          } else {
+            console.log(`[MercadoPago Webhook] Evento ${quoteId} confirmado con éxito tras pago de abono.`);
+            // Disparar correo de confirmación de recinto bloqueado al cliente y administración
+            sendEventEmails({ action: 'confirmed', quoteId }).catch(mailErr => {
+              console.warn('[MercadoPago Webhook] Error enviando correo de confirmación de evento:', mailErr);
+            });
+          }
+          return NextResponse.json({ message: 'Evento confirmado exitosamente.' }, { status: 200 });
+        }
+      }
+
+      // Parsear la referencia externa de cabañas: "bookingId__type__amount"
       const [bookingId, paymentType, expectedAmount] = external_reference.split('__');
 
       if (!bookingId) {
