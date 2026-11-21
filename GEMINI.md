@@ -31,10 +31,12 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.2.0 (Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo en Admin)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.3.0 (Cotizador Dinámico de Recinto, Rediseño Visual Hero Full-Width y Control Granular de Asistentes)**.
 
 El sistema ahora soporta:
 
+- **Cotizador Dinámico de Recinto y Rediseño Visual Hero Full-Width (v2.3.0):**
+  - **Fase 4 (Motor de Cotización Dinámico en `/recinto-completo#cotizador`):** Precarga en SSR desde `settings` de tramos, inflables, abonos y aforo. Rediseño visual a ancho completo (12 columnas) en `VenueQuoteForm.tsx` con tarjetas de planes espaciosas (~280px), cero texto truncado, precios base grandes, especificación granular de asistentes (Adultos, Niños 3 a 17 años y Bebés exentos), protección interactiva de aforo máximo con canal a WhatsApp y envío Zero-Trust a la RPC autoritativa de Supabase.
 - **Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo (v2.2.0):**
   - **Fase 3 (Editor de Tramos Extensibles en `/admin/configuraciones`):** Configuración visual e intuitiva por tramos con personas base, precio base, adicionales máximos permitidos y valor unitario por adicional. Incluye auto-encadenamiento sin gaps (`rechainTiers`), banner reactivo de sincronización de aforo y validación preventiva ante inconsistencias entre capacidad física del recinto y tramos tarifarios.
 - **Arriendo de Recinto Completo 8h: Fotos Dinámicas, Pestañas en Landing y Blindaje Zero-Trust (v2.1.0):**

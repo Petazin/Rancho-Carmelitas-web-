@@ -71,7 +71,63 @@ export default async function RecintoCompletoPage() {
     { src: '/gallery/piscina.png', title: 'Diversión Grupal y Familiar' }
   ];
 
+  // Parámetros y tramos dinámicos desde settings para SSR inmediato
+  let venueTiers: any[] = [];
+  let venueBouncyCastleFee = 5000;
+  let venueDepositPercentage = 50;
+  let venueMaxCapacity = 70;
+  let venueWhatsapp = '56994168853';
+
   try {
+    const { data: dbSettings } = await supabase
+      .from('settings')
+      .select('key, value')
+      .in('key', [
+        'venue_pricing_tiers',
+        'venue_bouncy_castle_fee',
+        'venue_deposit_percentage',
+        'venue_max_capacity',
+        'whatsapp_number'
+      ]);
+
+    if (dbSettings) {
+      const map: Record<string, string> = {};
+      dbSettings.forEach((item: { key: string; value: string }) => {
+        map[item.key] = item.value;
+      });
+
+      if (map['venue_pricing_tiers']) {
+        try {
+          const parsed = JSON.parse(map['venue_pricing_tiers']);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            venueTiers = parsed;
+          }
+        } catch (e) {
+          console.warn('Error al parsear venue_pricing_tiers:', e);
+        }
+      }
+
+      if (map['venue_bouncy_castle_fee']) {
+        const val = Number(map['venue_bouncy_castle_fee']);
+        if (!isNaN(val) && val >= 0) venueBouncyCastleFee = val;
+      }
+
+      if (map['venue_deposit_percentage']) {
+        const val = Number(map['venue_deposit_percentage']);
+        if (!isNaN(val) && val >= 10 && val <= 100) venueDepositPercentage = val;
+      }
+
+      if (map['venue_max_capacity']) {
+        const val = Number(map['venue_max_capacity']);
+        if (!isNaN(val) && val >= 10) venueMaxCapacity = val;
+      }
+
+      if (map['whatsapp_number']) {
+        const clean = map['whatsapp_number'].replace(/[^0-9]/g, '');
+        if (clean) venueWhatsapp = clean;
+      }
+    }
+
     const { data: dbGallery } = await supabase
       .from('landing_gallery')
       .select('image_url, alt_text')
@@ -85,7 +141,7 @@ export default async function RecintoCompletoPage() {
       }));
     }
   } catch (err) {
-    console.warn('Advertencia cargando fotos de recinto desde BD, aplicando fallback:', err);
+    console.warn('Advertencia cargando datos de recinto desde BD, aplicando fallback:', err);
   }
 
   const heroImageSrc = galleryImages.length > 0 ? galleryImages[0].src : '/gallery/piscina_principal.jpg';
@@ -273,7 +329,13 @@ export default async function RecintoCompletoPage() {
       {/* Sección del Cotizador Interactivo */}
       <section id="cotizador" className="py-24 bg-surface">
         <div className="container mx-auto px-4">
-          <VenueQuoteForm />
+          <VenueQuoteForm
+            initialTiers={venueTiers}
+            initialBouncyCastleFee={venueBouncyCastleFee}
+            initialDepositPercentage={venueDepositPercentage}
+            initialMaxCapacity={venueMaxCapacity}
+            initialWhatsapp={venueWhatsapp}
+          />
         </div>
       </section>
 

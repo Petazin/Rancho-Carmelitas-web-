@@ -736,3 +736,20 @@
 - Se ejecutó `npm run build` certificando compilación exitosa sin errores de TypeScript ni Next.js (código 0, 27/27 rutas).
 - Se actualizaron `GEMINI.md`, `README.md`, `CHANGELOG.md` y se redactó el reporte de hito en la Wiki LLM (`2026-10-11-fotografia-real-open-graph-portada-y-galeria.md`).
 - Se preparan los cambios para commit y push a la rama `master` en GitHub para su despliegue automático en Vercel.
+
+[2026-11-21 20:05:00] Actividad de Antigravity (Fase 4 - Rediseño Visual de Planes en Cotizador de Recinto Completo):
+- Se diagnosticó el problema de diseño reportado por el usuario ("el diseño está descuidado", con títulos cortados en "PA..." y números apretados): las 3 tarjetas de planes se encontraban comprimidas en un ancho menor a 150px dentro de la columna derecha de 6 columnas.
+- Se refactorizó la arquitectura visual de `src/components/ui/VenueQuoteForm.tsx` elevando la selección de planes a Paso 1 a Ancho Completo (12 columnas) en la parte superior del cotizador.
+- Se amplió el espacio de cada tarjeta a ~280px libres, eliminando el truncamiento y permitiendo leer los títulos completos de administración ("Paseo Estándar (hasta 15 personas)", "Paseo Mediano (16 a 29 personas)", "Paseo Grande (30 a 70 personas)").
+- Se enriquecieron las tarjetas con tipografía destacada de tarifa base ($190.000, $200.000, $250.000), aforo base incluido, desglose de capacidad del tramo, costo por persona adicional y botón interactivo "✓ Plan Seleccionado" / "Elegir este Plan".
+- Se reorganizó simétricamente el resto del formulario en dos columnas: izquierda con Fecha (Paso 2) y Horario (Paso 3), y derecha con Detalle de Asistentes (Paso 4) y Desglose Financiero en vivo.
+- Se verificó la consistencia de tipos con `npx tsc --noEmit` (código 0).
+- Se ejecutó `npm run build` certificando compilación exitosa sin errores de TypeScript ni Next.js (código 0, 31/31 rutas).
+- Se inspeccionó visualmente con el subagente de navegador en `http://localhost:3000/recinto-completo#cotizador`, validando una renderización espaciosa, nítida y perfectamente proporcionada.
+[2026-11-21 20:18:00] Actividad de Antigravity (Cierre y Despliegue de Versión 2.3.0 a Producción):
+- El usuario validó y confirmó el paso a producción tras el rediseño del cotizador de recinto completo.
+- Se actualizó la matriz de validación en `matriz_fases_y_validacion_recinto.md` marcando Fase 4 y Fase 5 como completadas.
+- Se actualizaron los documentos de control: `CHANGELOG.md`, `README.md` y `GEMINI.md` formalizando la versión [2.3.0].
+- Se redactó y guardó el reporte de hito en la Wiki de LLM: `2026-11-21-cotizador-recinto-ssr-y-rediseño-hero-fullwidth.md`.
+- Se sincronizaron las copias vivas de `CHANGELOG.md`, `README.md` y `GEMINI.md` hacia la Wiki LLM en `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\`.
+- Se procede a preparar el commit y push a la rama `master` en Git y GitHub para el despliegue automático en Vercel.

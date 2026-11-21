@@ -1,5 +1,16 @@
 # Changelog - Rancho Carmelitas
 
+## [2.3.0] - 2026-11-21
+
+### Añadido / Optimizado (Cotizador Dinámico de Recinto, Rediseño Visual Hero Full-Width y Control Granular de Asistentes v2.3.0)
+
+- **Fase 4 (Motor de Cotización Dinámico de Recinto en `/recinto-completo#cotizador`):**
+  - **Inyección SSR Inmediata desde Base de Datos:** Transformación de `/recinto-completo/page.tsx` en Server Component que consulta directamente `venue_pricing_tiers`, `venue_bouncy_castle_fee`, `venue_deposit_percentage`, `venue_max_capacity` y `whatsapp_number` desde la tabla `settings`, suministrándolos como props iniciales al cliente para erradicar el parpadeo de datos por defecto.
+  - **Rediseño Hero a Ancho Completo (Full-Width Plan Selector):** Reestructuración de la jerarquía visual en `VenueQuoteForm.tsx` elevando la selección de planes a **Paso 1 a 12 columnas (ancho completo)**. Cada tarjeta ahora dispone de ~280px libres, erradicando el truncamiento de textos ("PA...") y luciendo tipografía generosa, precios base destacados ($190.000, $200.000, $250.000), aforos base incluidos y botones interactivos `✓ Plan Seleccionado` / `Elegir este Plan`.
+  - **Detalle Granular de Asistentes:** Especificación detallada de participantes con contadores independientes para Adultos (coordinadores/profesores/apoderados), Niños de 3 a 17 años y Bebés menores de 3 años con exención total de cobro.
+  - **Bloqueo Inteligente y Canal de Eventos Masivos:** Detección de aforo superior al límite físico configurado (`isOverCapacity`), deshabilitando de forma preventiva el botón de cotización ordinario y desplegando un enlace directo prellenado a WhatsApp para coordinar requerimientos corporativos o eventos especiales a medida.
+  - **Integración Transaccional Zero-Trust:** Conexión segura con la RPC autoritativa en PostgreSQL `create_public_event_quote` y disparo en segundo plano de notificaciones por correo vía `/api/send-event-quote-email`.
+
 ## [2.2.0] - 2026-11-21
 
 ### Añadido / Optimizado (Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo en Admin v2.2.0)

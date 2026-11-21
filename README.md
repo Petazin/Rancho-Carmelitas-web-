@@ -19,6 +19,11 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Cotizador Dinámico de Recinto y Rediseño Visual Hero Full-Width (v2.3.0):**
+    *   **Inyección SSR Inmediata (`/recinto-completo`):** Server Component que precarga en el primer renderizado las tarifas de `venue_pricing_tiers`, costo de inflables, porcentaje de abono y aforo máximo desde la tabla `settings`, erradicando parpadeos de carga y fallbacks estáticos.
+    *   **Selector de Planes a Ancho Completo (Full-Width Hero UI):** Arquitectura visual renovada en `VenueQuoteForm.tsx` con Paso 1 a 12 columnas (~900px), tarjetas espaciosas de ~280px libres que eliminan cualquier truncamiento de texto, botones de selección reactivos `✓ Plan Seleccionado` / `Elegir este Plan` y tipografía clara para tarifas base y aforos.
+    *   **Control Granular de Asistentes:** Especificación detallada de participantes con contadores independientes para Adultos, Niños (3 a 17 años) y Bebés menores de 3 años exentos de cobro.
+    *   **Protección de Aforo Máximo y Canal de Eventos Masivos:** Detección en tiempo real de sobrepaso de aforo (`isOverCapacity`) con bloqueo preventivo del botón de envío y enlace interactivo a WhatsApp para cotizaciones personalizadas de eventos corporativos o masivos.
 *   **Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo (v2.2.0):**
     *   **Configuración Comercial Intuitiva (`/admin/configuraciones`):** Administración interactiva de tarifas de recinto completo (8h) basada en personas base cubiertas, precio base, máximo de adicionales y cobro por persona extra.
     *   **Auto-Encadenamiento Matemático:** El aforo de cada tramo se calcula automáticamente garantizando continuidad matemática absoluta y cero vacíos de tarifas.

@@ -1,9 +1,33 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+
+export interface VenuePricingTier {
+  id: string;
+  name: string;
+  min_guests: number;
+  max_guests: number;
+  base_price: number;
+  included_guests: number;
+  extra_guest_fee: number;
+}
+
+export interface VenueQuoteFormProps {
+  initialTiers?: VenuePricingTier[];
+  initialBouncyCastleFee?: number;
+  initialDepositPercentage?: number;
+  initialMaxCapacity?: number;
+  initialWhatsapp?: string;
+}
+
+const DEFAULT_VENUE_TIERS: VenuePricingTier[] = [
+  { id: 'tier-1', name: 'Paseo Estándar (hasta 15 personas)', min_guests: 1, max_guests: 15, base_price: 180000, included_guests: 15, extra_guest_fee: 3500 },
+  { id: 'tier-2', name: 'Paseo Mediano (16 a 29 personas)', min_guests: 16, max_guests: 29, base_price: 180000, included_guests: 15, extra_guest_fee: 3500 },
+  { id: 'tier-3', name: 'Paseo Grande (30 a 70 personas)', min_guests: 30, max_guests: 70, base_price: 250000, included_guests: 30, extra_guest_fee: 3500 }
+];
 
 const formatMoney = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null) return '$0';
@@ -32,7 +56,30 @@ const formatRut = (rut: string) => {
   return `${formattedBody}-${dv}`;
 };
 
-export function VenueQuoteForm() {
+export function VenueQuoteForm({
+  initialTiers,
+  initialBouncyCastleFee,
+  initialDepositPercentage,
+  initialMaxCapacity,
+  initialWhatsapp,
+}: VenueQuoteFormProps = {}) {
+  // Parámetros dinámicos desde settings (inicializados desde props SSR para carga 100% inmediata)
+  const [pricingTiers, setPricingTiers] = useState<VenuePricingTier[]>(
+    initialTiers && initialTiers.length > 0 ? initialTiers : DEFAULT_VENUE_TIERS
+  );
+  const [bouncyCastleFee, setBouncyCastleFee] = useState<number>(
+    initialBouncyCastleFee !== undefined ? initialBouncyCastleFee : 5000
+  );
+  const [depositPercentage, setDepositPercentage] = useState<number>(
+    initialDepositPercentage !== undefined ? initialDepositPercentage : 50
+  );
+  const [maxCapacity, setMaxCapacity] = useState<number>(
+    initialMaxCapacity !== undefined ? initialMaxCapacity : 70
+  );
+  const [adminWhatsapp, setAdminWhatsapp] = useState<string>(
+    initialWhatsapp || '56994168853'
+  );
+
   // Selección de fecha y horario
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('10:00');
@@ -40,8 +87,11 @@ export function VenueQuoteForm() {
   const [occupiedDates, setOccupiedDates] = useState<string[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
 
-  // Asistentes
-  const [adults, setAdults] = useState(15);
+  // Asistentes (inicializado dinámicamente con la base del primer tramo)
+  const [adults, setAdults] = useState(() => {
+    const tiers = initialTiers && initialTiers.length > 0 ? initialTiers : DEFAULT_VENUE_TIERS;
+    return tiers[0]?.included_guests || 15;
+  });
   const [children, setChildren] = useState(0);
   const [under3Years, setUnder3Years] = useState(0);
 
@@ -62,9 +112,31 @@ export function VenueQuoteForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [quoteSuccess, setQuoteSuccess] = useState<any | null>(null);
-  const [adminWhatsapp, setAdminWhatsapp] = useState('56994168853');
 
-  // Cargar fechas ocupadas y número de WhatsApp al montar
+  // Sincronización reactiva con props SSR
+  useEffect(() => {
+    if (initialTiers && initialTiers.length > 0) {
+      setPricingTiers(initialTiers);
+    }
+  }, [initialTiers]);
+
+  useEffect(() => {
+    if (initialBouncyCastleFee !== undefined) setBouncyCastleFee(initialBouncyCastleFee);
+  }, [initialBouncyCastleFee]);
+
+  useEffect(() => {
+    if (initialDepositPercentage !== undefined) setDepositPercentage(initialDepositPercentage);
+  }, [initialDepositPercentage]);
+
+  useEffect(() => {
+    if (initialMaxCapacity !== undefined) setMaxCapacity(initialMaxCapacity);
+  }, [initialMaxCapacity]);
+
+  useEffect(() => {
+    if (initialWhatsapp) setAdminWhatsapp(initialWhatsapp);
+  }, [initialWhatsapp]);
+
+  // Cargar fechas ocupadas y configuración dinámica al montar
   useEffect(() => {
     async function loadOccupiedDates() {
       setIsLoadingDates(true);
@@ -75,30 +147,69 @@ export function VenueQuoteForm() {
           setOccupiedDates(dates);
         }
       } catch (err) {
-        console.warn('Error al cargar fechas ocupadas de recinto:', err);
+        console.warn('[VenueQuoteForm] Error al cargar fechas ocupadas de recinto:', err);
       } finally {
         setIsLoadingDates(false);
       }
     }
 
-    async function loadWhatsappSetting() {
+    async function loadVenueSettings() {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('settings')
-          .select('value')
-          .eq('key', 'whatsapp_number')
-          .maybeSingle();
-        if (data?.value) {
-          const clean = data.value.replace(/[^0-9]/g, '');
-          if (clean) setAdminWhatsapp(clean);
+          .select('key, value')
+          .in('key', [
+            'venue_pricing_tiers',
+            'venue_bouncy_castle_fee',
+            'venue_deposit_percentage',
+            'venue_max_capacity',
+            'whatsapp_number'
+          ]);
+
+        if (!error && data) {
+          const map: Record<string, string> = {};
+          data.forEach((item: { key: string; value: string }) => {
+            map[item.key] = item.value;
+          });
+
+          if (map['venue_pricing_tiers']) {
+            try {
+              const parsed = JSON.parse(map['venue_pricing_tiers']);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setPricingTiers(parsed);
+              }
+            } catch (e) {
+              console.warn('[VenueQuoteForm] Error parseando venue_pricing_tiers de settings, usando fallback:', e);
+            }
+          }
+
+          if (map['venue_bouncy_castle_fee']) {
+            const val = Number(map['venue_bouncy_castle_fee']);
+            if (!isNaN(val) && val >= 0) setBouncyCastleFee(val);
+          }
+
+          if (map['venue_deposit_percentage']) {
+            const val = Number(map['venue_deposit_percentage']);
+            if (!isNaN(val) && val >= 10 && val <= 100) setDepositPercentage(val);
+          }
+
+          if (map['venue_max_capacity']) {
+            const val = Number(map['venue_max_capacity']);
+            if (!isNaN(val) && val >= 10) setMaxCapacity(val);
+          }
+
+          if (map['whatsapp_number']) {
+            const clean = map['whatsapp_number'].replace(/[^0-9]/g, '');
+            if (clean) setAdminWhatsapp(clean);
+          }
         }
       } catch (err) {
-        console.warn('Error al cargar whatsapp_number de configuraciones:', err);
+        console.warn('[VenueQuoteForm] Error cargando settings de recinto:', err);
       }
     }
 
     loadOccupiedDates();
-    loadWhatsappSetting();
+    loadVenueSettings();
   }, []);
 
   // Calcular hora de término (8 horas continuas)
@@ -109,30 +220,43 @@ export function VenueQuoteForm() {
   };
   const endTime = calculateEndTime(startTime);
 
-  // Motor financiero de tramos oficiales
+  // Motor financiero dinámico según tramos configurados
   const payingGuests = Math.max(1, adults + children); // Asistentes que pagan (mayores de 3 años)
   const totalGuests = payingGuests + under3Years;
+  const isOverCapacity = totalGuests > maxCapacity;
 
-  let basePrice = 180000;
-  let extraGuestsCost = 0;
+  // Ordenar tramos ascendentemente por min_guests
+  const sortedTiers = useMemo(() => {
+    return [...pricingTiers].sort((a, b) => a.min_guests - b.min_guests);
+  }, [pricingTiers]);
 
-  if (payingGuests <= 15) {
-    basePrice = 180000;
-    extraGuestsCost = 0;
-  } else if (payingGuests < 30) {
-    // Entre 16 y 29 personas: base 15 ($180.000) + $3.500 por adicional
-    basePrice = 180000;
-    extraGuestsCost = (payingGuests - 15) * 3500;
-  } else {
-    // 30 o más personas: Tramo 2 ($250.000 hasta 30 personas + $3.500 por cada adicional sobre 30)
-    basePrice = 250000;
-    extraGuestsCost = (payingGuests - 30) * 3500;
-  }
+  // Tramo coincidente
+  const currentTier = useMemo(() => {
+    if (sortedTiers.length === 0) return DEFAULT_VENUE_TIERS[0];
+    const matched = sortedTiers.find(t => payingGuests >= t.min_guests && payingGuests <= t.max_guests);
+    if (matched) return matched;
+    if (payingGuests < sortedTiers[0].min_guests) return sortedTiers[0];
+    return sortedTiers[sortedTiers.length - 1];
+  }, [sortedTiers, payingGuests]);
 
-  const bouncyCastleFee = hasBouncyCastle ? 5000 : 0;
-  const totalAmount = basePrice + extraGuestsCost + bouncyCastleFee;
-  const depositRequired = Math.round(totalAmount * 0.5);
+  const basePrice = currentTier ? currentTier.base_price : 180000;
+  const includedGuests = currentTier ? currentTier.included_guests : 15;
+  const extraFeePerGuest = currentTier ? currentTier.extra_guest_fee : 3500;
+  const extraGuestsCount = Math.max(0, payingGuests - includedGuests);
+  const extraGuestsCost = extraGuestsCount * extraFeePerGuest;
+
+  const activeBouncyCastleFee = hasBouncyCastle ? bouncyCastleFee : 0;
+  const totalAmount = basePrice + extraGuestsCost + activeBouncyCastleFee;
+  const depositRequired = Math.round(totalAmount * (depositPercentage / 100));
   const remainingAtDoor = totalAmount - depositRequired;
+
+  // Selección rápida de tramo al hacer clic en tarjeta
+  const handleSelectTier = (tier: VenuePricingTier) => {
+    if (payingGuests < tier.min_guests || payingGuests > tier.max_guests) {
+      setAdults(tier.included_guests);
+      setChildren(0);
+    }
+  };
 
   // Renderizado del calendario Stitch UI
   const renderCalendar = () => {
@@ -244,6 +368,11 @@ export function VenueQuoteForm() {
     e.preventDefault();
     setErrorMessage('');
 
+    if (isOverCapacity) {
+      setErrorMessage(`El número total de asistentes (${totalGuests}) supera el aforo máximo permitido (${maxCapacity} personas). Por favor contáctanos vía WhatsApp para eventos masivos.`);
+      return;
+    }
+
     if (!selectedDate) {
       setErrorMessage('Por favor selecciona una fecha disponible en el calendario para tu evento.');
       return;
@@ -275,7 +404,7 @@ export function VenueQuoteForm() {
         return;
       }
 
-      // 2. Registro seguro de la cotización en Supabase
+      // 2. Registro seguro de la cotización en Supabase (validación Zero-Trust autoritativa en BD)
       const { data: quoteId, error: quoteError } = await supabase.rpc('create_public_event_quote', {
         p_event_date: selectedDate,
         p_start_time: `${startTime}:00`,
@@ -293,7 +422,7 @@ export function VenueQuoteForm() {
         p_extra_services_notes: extraNotes.trim() || null,
         p_base_price: basePrice,
         p_extra_guests_cost: extraGuestsCost,
-        p_bouncy_castle_fee: bouncyCastleFee,
+        p_bouncy_castle_fee: activeBouncyCastleFee,
         p_total_amount: totalAmount,
         p_deposit_required: depositRequired
       });
@@ -314,8 +443,10 @@ export function VenueQuoteForm() {
         endTime,
         totalGuests,
         payingGuests,
+        tierName: currentTier.name,
         totalAmount,
         depositRequired,
+        depositPercentage,
         groupName: groupName.trim() || organizerName.trim()
       });
     } catch (err: any) {
@@ -332,8 +463,9 @@ export function VenueQuoteForm() {
       `¡Hola Rancho Carmelitas! Acabo de enviar mi solicitud de cotización para el Arriendo de Recinto Completo.\n\n` +
       `📋 *Folio de Cotización:* #${quoteSuccess.id.slice(0, 8).toUpperCase()}\n` +
       `📅 *Fecha:* ${quoteSuccess.date} (De ${quoteSuccess.startTime} a ${quoteSuccess.endTime} hrs)\n` +
+      `🏷️ *Plan:* ${quoteSuccess.tierName}\n` +
       `👥 *Asistentes:* ${quoteSuccess.totalGuests} personas (${quoteSuccess.groupName})\n` +
-      `💰 *Total Cotizado:* ${formatMoney(quoteSuccess.totalAmount)} (Abono 50%: ${formatMoney(quoteSuccess.depositRequired)})\n\n` +
+      `💰 *Total Cotizado:* ${formatMoney(quoteSuccess.totalAmount)} (Abono ${quoteSuccess.depositPercentage}%: ${formatMoney(quoteSuccess.depositRequired)})\n\n` +
       `Quedo atento a la confirmación de la administración para realizar el pago del abono. ¡Muchas gracias!`
     );
 
@@ -365,6 +497,10 @@ export function VenueQuoteForm() {
             <span className="font-semibold text-gray-900">{quoteSuccess.startTime} a {quoteSuccess.endTime} hrs (8 hrs continuas)</span>
           </div>
           <div className="flex justify-between items-center py-1 border-b border-gray-200/60">
+            <span className="text-gray-500">Tramo / Plan:</span>
+            <span className="font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-xs">{quoteSuccess.tierName}</span>
+          </div>
+          <div className="flex justify-between items-center py-1 border-b border-gray-200/60">
             <span className="text-gray-500">Total Asistentes:</span>
             <span className="font-semibold text-gray-900">{quoteSuccess.totalGuests} personas</span>
           </div>
@@ -373,7 +509,7 @@ export function VenueQuoteForm() {
             <span className="font-bold text-gray-900 text-base">{formatMoney(quoteSuccess.totalAmount)}</span>
           </div>
           <div className="flex justify-between items-center py-1 text-[#11d442]">
-            <span className="font-semibold">Abono Inicial Requerido (50%):</span>
+            <span className="font-semibold">Abono Inicial Requerido ({quoteSuccess.depositPercentage}%):</span>
             <span className="font-black text-lg">{formatMoney(quoteSuccess.depositRequired)}</span>
           </div>
         </div>
@@ -386,7 +522,7 @@ export function VenueQuoteForm() {
             1. Nuestro equipo revisará la disponibilidad y características de tu grupo en el panel de administración.
           </p>
           <p>
-            2. Te contactaremos vía WhatsApp o correo con la aprobación formal y el enlace directo para pagar el 50% de abono oficial (vía Mercado Pago o Transferencia Bancaria).
+            2. Te contactaremos vía WhatsApp o correo con la confirmación formal y el enlace para abonar el {quoteSuccess.depositPercentage}% requerido.
           </p>
           <p>
             3. Al acreditarse el abono, el recinto completo quedará oficialmente bloqueado y reservado exclusivamente para tu celebración.
@@ -414,7 +550,7 @@ export function VenueQuoteForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 md:p-10 border border-gray-200 shadow-xl max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 md:p-10 border border-gray-200 shadow-xl max-w-5xl mx-auto">
       <div className="text-center mb-8">
         <span className="text-xs font-bold uppercase tracking-wider text-[#11d442] bg-[#11d442]/10 px-3 py-1 rounded-full">
           Cotizador en Línea
@@ -434,12 +570,115 @@ export function VenueQuoteForm() {
         </div>
       )}
 
+      {/* ======================================================== */}
+      {/* PASO 1 (ANCHO COMPLETO): SELECCIÓN VISUAL DE PLANES     */}
+      {/* ======================================================== */}
+      <div className="mb-10 pb-8 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <label className="block text-base font-bold text-gray-900">
+              1. Selecciona tu Plan o Rango de Asistentes
+            </label>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Elige el plan que mejor se adapte a tu grupo o ajusta el número exacto de asistentes más abajo.
+            </p>
+          </div>
+          <div className="self-start sm:self-auto">
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-2xs ${
+              isOverCapacity 
+                ? 'bg-red-100 text-red-800 border-red-200' 
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}>
+              Aforo Total: {totalGuests} / {maxCapacity} pers.
+            </span>
+          </div>
+        </div>
+
+        {/* Tarjetas de Planes a Ancho Completo */}
+        <div className={`grid grid-cols-1 ${
+          sortedTiers.length === 2 ? 'md:grid-cols-2' : 
+          sortedTiers.length >= 3 ? 'md:grid-cols-3' : ''
+        } gap-4`}>
+          {sortedTiers.map((tier) => {
+            const isSelected = currentTier?.id === tier.id && !isOverCapacity;
+            return (
+              <div
+                key={tier.id}
+                onClick={() => handleSelectTier(tier)}
+                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                  isSelected 
+                    ? 'border-[#11d442] bg-emerald-50/40 shadow-md ring-2 ring-[#11d442]/30 scale-[1.01]' 
+                    : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-gray-50/70 hover:shadow-xs'
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h4 className="font-extrabold text-sm md:text-base text-gray-900 leading-snug">
+                      {tier.name}
+                    </h4>
+                    {isSelected ? (
+                      <span className="shrink-0 text-[11px] font-bold bg-[#11d442] text-white px-2.5 py-0.5 rounded-full shadow-2xs">
+                        ✓ Activo
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[11px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        Plan
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-baseline gap-1.5 my-2">
+                    <span className="text-2xl md:text-3xl font-black text-gray-900">
+                      {formatMoney(tier.base_price)}
+                    </span>
+                    <span className="text-xs font-semibold text-gray-500">
+                      Tarifa Base
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-gray-700 bg-gray-50 rounded-lg p-2 border border-gray-100 mt-2">
+                    Incluye hasta <strong>{tier.included_guests} personas</strong> en el valor base.
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Capacidad del tramo:</span>
+                    <span className="font-bold text-gray-800">{tier.min_guests} a {tier.max_guests} pers.</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Persona adicional:</span>
+                    <span className="font-extrabold text-emerald-700">+{formatMoney(tier.extra_guest_fee)} c/u</span>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition-colors ${
+                        isSelected
+                          ? 'bg-[#11d442] text-white shadow-xs'
+                          : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-800'
+                      }`}
+                    >
+                      {isSelected ? '✓ Plan Seleccionado' : 'Elegir este Plan'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* GRID DE 2 COLUMNAS: FECHA/HORARIO VS ASISTENTES/TOTAL    */}
+      {/* ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Columna Izquierda: Calendario y Horario */}
         <div className="lg:col-span-6 space-y-6">
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-2">
-              1. Selecciona la Fecha del Evento <span className="text-red-500">*</span>
+              2. Selecciona la Fecha del Evento <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-3">
               Las fechas tachadas en rojo ya cuentan con reservas o cierres de cabañas.
@@ -461,7 +700,7 @@ export function VenueQuoteForm() {
 
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-2">
-              2. Horario de la Jornada (8 Horas continuas)
+              3. Horario de la Jornada (8 Horas continuas)
             </label>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -499,9 +738,19 @@ export function VenueQuoteForm() {
         <div className="lg:col-span-6 space-y-6">
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-2">
-              3. Cantidad de Asistentes
+              4. Especifica los Asistentes de tu Grupo
             </label>
+
             <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
+              <div className="flex items-center justify-between pb-1 border-b border-gray-200/50">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Detalle de participantes:
+                </span>
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                  {payingGuests} personas pagan tarifa
+                </span>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-semibold text-sm text-gray-800 block">Adultos</span>
@@ -511,7 +760,7 @@ export function VenueQuoteForm() {
                   <button
                     type="button"
                     onClick={() => setAdults(Math.max(1, adults - 1))}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     -
                   </button>
@@ -519,7 +768,7 @@ export function VenueQuoteForm() {
                   <button
                     type="button"
                     onClick={() => setAdults(adults + 1)}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     +
                   </button>
@@ -535,7 +784,7 @@ export function VenueQuoteForm() {
                   <button
                     type="button"
                     onClick={() => setChildren(Math.max(0, children - 1))}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     -
                   </button>
@@ -543,7 +792,7 @@ export function VenueQuoteForm() {
                   <button
                     type="button"
                     onClick={() => setChildren(children + 1)}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     +
                   </button>
@@ -553,13 +802,13 @@ export function VenueQuoteForm() {
               <div className="flex items-center justify-between pt-3 border-t border-gray-200/60">
                 <div>
                   <span className="font-semibold text-sm text-gray-800 block">Bebés / Menores de 3 años</span>
-                  <span className="text-xs text-green-600 font-semibold">¡No pagan ni suman a los tramos!</span>
+                  <span className="text-xs text-green-600 font-semibold">¡No pagan tarifa en los tramos!</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setUnder3Years(Math.max(0, under3Years - 1))}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     -
                   </button>
@@ -567,7 +816,7 @@ export function VenueQuoteForm() {
                   <button
                     type="button"
                     onClick={() => setUnder3Years(under3Years + 1)}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                   >
                     +
                   </button>
@@ -575,6 +824,33 @@ export function VenueQuoteForm() {
               </div>
             </div>
           </div>
+
+          {/* Alerta de Aforo Máximo Excedido */}
+          {isOverCapacity && (
+            <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl text-amber-900 space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <h5 className="font-bold text-sm">
+                    Aforo Máximo Superado ({totalGuests} de {maxCapacity} personas)
+                  </h5>
+                  <p className="text-xs text-amber-800 mt-1">
+                    El aforo estándar configurado para el recinto es de <strong>{maxCapacity} personas</strong>. Para grupos masivos o requerimientos corporativos especiales que superen este aforo, contáctanos directamente a través de WhatsApp para coordinar una propuesta a tu medida.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(
+                  `¡Hola Rancho Carmelitas! Quisiera consultar por un evento especial para un grupo de ${totalGuests} personas (${adults} adultos, ${children} niños y ${under3Years} menores de 3 años). ¿Tienen disponibilidad y opciones para este aforo?`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-4 py-3 rounded-xl font-bold text-xs transition-colors shadow-sm"
+              >
+                <span>💬 Consultar Evento Masivo ({totalGuests} personas) por WhatsApp</span>
+              </a>
+            </div>
+          )}
 
           {/* Opcional Juegos Inflables */}
           <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
@@ -587,7 +863,7 @@ export function VenueQuoteForm() {
               />
               <div>
                 <span className="font-bold text-sm text-gray-800 block">
-                  ¿Traerán Juegos Inflables? (+$5.000)
+                  ¿Traerán Juegos Inflables? (+{formatMoney(bouncyCastleFee)})
                 </span>
                 <span className="text-xs text-gray-500">
                   Cubre el costo por consumo eléctrico extra de turbinas durante las 8 horas.
@@ -598,19 +874,24 @@ export function VenueQuoteForm() {
 
           {/* Tarjeta de Resumen Financiero en Vivo */}
           <div className="bg-[#11d442]/5 border-2 border-[#11d442]/20 rounded-2xl p-5 space-y-2">
-            <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider mb-3">
-              Desglose de Cotización
-            </h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider">
+                Desglose de Cotización
+              </h4>
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                {currentTier.name}
+              </span>
+            </div>
 
             <div className="flex justify-between text-xs text-gray-600">
-              <span>Plan Base ({payingGuests <= 15 ? 'Hasta 15 personas' : payingGuests < 30 ? 'Base 15 personas' : 'Hasta 30 personas'}):</span>
+              <span>Precio Base (cubre hasta {includedGuests} personas):</span>
               <span className="font-semibold">{formatMoney(basePrice)}</span>
             </div>
 
-            {extraGuestsCost > 0 && (
+            {extraGuestsCount > 0 && (
               <div className="flex justify-between text-xs text-gray-600">
                 <span>
-                  Personas adicionales ({payingGuests < 30 ? payingGuests - 15 : payingGuests - 30} x $3.500):
+                  {extraGuestsCount} persona{extraGuestsCount > 1 ? 's' : ''} adicional{extraGuestsCount > 1 ? 'es' : ''} ({formatMoney(extraFeePerGuest)} c/u):
                 </span>
                 <span className="font-semibold">{formatMoney(extraGuestsCost)}</span>
               </div>
@@ -619,35 +900,39 @@ export function VenueQuoteForm() {
             {hasBouncyCastle && (
               <div className="flex justify-between text-xs text-gray-600">
                 <span>Recargo por Juego Inflable:</span>
-                <span className="font-semibold">$5.000</span>
+                <span className="font-semibold">{formatMoney(bouncyCastleFee)}</span>
               </div>
             )}
 
             <div className="pt-2 border-t border-gray-200 flex justify-between items-baseline">
               <div>
                 <span className="text-base font-black text-gray-900 block">Monto Total</span>
-                <span className="text-[11px] text-gray-500">{totalGuests} personas en total</span>
+                <span className="text-[11px] text-gray-500">
+                  {totalGuests} persona{totalGuests > 1 ? 's' : ''} en total ({payingGuests} que pagan + {under3Years} menores de 3 años)
+                </span>
               </div>
               <span className="text-2xl font-black text-[#11d442]">{formatMoney(totalAmount)}</span>
             </div>
 
             <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between text-xs text-gray-700">
-              <span className="font-semibold">Abono 50% para Reservar:</span>
+              <span className="font-semibold">Abono {depositPercentage}% para Reservar:</span>
               <span className="font-black text-gray-900">{formatMoney(depositRequired)}</span>
             </div>
 
             <div className="flex justify-between text-xs text-gray-500">
-              <span>Saldo 50% restante (al ingresar):</span>
+              <span>Saldo {100 - depositPercentage}% restante (al ingresar):</span>
               <span>{formatMoney(remainingAtDoor)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Datos del Organizador y Formulario de Contacto */}
-      <div className="mt-8 pt-8 border-t border-gray-200">
+      {/* ======================================================== */}
+      {/* PASO 5 (ANCHO COMPLETO): DATOS DEL RESPONSABLE Y ENVÍO   */}
+      {/* ======================================================== */}
+      <div className="mt-10 pt-8 border-t border-gray-200">
         <h4 className="text-lg font-bold text-gray-900 mb-4">
-          4. Datos del Responsable del Grupo
+          5. Datos del Responsable del Grupo
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -772,13 +1057,21 @@ export function VenueQuoteForm() {
         <div className="text-center">
           <Button
             type="submit"
-            disabled={isSubmitting || !selectedDate}
-            className="w-full sm:w-auto px-10 py-4 text-base font-bold btn-primary"
+            disabled={isSubmitting || !selectedDate || isOverCapacity}
+            className={`w-full sm:w-auto px-10 py-4 text-base font-bold ${
+              isOverCapacity 
+                ? 'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400' 
+                : 'btn-primary'
+            }`}
           >
-            {isSubmitting ? 'Enviando Solicitud...' : 'Solicitar Cotización de Recinto Exclusivo'}
+            {isSubmitting 
+              ? 'Enviando Solicitud...' 
+              : isOverCapacity 
+                ? `Aforo Máximo Superado (${totalGuests}/${maxCapacity} pers.)` 
+                : 'Solicitar Cotización de Recinto Exclusivo'}
           </Button>
           <p className="text-xs text-gray-400 mt-2">
-            * Al enviar la cotización, nuestro equipo verificará la fecha y te remitirá el enlace oficial para abonar el 50% de reserva.
+            * Al enviar la cotización, nuestro equipo verificará la fecha y te remitirá el enlace oficial para abonar el {depositPercentage}% de reserva.
           </p>
         </div>
       </div>
