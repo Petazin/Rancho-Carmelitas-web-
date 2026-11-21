@@ -19,6 +19,11 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo (v2.2.0):**
+    *   **Configuración Comercial Intuitiva (`/admin/configuraciones`):** Administración interactiva de tarifas de recinto completo (8h) basada en personas base cubiertas, precio base, máximo de adicionales y cobro por persona extra.
+    *   **Auto-Encadenamiento Matemático:** El aforo de cada tramo se calcula automáticamente garantizando continuidad matemática absoluta y cero vacíos de tarifas.
+    *   **Protección y Sincronización de Aforo:** Detección en tiempo real de desfases entre el aforo físico máximo y las tarifas ofrecidas, con botón de 1 clic para alinear valores y validación preventiva que impide guardar inconsistencias.
+    *   **Tramos Extensibles y Reversión Rápida:** Soporte para agregar tramos personalizados ilimitados y botón para restablecer a la configuración recomendada de 2 tramos limpios (1 a 29 pers. y 30 a 70 pers.).
 *   **Arriendo de Recinto Completo 8h y Rediseño Modular de Landing (v2.1.0):**
     *   **Pestañas en Administración (`/admin/landing`):** Navegación compacta por selectores horizontales (`Hero & Portada`, `Galería Portada`, `Galería Recinto`, `Textos & Reglas`, `Equipo`, `Contacto & Ubicación`), eliminando el scroll vertical con persistencia en memoria (CSS `hidden`).
     *   **Galería Dinámica de Recinto:** Subida y gestión de fotos exclusivas para eventos con purga automática en Supabase Storage y visualización pública en `/recinto-completo` con fallback resiliente.

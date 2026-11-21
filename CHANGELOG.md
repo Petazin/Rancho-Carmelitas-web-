@@ -1,5 +1,16 @@
 # Changelog - Rancho Carmelitas
 
+## [2.2.0] - 2026-11-21
+
+### Añadido / Optimizado (Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo en Admin v2.2.0)
+
+- **Fase 3 (Editor de Tramos Extensibles y Parametrización en `/admin/configuraciones`):**
+  - **Modelo Intuitivo por Tramo:** Configuración por tramos dinámicos mediante Personas Base (`included_guests`), Precio Base (`base_price`), Máximo de Adicionales Permitidos (`max_extra_guests`), y Valor por Adicional (`extra_guest_fee`).
+  - **Auto-Encadenamiento Continuo (`rechainTiers`):** Cálculo reactivo y automático de aforo por tramo (`min_guests` a `max_guests`) que previene de raíz solapamientos o vacíos tarifarios sin requerir cálculos manuales por parte del administrador.
+  - **Banner Reactivo y Protección de Aforo Máximo:** Detección de incoherencias en tiempo real entre el Aforo Máximo Físico del Recinto y el alcance de los tramos configurados. Incluye botón interactivo de 1 clic (`Alinear Aforo a X pers.`) y bloqueo preventivo de guardado ante inconsistencias.
+  - **Gestión Dinámica de Rangos:** Botón `➕ Agregar Nuevo Rango` para añadir tramos contiguos ilimitados, eliminación con `✕` y botón de restablecimiento rápido a los 2 tramos oficiales recomendados (1 a 29 pers. / 30 a 70 pers.).
+  - **Persistencia Atómica en Supabase:** Almacenamiento seguro en `settings.venue_pricing_tiers`, `venue_bouncy_castle_fee`, `venue_deposit_percentage` y `venue_max_capacity`, manteniendo 100% de compatibilidad con la RPC Zero-Trust `create_public_event_quote`.
+
 ## [2.1.0] - 2026-11-21
 
 ### Añadido / Optimizado (Arriendo de Recinto Completo 8h: Fotos Dinámicas, Pestañas en Landing y Blindaje Zero-Trust v2.1.0)

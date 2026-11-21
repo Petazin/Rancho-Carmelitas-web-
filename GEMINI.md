@@ -31,10 +31,12 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.1.0 (Arriendo de Recinto Completo 8h: Fotos Dinámicas, Pestañas en Landing y Blindaje Zero-Trust)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.2.0 (Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo en Admin)**.
 
 El sistema ahora soporta:
 
+- **Editor de Tramos Dinámicos, Máx. Adicionales y Alerta Reactiva de Aforo (v2.2.0):**
+  - **Fase 3 (Editor de Tramos Extensibles en `/admin/configuraciones`):** Configuración visual e intuitiva por tramos con personas base, precio base, adicionales máximos permitidos y valor unitario por adicional. Incluye auto-encadenamiento sin gaps (`rechainTiers`), banner reactivo de sincronización de aforo y validación preventiva ante inconsistencias entre capacidad física del recinto y tramos tarifarios.
 - **Arriendo de Recinto Completo 8h: Fotos Dinámicas, Pestañas en Landing y Blindaje Zero-Trust (v2.1.0):**
   - **Fase 1 (Seguridad & Base de Datos):** Columna `category` en `landing_gallery`, parámetros dinámicos `venue_%` en `settings`, triggers antiruido para `audit_logs` y RPC `create_public_event_quote` con cálculo autoritativo en servidor PostgreSQL (Zero-Trust).
   - **Fase 2 (Rediseño `/admin/landing`):** Navegación modular por pestañas horizontales (`Hero`, `Galería Portada`, `Galería Recinto`, `Textos/Reglas`, `Equipo`, `Contacto`), montaje persistente con CSS `hidden` (cero pérdida de datos al cambiar de tab) y galería de eventos con purga en Storage y visualización en `/recinto-completo`.
