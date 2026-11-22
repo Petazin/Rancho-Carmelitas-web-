@@ -31,10 +31,13 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.3 (Responsividad Móvil y Usabilidad EGM: Drawer Móvil PMS, Menú Desplegable Landing y Rutas Semánticas)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.5.0 (Estandarización Documental EGM y Cierre de Auditoría)**.
 
 El sistema ahora soporta:
 
+- **Estandarización Documental EGM (v2.5.0):**
+  - **Sincronización Técnica:** Runbook 07 alineado al motor de tramos dinámicos en Supabase y políticas vigentes.
+  - **Manuales de Usuario Completos:** Actualización del manual 06 de recinto, manual 09 de canales y creación del manual 14 de configuraciones globales.
 - **Responsividad Móvil y Usabilidad EGM (v2.4.3):**
   - **Drawer Móvil en PMS Admin:** Navegación táctil con animación suave y botón hamburguesa en `/admin/*`, garantizando uso cómodo en smartphones.
   - **Menú Móvil en Landing Page (`LandingNavbar.tsx`):** Menú desplegable completo con enlaces accesibles a todas las secciones del rancho y recinto completo.

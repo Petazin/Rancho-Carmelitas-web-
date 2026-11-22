@@ -1,6 +1,6 @@
 # 🔌 Manual de Usuario: 09. Canales de Venta y Comisiones Externas
 
-**Pantalla:** `/admin/configuracion` (Menú lateral: "Canales de Venta")  
+**Pantalla:** `/admin/canales` (Menú lateral: "Canales de Venta")  
 **Roles involucrados:** Administradores  
 
 ---
@@ -18,7 +18,7 @@ El módulo de **Canales de Venta** permite:
 
 ## 2. Cómo Agregar un Nuevo Canal de Venta
 
-1. En el menú lateral, haz clic en **"Canales de Venta"** (`/admin/configuracion`).
+1. En el menú lateral, haz clic en **"Canales de Venta"** (`/admin/canales`).
 2. En el formulario superior, ingresa:
    - **Nombre de la Plataforma:** Ej: *Booking.com*, *Airbnb*, *Directo Rancho*, *Convenio Empresa*.
    - **Comisión de la Plataforma (%):** Porcentaje de comisión estándar (ej: `15` para Booking.com, `3` para Airbnb, `0` para venta directa).

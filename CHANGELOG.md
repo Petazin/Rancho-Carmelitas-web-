@@ -1,5 +1,17 @@
 # Changelog - Rancho Carmelitas
 
+## [2.5.0] - 2026-11-21
+
+### Estandarización Documental EGM (Fase 4: Sincronización Integral v2.5.0)
+
+- **Alineación Fidedigna de Documentación Técnica:**
+  - Actualización de [documentacion/tecnica/07-sistema-recinto-completo.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/tecnica/07-sistema-recinto-completo.md) reflejando el motor de tramos dinámicos en base de datos (`settings.venue_pricing_tiers`), cálculo autoritativo en servidor PostgreSQL y la política de supresión de adicionales en recinto.
+- **Actualización de Manuales Operativos de Usuario:**
+  - Refactorización de [documentacion/usuario/06-arriendo-recinto-completo.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/06-arriendo-recinto-completo.md) con el tarifario por tramos fijos, aforo máximo y notas de operación vigentes.
+  - Creación del manual oficial [documentacion/usuario/14-configuraciones-globales.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/14-configuraciones-globales.md) documentando la autogestión de parámetros de empresa y el editor interactivo de tramos de recinto con auto-encadenamiento sin gaps (`rechainTiers`).
+  - Actualización del manual [documentacion/usuario/09-canales-venta-externos.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/09-canales-venta-externos.md) con la ruta oficial `/admin/canales`.
+  - Sincronización del índice maestro en [documentacion/README.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/README.md) y [documentacion/usuario/index.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/index.md).
+
 ## [2.4.3] - 2026-11-21
 
 ### Responsividad Móvil y Usabilidad EGM (Fase 3: Drawer Móvil PMS, Menú Desplegable Landing y Rutas Semánticas v2.4.3)

@@ -19,6 +19,9 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Estandarización Documental EGM (v2.5.0):**
+    *   **Alineación Técnica Fidedigna:** Sincronización completa de los runbooks técnicos de Recinto Completo con el modelo comercial y arquitectónico real de producción.
+    *   **Manuales de Usuario Consolidados:** Creación de la guía oficial de Configuraciones Globales (`14-configuraciones-globales.md`) y actualización de manuales operativos para recepción y gerencia.
 *   **Responsividad Móvil y Usabilidad EGM (v2.4.3):**
     *   **Navegación Móvil Táctil en PMS:** Drawer deslizante con backdrop y botón hamburguesa en `/admin/*`, permitiendo administrar el complejo desde smartphones con comodidad.
     *   **Menú Desplegable en Landing Pública:** Componente `LandingNavbar.tsx` con accesos rápidos móviles a Cabañas, Recinto Completo, Galería, Preguntas, Reglamento y Mi Reserva.

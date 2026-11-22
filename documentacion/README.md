@@ -35,7 +35,8 @@ Este repositorio documental ha sido estructurado meticulosamente bajo la metodol
 │   ├── 10-equipo-y-roles.md               # Invitación de colaboradores, asignación de roles y suspensiones
 │   ├── 11-bitacora-auditoria.md           # Trazabilidad en lenguaje natural y auditoría de cambios
 │   ├── 12-gestion-landing-page.md         # Textos del Hero, imagen de fondo, galería y logotipo oficial
-│   └── 13-desarrollo-y-roadmap.md         # Requerimientos, reporte de bugs con Ctrl+V y Drag & Drop
+│   ├── 13-desarrollo-y-roadmap.md         # Requerimientos, reporte de bugs con Ctrl+V y Drag & Drop
+│   └── 14-configuraciones-globales.md     # Parámetros institucionales, WhatsApp y editor dinámico de tramos
 │
 └── 📂 auditoria-egm                       # NIVEL 3: EVALUACIÓN DE INCONGRUENCIAS Y CÓDIGO FANTASMA
     ├── informe-incongruencias-codigo.md   # Diagnóstico exhaustivo de contradicciones, dead code y riesgos

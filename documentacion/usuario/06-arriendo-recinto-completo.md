@@ -25,18 +25,18 @@ El servicio de Arriendo de Recinto Completo está diseñado exclusivamente para 
 
 ---
 
-## 2. Tarifario Oficial y Parámetros Comerciales
+## 2. Tarifario Oficial y Parámetros Comerciales (v2.4.x)
 
-El cotizador público y el sistema administrativo aplican las siguientes reglas oficiales:
+El cotizador público y el sistema administrativo aplican las siguientes reglas oficiales autogestionables desde `/admin/configuraciones`:
 
 | Concepto | Regla y Valor Oficial | Notas de Operación |
 | :--- | :--- | :--- |
-| **Tramo Base 1** | **$180.000 CLP** (Hasta 15 personas) | Aplica para grupos pequeños de 1 a 15 asistentes. |
-| **Tramo Base 2** | **$250.000 CLP** (Hasta 30 personas) | Aplica para grupos medianos de 16 a 30 asistentes. |
-| **Persona Adicional** | **$3.500 CLP** por cada persona extra | Se cobra sobre la base del tramo correspondiente. |
-| **Menores de 3 Años** | **$0 CLP (Liberados de cobro)** | No pagan entrada. Se registran en el aforo por seguridad. |
-| **Juego Inflable Propio** | **$5.000 CLP** fijos | Recargo obligatorio para cubrir el consumo del motor eléctrico. |
-| **Abono Obligatorio** | **50% del total presupuestado** | Monto requerido para congelar y confirmar la fecha. |
+| **Tarifas Fijas por Tramo** | Configurables en `/admin/configuraciones` | Rangos sin gaps (ej: 1 a 20 pers: $190.000, 21 a 40 pers: $250.000, 41 a 70 pers: $350.000). |
+| **Asistentes Adicionales** | **Coordinar con administración** | Se suprime el cobro unitario por adicional en recinto. El cliente especifica extras en observaciones. |
+| **Menores de 3 Años** | **$0 CLP (Liberados de cobro)** | No pagan entrada. Se registran en el aforo total por seguridad y control de acceso. |
+| **Juego Inflable Propio** | **Configurable (Defecto $5.000 CLP)** | Recargo fijo para cubrir el consumo del motor eléctrico del inflable. |
+| **Abono Obligatorio** | **Configurable (Defecto 50%)** | Monto requerido para congelar y confirmar la fecha en el calendario. |
+| **Aforo Máximo Físico** | **Configurable (Defecto 70 personas)** | Al sobrepasarse, el cotizador desvía la consulta a WhatsApp para cotización corporativa. |
 
 ---
 

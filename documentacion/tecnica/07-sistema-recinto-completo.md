@@ -6,26 +6,26 @@
 
 ---
 
-## 1. Reglas de Negocio y Motor Tarifario Oficial
+## 1. Reglas de Negocio y Motor Tarifario Dinámico (v2.4.x)
 
-El sistema implementa el modelo comercial oficial validado por la administración de Rancho Carmelitas:
+El sistema opera bajo un motor de tarifación flexible y autoritativo en servidor PostgreSQL, sincronizado en tiempo real con la administración:
 
-### A) Tramos Base Oficiales
-* **Tramo Base 1 (Grupos Pequeños):**
-  - Hasta **15 personas** = **$180.000 CLP**.
-  - Si el grupo supera las 15 personas pero no excede las 20, se aplica la base de $180.000 más el cobro de pasajeros adicionales.
-* **Tramo Base 2 (Grupos Medianos y Grandes):**
-  - De **16 a 30 personas** = **$250.000 CLP**.
-  - Si el grupo supera las 30 personas, se aplica la base de $250.000 más el cobro de pasajeros adicionales.
+### A) Tarifas Fijas por Tramo Dinámico (Autogestionables)
+* **Tramos Parametrizables en Base de Datos:** Los tramos tarifarios se almacenan en formato JSON en `settings.venue_pricing_tiers` y son configurables en tiempo real por los administradores desde `/admin/configuraciones`:
+  - **Tramo Estándar (Grupos Pequeños):** Ej. 1 a 20 personas = Tarifa Fija (ej: $190.000 CLP).
+  - **Tramo Mediano (Grupos Medianos):** Ej. 21 a 40 personas = Tarifa Fija (ej: $250.000 CLP).
+  - **Tramo Grande (Grupos Mayores):** Ej. 41 a 70 personas = Tarifa Fija (ej: $350.000 CLP).
+* **Auto-Encadenamiento Continuo (`rechainTiers`):** Al modificar el tope de personas de cualquier tramo, el siguiente tramo encadena automáticamente su límite inferior en `Hasta + 1`, garantizando continuidad matemática estricta sin solapamientos ni lagunas tarifarias.
 
-### B) Pasajeros Adicionales y Exenciones
-* **Valor por Persona Adicional:** **$3.500 CLP** por cada asistente sobre el cupo base del tramo.
-* **Exención por Edad (Menores de 3 Años):** Los niños menores de 3 años están **liberados de cobro**. El cotizador solicita desglosar la cantidad de menores de 3 años y los descuenta del cálculo financiero, manteniéndolos en la nómina total para control de aforo.
+### B) Supresión de Cobro por Adicional en Recinto (Coordinación Directa)
+* **Alineación Comercial Oficial:** Se eliminó el concepto de cobro de adicionales por persona exclusivamente para el servicio de Arriendo de Recinto Completo (manteniéndose 100% inalterado para el arriendo de cabañas individuales).
+* **Política de Capacidad y Asistentes:** El cotizador informa en cada tarjeta: `Adicionales: Coordinar con administración`. Si un grupo prevé asistentes adicionales sobre el límite estándar, se solicita detallarlo en las notas del cotizador para acordar los requerimientos con la administración.
+* **Exención para Menores de 3 Años:** Los bebés y niños menores de 3 años están **liberados de cobro ($0)**. El cotizador desglosa la cantidad de menores de 3 años y los descuenta del aforo pagante.
 
-### C) Servicios Extra y Políticas
-* **Juegos Inflables propios:** Si el grupo ingresa un inflable propio, se aplica un recargo fijo de **$5.000 CLP** por concepto de consumo eléctrico del motor soplador.
-* **Abono Mínimo Requerido:** **50% del total presupuestado** para congelar y reservar la fecha de forma definitiva.
-* **Cabaña de Apoyo Opcional (Excepción Conversada):** Los eventos diurnos no incluyen cabañas por defecto. Si el organizador necesita una cabaña para mudar bebés, refrigerar medicamentos o descanso de adultos mayores, la administración puede asignar una cabaña de apoyo en el PMS ingresando un suplemento acordado.
+### C) Servicios Extra y Políticas Operativas
+* **Juegos Inflables:** Parámetro autogestionable en `settings.venue_bouncy_castle_fee` (por defecto $5.000 CLP o el valor configurado por la administración para cubrir el consumo eléctrico del motor soplador).
+* **Abono Mínimo Obligatorio:** Parámetro autogestionable en `settings.venue_deposit_percentage` (por defecto 50% del total presupuestado) requerido para congelar y reservar la fecha de forma definitiva.
+* **Aforo Físico Máximo:** Configurable en `settings.venue_max_capacity` (por defecto 70 personas). Si la cantidad de asistentes supera este límite, el cotizador activa el canal directo a WhatsApp para cotizar eventos masivos a medida.
 
 ---
 
@@ -33,9 +33,9 @@ El sistema implementa el modelo comercial oficial validado por la administració
 
 ```mermaid
 flowchart LR
-    A["Cotizador Público (/recinto-completo)"] -->|RPC create_public_event_quote| B[("event_quotes (Estado: Cotizacion_Pendiente)")]
-    B -->|Mailing Automático| C["Aviso al Cliente y Alerta al Administrador"]
-    D["PMS Admin (/admin/reservas?tab=eventos)"] -->|Botón Aprobar| B
+    A["Cotizador Público SSR (/recinto-completo#cotizador)"] -->|RPC autoritativa create_public_event_quote| B[("event_quotes (Estado: Cotizacion_Pendiente)")]
+    B -->|API Segura /api/send-event-quote-email| C["Acuse al Cliente y Alerta al Administrador"]
+    D["PMS Admin (/admin/reservas?tab=eventos)"] -->|Botón Aprobar (RBAC)| B
     B -->|Estado: Aprobada| E["Envío de Link de Pago de Abono 50% al Cliente"]
     E --> F["Portal de Pago (/recinto-completo/pago)"]
     F -->|Mercado Pago o Transferencia| G["Acreditación de Abono"]
