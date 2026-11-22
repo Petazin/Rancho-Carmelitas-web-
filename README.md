@@ -19,6 +19,10 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Responsividad Móvil y Usabilidad EGM (v2.4.3):**
+    *   **Navegación Móvil Táctil en PMS:** Drawer deslizante con backdrop y botón hamburguesa en `/admin/*`, permitiendo administrar el complejo desde smartphones con comodidad.
+    *   **Menú Desplegable en Landing Pública:** Componente `LandingNavbar.tsx` con accesos rápidos móviles a Cabañas, Recinto Completo, Galería, Preguntas, Reglamento y Mi Reserva.
+    *   **Estandarización Semántica de Rutas:** Desacoplamiento entre Canales de Venta (`/admin/canales`) y Configuraciones Globales (`/admin/configuraciones`).
 *   **Orden Estructural y Saneamiento EGM (v2.4.2):**
     *   **Raíz del Repositorio Limpia:** Centralización de más de 20 scripts SQL dispersos en [database/history/](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/database/history), reubicación de herramientas de testing a `scripts/` y eliminación de archivos de 0 bytes.
     *   **Optimización de Assets en `public/`:** Eliminación de íconos por defecto no usados y purga de imágenes preliminares no referenciadas.

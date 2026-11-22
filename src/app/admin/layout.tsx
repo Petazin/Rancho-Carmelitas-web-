@@ -13,7 +13,13 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
+
+  // Cerrar el drawer móvil automáticamente al cambiar de ruta
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     async function getProfile() {
@@ -67,17 +73,38 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#f3f4f6]">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6">
+    <div className="flex h-screen bg-[#f3f4f6] relative overflow-hidden">
+      {/* Backdrop overlay para pantallas móviles */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar con soporte de drawer deslizante en móvil */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+        sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+      }`}>
+        <div className="p-6 flex items-center justify-between border-b border-gray-100 md:border-b-0">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span className="w-8 h-8 bg-[#11d442] rounded-lg flex items-center justify-center text-white text-xs">RC</span>
+            <span className="w-8 h-8 bg-[#11d442] rounded-lg flex items-center justify-center text-white text-xs font-black">RC</span>
             PMS Admin
           </h2>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+            aria-label="Cerrar menú"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 py-4">
+        <nav className="flex-1 px-4 space-y-2 py-4 overflow-y-auto">
           <Link 
             href="/admin" 
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
@@ -154,9 +181,9 @@ export default function AdminLayout({
 
           {profile?.role === 'admin' && (
             <Link 
-              href="/admin/configuracion" 
+              href="/admin/canales" 
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                pathname === '/admin/configuracion' 
+                pathname.includes('/admin/canales') || pathname === '/admin/configuracion'
                   ? 'bg-[#f0fdf4] text-[#11d442] font-medium' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
@@ -238,7 +265,7 @@ export default function AdminLayout({
         <div className="p-4 mt-auto border-t border-gray-100">
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -249,21 +276,33 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8">
-          <h1 className="text-gray-500 text-sm font-medium">Panel de Gestión</h1>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'Cargando...'}</p>
+      <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
+        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 md:px-8 shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+              aria-label="Abrir menú de navegación"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="text-gray-600 text-sm font-semibold truncate">Panel de Gestión</h1>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-gray-900 leading-tight">{profile?.full_name || 'Cargando...'}</p>
               <p className="text-xs text-gray-400 capitalize">{profile?.role || '...'}</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#11d442] to-[#0fb337] flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#11d442] to-[#0fb337] flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white shrink-0">
               {(profile?.full_name || 'C').charAt(0)}
             </div>
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 md:p-8 flex-1">
           {children}
         </div>
       </main>

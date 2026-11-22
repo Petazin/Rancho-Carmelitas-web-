@@ -31,10 +31,14 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.2 (Orden Estructural y Saneamiento EGM: Purga de Residuos, Consolidación SQL y Limpieza de Assets)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.3 (Responsividad Móvil y Usabilidad EGM: Drawer Móvil PMS, Menú Desplegable Landing y Rutas Semánticas)**.
 
 El sistema ahora soporta:
 
+- **Responsividad Móvil y Usabilidad EGM (v2.4.3):**
+  - **Drawer Móvil en PMS Admin:** Navegación táctil con animación suave y botón hamburguesa en `/admin/*`, garantizando uso cómodo en smartphones.
+  - **Menú Móvil en Landing Page (`LandingNavbar.tsx`):** Menú desplegable completo con enlaces accesibles a todas las secciones del rancho y recinto completo.
+  - **Ruta Semántica `/admin/canales`:** Separación clara entre Canales de Venta (`/admin/canales`) y Configuraciones Globales (`/admin/configuraciones`).
 - **Orden Estructural y Saneamiento EGM (v2.4.2):**
   - **Raíz 100% Despejada:** Migración de 20 parches SQL a `database/history/`, reubicación de utilidades a `scripts/` y eliminación del archivo vacío `esquema_produccion.sql`.
   - **Purga de Assets y SVGs:** Eliminación de 5 íconos por defecto de Next.js y mockups `_new.png` de `public/gallery/`.

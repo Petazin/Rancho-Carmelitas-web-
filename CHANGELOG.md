@@ -1,5 +1,21 @@
 # Changelog - Rancho Carmelitas
 
+## [2.4.3] - 2026-11-21
+
+### Responsividad Móvil y Usabilidad EGM (Fase 3: Drawer Móvil PMS, Menú Desplegable Landing y Rutas Semánticas v2.4.3)
+
+- **Soporte Responsivo Total en PMS Admin (`src/app/admin/layout.tsx`):**
+  - Implementación de drawer lateral deslizante con animación suave (`translate-x-0` / `-translate-x-full`) y backdrop difuminado en pantallas móviles (< 768px).
+  - Incorporación de botón hamburguesa accesible en la cabecera del panel administrativo y botón de cierre rápido `✕` en el menú lateral.
+  - Auto-cierre reactivo del drawer móvil al navegar entre rutas del panel PMS (`useEffect` dependiente de `pathname`).
+  - Adaptación de espaciado dinámico en el contenedor principal (`p-4 sm:p-6 md:p-8`), erradicando el desbordamiento horizontal en pantallas táctiles.
+- **Menú Móvil Interactivo en Landing Pública (`LandingNavbar.tsx`):**
+  - Creación del componente de navegación `LandingNavbar.tsx` con menú hamburguesa animado en smartphones.
+  - Menú desplegable móvil que expone con 1 clic accesos a: Cabañas (`#cabins`), Recinto Completo (8h) con badge destacado (`/recinto-completo`), Galería (`#gallery`), Ubicación (`#location-social`), Preguntas Frecuentes (`#faq`), Reglamento (`/reglamento`), Consulta de Reserva (`/reserva`) y Acceso Admin (`/admin`).
+- **Estandarización Semántica de Rutas en PMS (`/admin/canales`):**
+  - Creación de la ruta dedicada [src/app/admin/canales/page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/admin/canales/page.tsx) para la gestión de plataformas externas (OTAs) y comisiones de canales de venta.
+  - Redirección automática transparente en `/admin/configuracion` hacia `/admin/canales`, erradicando la ambigüedad con `/admin/configuraciones`.
+
 ## [2.4.2] - 2026-11-21
 
 ### Orden Estructural y Saneamiento EGM (Fase 2: Purga de Residuos, Consolidación SQL y Limpieza de Assets v2.4.2)

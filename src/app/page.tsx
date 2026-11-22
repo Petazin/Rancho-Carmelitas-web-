@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { SocialSection } from "@/components/ui/SocialSection";
 import { Logo } from "@/components/ui/Logo";
 import { TeamSection, TeamMember } from "@/components/ui/TeamSection";
+import { LandingNavbar } from "@/components/ui/LandingNavbar";
 
 export const dynamic = 'force-dynamic';
 
@@ -210,42 +211,8 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
-      {/* Header flotante minimalista */}
-      <header className="fixed top-0 z-50 w-full glass-effect border-b border-gray-200/50">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo className="w-10 h-10 rounded-full object-cover border border-gray-200/50 shadow-sm" logoUrl={heroSettings.logo_url} />
-            <span className="text-xl font-bold tracking-tight text-gray-900">
-              Rancho<span className="text-[#11d442]">Carmelitas</span>
-            </span>
-          </div>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-            <a href="#cabins" className="hover:text-[#11d442] transition-colors">Cabañas</a>
-            <Link href="/recinto-completo" className="text-[#11d442] font-semibold hover:text-[#0fb839] transition-colors flex items-center gap-1">
-              <span>🎉 Recinto Completo</span>
-            </Link>
-            <a href="#gallery" className="hover:text-[#11d442] transition-colors">Galería</a>
-            {teamMembers.length > 0 && (
-              <a href="#team" className="hover:text-[#11d442] transition-colors">Equipo</a>
-            )}
-            <a href="#location-social" className="hover:text-[#11d442] transition-colors">Ubicación</a>
-            <a href="#faq" className="hover:text-[#11d442] transition-colors">Preguntas</a>
-            <Link href="/reglamento" className="hover:text-[#11d442] transition-colors">Reglamento</Link>
-            <Link href="/reserva" className="hover:text-[#11d442] transition-colors text-gray-800 font-semibold flex items-center gap-1">
-              <span>🔍 Mi Reserva</span>
-            </Link>
-            <a href="/admin" className="hover:text-[#11d442] transition-colors text-gray-400">Admin</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link href="/reserva" className="md:hidden text-xs font-bold text-gray-700 bg-gray-100 px-2.5 py-1.5 rounded-lg">
-              Mi Reserva
-            </Link>
-            <a href="#cabins" className="btn-primary">
-              Reservar Ahora
-            </a>
-          </div>
-        </div>
-      </header>
+      {/* Header flotante interactivo con menú responsive para móviles */}
+      <LandingNavbar logoUrl={heroSettings.logo_url} hasTeam={teamMembers.length > 0} />
 
       {/* Hero Section */}
       <main className="flex-1">
