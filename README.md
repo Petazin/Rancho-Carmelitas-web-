@@ -19,6 +19,9 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Humanización y Lenguaje Natural en Auditoría (v2.5.1):**
+    *   **Traducción Amigable de Tramos y Variables de Recinto:** Parseo dinámico de tramos tarifarios de recinto completo en `/admin/auditoria`, eliminando el volcado de código JSON crudo y expresando las variaciones en rangos de personas y moneda local ($CLP).
+    *   **Auditoría de Cotizaciones (`event_quotes`):** Trazabilidad en lenguaje natural y filtro dedicado en la bitácora para solicitudes y aprobaciones de eventos diurnos.
 *   **Estandarización Documental EGM (v2.5.0):**
     *   **Alineación Técnica Fidedigna:** Sincronización completa de los runbooks técnicos de Recinto Completo con el modelo comercial y arquitectónico real de producción.
     *   **Manuales de Usuario Consolidados:** Creación de la guía oficial de Configuraciones Globales (`14-configuraciones-globales.md`) y actualización de manuales operativos para recepción y gerencia.

@@ -120,7 +120,18 @@ export default function AuditoriaPage() {
     capacity: 'Capacidad',
     amount: 'Monto del Pago',
     payment_method: 'Método de Pago',
-    reference: 'N° Transacción/Ref'
+    reference: 'N° Transacción/Ref',
+    venue_pricing_tiers: 'Tramos Tarifarios de Recinto',
+    venue_max_capacity: 'Aforo Máximo de Recinto',
+    venue_bouncy_castle_fee: 'Tarifa Inflable (Eléctrica)',
+    venue_deposit_percentage: 'Porcentaje de Abono de Recinto',
+    customer_name: 'Nombre Cliente (Recinto)',
+    customer_email: 'Email Cliente (Recinto)',
+    customer_phone: 'Teléfono Cliente (Recinto)',
+    event_date: 'Fecha del Evento',
+    estimated_guests: 'Asistentes Estimados',
+    has_bouncy_castle: 'Incluye Inflable',
+    assigned_tier_name: 'Tramo Asignado'
   };
 
   const formatFieldValue = (key: string, val: any) => {
@@ -132,15 +143,38 @@ export default function AuditoriaPage() {
     }
     if (key === 'status') {
       const s = String(val);
-      if (s.toLowerCase() === 'cancelada') {
-        return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold uppercase text-[10px]">Cancelada</span>;
+      if (s.toLowerCase() === 'cancelada' || s.toLowerCase() === 'rejected') {
+        return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold uppercase text-[10px]">{s}</span>;
       }
-      if (s.toLowerCase() === 'confirmada') {
-        return <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold uppercase text-[10px]">Confirmada</span>;
+      if (s.toLowerCase() === 'confirmada' || s.toLowerCase() === 'confirmed') {
+        return <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold uppercase text-[10px]">{s}</span>;
       }
       return <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase text-[10px]">{s}</span>;
     }
-    if (['payment_amount', 'total_price', 'amount', 'price_per_night'].includes(key) && !isNaN(Number(val))) {
+    if (key === 'venue_pricing_tiers') {
+      try {
+        const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+        if (Array.isArray(parsed)) {
+          return (
+            <span className="text-[11px] font-sans font-medium text-emerald-800 bg-emerald-50 px-2 py-1 rounded inline-block">
+              🏰 {parsed.length} tramos configurados ({parsed.map((t: any) => `${t.name || 'Tramo'}: $${Number(t.base_price || 0).toLocaleString('es-CL')}`).join(' | ')})
+            </span>
+          );
+        }
+      } catch {
+        // Fallback al default si no es JSON válido
+      }
+    }
+    if (['venue_max_capacity', 'estimated_guests'].includes(key) && !isNaN(Number(val))) {
+      return `${Number(val)} personas`;
+    }
+    if (key === 'venue_deposit_percentage' && !isNaN(Number(val))) {
+      return `${Number(val)}%`;
+    }
+    if (key === 'has_bouncy_castle') {
+      return val ? 'Sí (con inflable)' : 'No';
+    }
+    if (['payment_amount', 'total_price', 'amount', 'price_per_night', 'venue_bouncy_castle_fee'].includes(key) && !isNaN(Number(val))) {
       return `$${Number(val).toLocaleString('es-CL')}`;
     }
     if (typeof val === 'object') {
@@ -431,6 +465,55 @@ export default function AuditoriaPage() {
       const key = data?.key || '';
       const val = data?.value || '';
 
+      // 1. Tramos tarifarios de arriendo de recinto completo (8h)
+      if (key === 'venue_pricing_tiers') {
+        let detalle = 'los tramos tarifarios del Arriendo de Recinto Completo';
+        try {
+          const tiers = typeof val === 'string' ? JSON.parse(val) : val;
+          if (Array.isArray(tiers) && tiers.length > 0) {
+            const count = tiers.length;
+            const minGuests = tiers[0].min_guests || 1;
+            const maxGuests = tiers[tiers.length - 1].max_guests || 'N/A';
+            const prices = tiers.map((t: any) => Number(t.base_price) || 0).filter((p: number) => p > 0);
+            const minP = Math.min(...prices);
+            const maxP = Math.max(...prices);
+            detalle = `${count} tramos para ${minGuests} a ${maxGuests} personas, tarifas desde $${minP.toLocaleString('es-CL')} hasta $${maxP.toLocaleString('es-CL')}`;
+          }
+        } catch {
+          // fallback silencioso si no es json parseable
+        }
+        if (log.action === 'INSERT') {
+          return `🏰 ${autor} configuró inicialmente los tramos tarifarios del Recinto Completo (${detalle}) (${fecha}).`;
+        }
+        if (log.action === 'UPDATE') {
+          return `🏰 ${autor} actualizó los tramos tarifarios del Arriendo de Recinto Completo (${detalle}) (${fecha}).`;
+        }
+        return `🗑️ ${autor} eliminó los tramos tarifarios de recinto del sistema (${fecha}).`;
+      }
+
+      // 2. Aforo máximo del recinto
+      if (key === 'venue_max_capacity') {
+        if (log.action === 'INSERT') return `👥 ${autor} fijó el aforo máximo permitido del recinto en ${val} personas (${fecha}).`;
+        if (log.action === 'UPDATE') return `👥 ${autor} actualizó el aforo máximo permitido del recinto a ${val} personas (${fecha}).`;
+        return `🗑️ ${autor} eliminó la configuración de aforo máximo (${fecha}).`;
+      }
+
+      // 3. Tarifa por consumo de inflable
+      if (key === 'venue_bouncy_castle_fee') {
+        const monto = Number(val) || 0;
+        if (log.action === 'INSERT') return `⚡ ${autor} fijó la tarifa por consumo eléctrico de juego inflable en $${monto.toLocaleString('es-CL')} CLP (${fecha}).`;
+        if (log.action === 'UPDATE') return `⚡ ${autor} actualizó la tarifa por consumo eléctrico de juego inflable a $${monto.toLocaleString('es-CL')} CLP (${fecha}).`;
+        return `🗑️ ${autor} eliminó la tarifa de juego inflable (${fecha}).`;
+      }
+
+      // 4. Porcentaje de abono requerido para recinto
+      if (key === 'venue_deposit_percentage') {
+        if (log.action === 'INSERT') return `💳 ${autor} fijó el abono mínimo requerido para reservar el recinto en ${val}% (${fecha}).`;
+        if (log.action === 'UPDATE') return `💳 ${autor} actualizó el abono mínimo requerido para reservar el recinto al ${val}% (${fecha}).`;
+        return `🗑️ ${autor} eliminó el porcentaje de abono de recinto (${fecha}).`;
+      }
+
+      // Resto de variables corporativas
       const labels: Record<string, string> = {
         whatsapp_number: 'el número de WhatsApp',
         company_name: 'el nombre de la empresa',
@@ -444,7 +527,7 @@ export default function AuditoriaPage() {
       const label = labels[key] || `la variable "${key}"`;
 
       if (log.action === 'INSERT') {
-        return `⚙️ ${autor} agregó la variable de configuración "${key}" con el valor "${val}" (${fecha}).`;
+        return `⚙️ ${autor} agregó ${label} con el valor "${val}" (${fecha}).`;
       }
       if (log.action === 'UPDATE') {
         const displayVal = key === 'default_admin_commission' ? `${val}%` : `"${val}"`;
@@ -531,6 +614,33 @@ export default function AuditoriaPage() {
       return `🗑️ ${autor} eliminó el registro de abono de $${monto.toLocaleString('es-CL')} (${fecha}).`;
     }
 
+    if (log.table_name === 'event_quotes') {
+      const data = log.action === 'DELETE' ? log.old_data : log.new_data;
+      const cliente = data?.customer_name || 'un cliente';
+      const personas = data?.estimated_guests || 0;
+      const fechaEvento = data?.event_date ? new Date(data.event_date + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : 'fecha a coordinar';
+      const total = Number(data?.total_price) || 0;
+
+      if (log.action === 'INSERT') {
+        return `🏰 Se ingresó una nueva cotización de recinto para "${cliente}" (${personas} personas, evento para el ${fechaEvento}) por $${total.toLocaleString('es-CL')} (${fecha}).`;
+      }
+      if (log.action === 'UPDATE') {
+        const oldStatus = log.old_data?.status;
+        const newStatus = log.new_data?.status;
+        if (oldStatus !== newStatus && newStatus) {
+          if (newStatus.toLowerCase() === 'confirmed' || newStatus.toLowerCase() === 'confirmada') {
+            return `✅ ${autor} confirmó y reservó el recinto completo para "${cliente}" (${fechaEvento}) (${fecha}).`;
+          }
+          if (newStatus.toLowerCase() === 'rejected' || newStatus.toLowerCase() === 'rechazada') {
+            return `❌ ${autor} rechazó la solicitud de arriendo de recinto para "${cliente}" (${fechaEvento}) (${fecha}).`;
+          }
+          return `🔄 ${autor} cambió el estado de la cotización de recinto de "${cliente}" de "${oldStatus || 'N/A'}" a "${newStatus}" (${fecha}).`;
+        }
+        return `📋 ${autor} actualizó los datos de la cotización de recinto para "${cliente}" (${fecha}).`;
+      }
+      return `🗑️ ${autor} eliminó la cotización de recinto de "${cliente}" (${fecha}).`;
+    }
+
     return `🔗 ${autor} realizó una acción de tipo ${log.action} en el módulo ${log.table_name} (${fecha}).`;
   };
 
@@ -569,6 +679,7 @@ export default function AuditoriaPage() {
             <option value="ALL">Todas las tablas</option>
             <option value="bookings">bookings (Reservas)</option>
             <option value="booking_payments">booking_payments (Abonos y Pagos)</option>
+            <option value="event_quotes">event_quotes (Cotizaciones de Recinto)</option>
             <option value="cabins">cabins (Cabañas)</option>
             <option value="cabin_closures">cabin_closures (Bloqueos)</option>
             <option value="profiles">profiles (Usuarios/Perfiles)</option>

@@ -26,14 +26,17 @@ A diferencia de los sistemas tradicionales que solo muestran códigos técnicos 
 | 🔒 | **Bloqueo de Usuario** | *"El administrador bloqueó la cuenta de Luis Muñoz. Motivo: Término de temporada."* |
 | 🔓 | **Desbloqueo de Usuario**| *"Se levantó la suspensión de acceso para la cuenta de Luis Muñoz."* |
 | 📩 | **Invitaciones de Correo**| *"Se reenvió el correo de invitación al colaborador para activar su cuenta."* |
-| 🎪 | **Eventos de Recinto** | *"Se aprobó la cotización de Arriendo de Recinto para el Colegio San José (45 personas)."* |
+| 🎪 | **Eventos y Cotizaciones**| *"Se ingresó una nueva cotización de recinto para 'Colegio San José' (45 personas) por $250.000."* |
+| 🏰 | **Tramos de Recinto** | *"El administrador actualizó los tramos tarifarios del Arriendo de Recinto Completo (6 tramos para 1 a 145 personas, tarifas desde $190.000 hasta $400.000)."* |
+| 👥 | **Aforo Máximo** | *"El administrador actualizó el aforo máximo permitido del recinto a 150 personas."* |
+| ⚡ | **Inflables y Abonos** | *"Se actualizó la tarifa por consumo eléctrico de juego inflable a $5.000 CLP / abono al 50%."* |
 
 ---
 
 ## 3. Herramientas de Búsqueda y Filtros
 
 En la cabecera de `/admin/auditoria` dispones de filtros interactivos para encontrar rápidamente cualquier evento:
-* **Filtro por Módulo / Tabla:** Selecciona si buscas movimientos en *Reservas*, *Cabañas*, *Pagos*, *Cierres Temporales*, *Usuarios* o *Roadmap*.
+* **Filtro por Módulo / Tabla:** Selecciona si buscas movimientos en *Reservas*, *Abonos y Pagos*, *Cotizaciones de Recinto (event_quotes)*, *Cabañas*, *Cierres Temporales*, *Usuarios/Perfiles*, *Hero y Logo*, *Galería*, *Configuraciones Globales*, *Canales y Comisiones* o *Roadmap*.
 * **Filtro por Tipo de Acción:** *Creaciones (INSERT)*, *Modificaciones (UPDATE)* o *Eliminaciones (DELETE)*.
 * **Filtro por Operador:** Busca las acciones realizadas por un miembro específico del equipo.
 * **Rango de Fechas:** Acota la búsqueda al día de hoy, esta semana o un mes en particular.

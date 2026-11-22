@@ -1,5 +1,21 @@
 # Changelog - Rancho Carmelitas
 
+## [2.5.1] - 2026-11-22
+
+### Humanización y Lenguaje Natural en Auditoría (v2.5.1)
+
+- **Traducción a Lenguaje Natural de Tramos de Recinto y Aforo (`src/app/admin/auditoria/page.tsx`):**
+  - Eliminación total del volcado de código JSON crudo en la bitácora de auditoría al modificar los tramos tarifarios del Arriendo de Recinto Completo (`venue_pricing_tiers`).
+  - Parseo automático inteligente que genera un resumen ejecutivo claro para usuarios no técnicos: cantidad de tramos, alcance de asistentes mín/máx y rango de precios formateado en moneda local (`$190.000 a $400.000`).
+  - Formato de lenguaje natural con unidades de negocio para aforo máximo (`venue_max_capacity: 150 personas`), tarifa eléctrica de inflable (`venue_bouncy_castle_fee: $5.000 CLP`) y porcentaje de abono (`venue_deposit_percentage: 50%`).
+- **Soporte Completo de Cotizaciones de Eventos Diurnos (`event_quotes`):**
+  - Implementación de explicaciones amigables en lenguaje natural para creaciones, confirmaciones y rechazos de cotizaciones de recinto con fecha, cliente y montos.
+  - Inclusión de la opción `event_quotes (Cotizaciones de Recinto)` en el menú desplegable de filtros por tabla de la bitácora.
+- **Formateo Limpio en la Tabla Comparativa de Diferencias (Diff):**
+  - Inyección de etiquetas de campo legibles en español en `FIELD_LABELS` y chips visuales Stitch UI amigables en `formatFieldValue`.
+- **Actualización Documental:**
+  - Sincronización del manual de usuario [documentacion/usuario/11-bitacora-auditoria.md](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/documentacion/usuario/11-bitacora-auditoria.md) con los nuevos eventos y filtros.
+
 ## [2.5.0] - 2026-11-21
 
 ### Estandarización Documental EGM (Fase 4: Sincronización Integral v2.5.0)

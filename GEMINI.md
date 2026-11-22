@@ -31,10 +31,15 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.5.0 (Estandarización Documental EGM y Cierre de Auditoría)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.5.1 (Humanización y Lenguaje Natural en Auditoría)**.
 
 El sistema ahora soporta:
 
+- **Humanización y Lenguaje Natural en Auditoría (v2.5.1):**
+  - **Eliminación de Volcado JSON:** Parseo inteligente de `venue_pricing_tiers` para generar resúmenes amigables en español de los tramos tarifarios del Arriendo de Recinto Completo (cantidad de tramos, asistentes mín/máx y rango de precios en CLP).
+  - **Unidades de Negocio:** Formateo explícito para aforo máximo (`150 personas`), inflables (`$5.000 CLP`) y porcentaje de abono (`50%`).
+  - **Módulo `event_quotes`:** Explicaciones amigables en lenguaje natural para ingresos, confirmaciones y rechazos de cotizaciones de eventos diurnos, más filtro dedicado en el selector de tablas de la bitácora.
+  - **Sincronización Documental:** Actualización del manual `documentacion/usuario/11-bitacora-auditoria.md`.
 - **Estandarización Documental EGM (v2.5.0):**
   - **Sincronización Técnica:** Runbook 07 alineado al motor de tramos dinámicos en Supabase y políticas vigentes.
   - **Manuales de Usuario Completos:** Actualización del manual 06 de recinto, manual 09 de canales y creación del manual 14 de configuraciones globales.

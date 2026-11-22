@@ -786,3 +786,32 @@
 - Se redactó y guardó el reporte de hito en la Wiki de LLM: `2026-11-21-tarifas-fijas-tramos-recinto-y-coordinacion-adicionales.md`.
 - Se sincronizaron las copias vivas de la documentación técnica hacia `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\`.
 - Se procede a preparar el commit y push a la rama `master` en Git y GitHub para activar el despliegue automático en Vercel.
+[2026-11-21 23:51:00] Actividad de Antigravity:
+- Se realizó una auditoría de preparación agéntica del proyecto Rancho Carmelitas.
+- Se inspeccionaron los archivos de contexto para IA: `GEMINI.md`, `README.md`, `CHANGELOG.md`, `package.json`, `tsconfig.json`, `database/` y la biblioteca documental `documentacion/` (8 runbooks técnicos, 14 manuales de usuario y guías de infraestructura).
+- Se confirmó que el proyecto cuenta con un ecosistema agéntico completo de nivel de producción.
+[2026-11-22 12:49:00] Actividad de Antigravity:
+- Se inspeccionó la arquitectura de la Bitácora de Auditoría en `src/app/admin/auditoria/page.tsx` y los triggers PostgreSQL (`database/history/schema_update_auditoria_completa.sql` y `schema_event_quotes_fase1_test.sql`).
+- Se verificó el registro de los tramos de arriendo de recinto y configuraciones en la tabla `settings` y eventos en `event_quotes`.
+- Modo solo lectura: no se aplicó ninguna modificación de código conforme a la instrucción del usuario.
+[2026-11-22 14:07:30] Actividad de Antigravity:
+- El usuario solicitó subir el ambiente de pruebas.
+- Conforme a las reglas de sandboxing (Sección 3: "No ejecutes scripts de prueba o de inicialización por tu cuenta. Debes solicitar al usuario que los ejecute..."), se prepararon las instrucciones exactas y comandos transparentes para la ejecución local de Next.js en puerto 3000.
+[2026-11-22 14:09:30] Actividad de Antigravity:
+- El usuario solicitó expresamente la ejecución por parte del agente del servidor de pruebas local: `cd 'rancho-carmelitas-web'; npm run dev`.
+- Se inició el proceso en segundo plano como daemon de soporte (puerto 3000).
+[2026-11-22 14:14:00] Actividad de Antigravity:
+- Se refactorizó la visualización y traducción a lenguaje natural de la Bitácora de Auditoría en `src/app/admin/auditoria/page.tsx`.
+- Se añadieron etiquetas amigables para variables de recinto: `venue_pricing_tiers` (resumen estructurado sin volcado de JSON), `venue_max_capacity` (formato con personas), `venue_bouncy_castle_fee` (formato CLP) y `venue_deposit_percentage` (formato %).
+- Se integró soporte completo para `event_quotes` en las explicaciones en lenguaje natural y como opción en el filtro desplegable de tablas.
+- Se ejecutó `npx tsc --noEmit` validando compilación de TypeScript limpia con código de salida 0.
+[2026-11-22 14:27:50] Actividad de Antigravity:
+- Verificación de la presencia y vigencia de la sección de Auditoría en la biblioteca documental.
+- Se identificó que la Bitácora de Auditoría está ampliamente documentada en el Nivel 2: `documentacion/usuario/11-bitacora-auditoria.md` y en el Nivel 1: `documentacion/tecnica/02-modelo-datos-y-base-de-datos.md`.
+[2026-11-22 14:28:15] Actividad de Antigravity:
+- Actualización de `documentacion/usuario/11-bitacora-auditoria.md` con los nuevos ejemplos de traducción a lenguaje natural de tramos de recinto, aforo, inflables y el filtro `event_quotes`.
+[2026-11-22 17:19:20] Actividad de Antigravity:
+- Validación de compilación de producción exitosa con `npm run build` (32 rutas optimizadas).
+- Elevación de versión a [2.5.1] en `package.json`, `CHANGELOG.md`, `GEMINI.md` y `README.md`.
+- Generación del reporte de hito `2026-11-22-lenguaje-natural-auditoria-recinto-v2-5-1.md` y sincronización de `README.md`, `CHANGELOG.md` y `GEMINI.md` hacia `Wiki_LLM/fuentes/proyectos/rancho-carmelitas/`.
+- Preparación de commit y sincronización a GitHub en rama `master`.
