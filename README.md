@@ -19,6 +19,10 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Orden Estructural y Saneamiento EGM (v2.4.2):**
+    *   **Raíz del Repositorio Limpia:** Centralización de más de 20 scripts SQL dispersos en [database/history/](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/database/history), reubicación de herramientas de testing a `scripts/` y eliminación de archivos de 0 bytes.
+    *   **Optimización de Assets en `public/`:** Eliminación de íconos por defecto no usados y purga de imágenes preliminares no referenciadas.
+    *   **Consolidación de Manuales de Usuario:** Eliminación de 8 borradores no estructurados en `/documentacion/usuario`, preservando la serie oficial fidedigna numerada del `01` al `13`.
 *   **Seguridad y Blindaje EGM (v2.4.1):**
     *   **Supresión de Escalada de Privilegios a Administrador:** Eliminación del auto-upsert incondicional a rol administrador en `/api/admin/users`, requiriendo perfil administrativo previamente validado.
     *   **Protección de Despacho de Correos de Recinto:** Control de acceso en `/api/send-event-quote-email` exigiendo `isStaffOrAdmin()` para aprobaciones y confirmaciones, validación estricta de formato UUID y lista blanca de acciones.

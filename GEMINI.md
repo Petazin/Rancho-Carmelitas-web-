@@ -31,10 +31,14 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.1 (Seguridad & Blindaje EGM: Protección de Endpoints, RLS y Homologación de Pasarelas)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.2 (Orden Estructural y Saneamiento EGM: Purga de Residuos, Consolidación SQL y Limpieza de Assets)**.
 
 El sistema ahora soporta:
 
+- **Orden Estructural y Saneamiento EGM (v2.4.2):**
+  - **Raíz 100% Despejada:** Migración de 20 parches SQL a `database/history/`, reubicación de utilidades a `scripts/` y eliminación del archivo vacío `esquema_produccion.sql`.
+  - **Purga de Assets y SVGs:** Eliminación de 5 íconos por defecto de Next.js y mockups `_new.png` de `public/gallery/`.
+  - **Biblioteca Documental Homologada:** Purgados los 8 manuales duplicados no indexados en `documentacion/usuario/`, preservando la serie oficial `01` a `13`.
 - **Seguridad & Blindaje EGM (v2.4.1):**
   - **Supresión de Escalada de Privilegios:** Eliminación de la creación automática de usuarios administradores en `/api/admin/users`.
   - **Protección de Despacho de Correos:** Control de acceso en `/api/send-event-quote-email` con `isStaffOrAdmin()`, validación estricta de UUIDs y lista blanca de acciones.

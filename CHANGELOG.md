@@ -1,5 +1,21 @@
 # Changelog - Rancho Carmelitas
 
+## [2.4.2] - 2026-11-21
+
+### Orden Estructural y Saneamiento EGM (Fase 2: Purga de Residuos, Consolidación SQL y Limpieza de Assets v2.4.2)
+
+- **Centralización y Orden de la Raíz del Proyecto:**
+  - Migración y organización de 20 scripts SQL dispersos en la raíz hacia la carpeta dedicada [database/history/](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/database/history).
+  - Eliminación definitiva del archivo vacío `esquema_produccion.sql` (0 bytes).
+  - Reubicación de scripts utilitarios sueltos (`download-logo.js` y `verify-rls.js`) dentro del directorio oficial [scripts/](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/scripts).
+- **Limpieza de Assets Residuales en `public/`:**
+  - Purgados 5 íconos SVG obsoletos heredados de la plantilla por defecto de Next.js (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`).
+  - Eliminación de 4 imágenes mockups preliminares no referenciadas en `public/gallery/` (`dormitorio_new.png`, `hero_new.png`, `interior_new.png`, `lounge_new.png`).
+- **Saneamiento Documental en `/documentacion/usuario`:**
+  - Purgados 8 archivos Markdown duplicados y obsoletos (`auditoria.md`, `cabanas.md`, `canales-venta.md`, `configuraciones-globales.md`, `dashboard.md`, `login.md`, `reservas.md`, `usuarios.md`), dejando exclusivamente la serie oficial estandarizada y numerada del `01` al `13` más `index.md`.
+- **Eliminación de Directorios Vacíos:**
+  - Eliminada la carpeta huérfana vacía `src/components/layout`.
+
 ## [2.4.1] - 2026-11-21
 
 ### Seguridad y Blindaje EGM (Fase 1: Protección de Endpoints, RLS y Homologación de Pasarelas v2.4.1)
