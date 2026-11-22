@@ -753,3 +753,36 @@
 - Se redactó y guardó el reporte de hito en la Wiki de LLM: `2026-11-21-cotizador-recinto-ssr-y-rediseño-hero-fullwidth.md`.
 - Se sincronizaron las copias vivas de `CHANGELOG.md`, `README.md` y `GEMINI.md` hacia la Wiki LLM en `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\`.
 - Se procede a preparar el commit y push a la rama `master` en Git y GitHub para el despliegue automático en Vercel.
+
+[2026-11-21 21:07:00] Actividad de Antigravity (Alineación Comercial: Supresión de Adicionales para Recinto Completo):
+- A solicitud del usuario tras acuerdo entre el dueño y el administrador del recinto, se eliminó el concepto de cobro por persona adicional exclusivamente para el Arriendo de Recinto Completo (8 horas), preservando intacta la lógica de adicionales de las cabañas.
+- Se refactorizó la interfaz de administración en `src/app/admin/configuraciones/page.tsx`:
+  - Se eliminaron las columnas de "Personas Base", "Máx. Adicionales" y "Valor Adicional".
+  - Se implementó la tabla simplificada de tramos puros con columnas: "Nombre del Plan / Tramo", "Desde (pers.)" (auto-calculado), "Hasta (pers.)" (editable), "Tarifa Fija del Tramo ($)", "Cobertura" y acción de eliminación.
+  - La función de encadenamiento `rechainTiers` se adaptó para fijar automáticamente `extra_guest_fee = 0` e `included_guests = max_guests`.
+- Se adaptó el cotizador web en `src/components/ui/VenueQuoteForm.tsx`:
+  - Las tarjetas de planes en el Paso 1 ahora indican claramente "Tarifa Fija (8 hrs)", cobertura de personas sin cobro adicional y rango de aforo.
+  - El desglose de cotización en vivo calcula directamente: Tarifa Fija del Plan + Inflable (opcional), eliminando por completo cualquier línea o cálculo de personas adicionales.
+  - La llamada a la RPC autoritativa en BD fija `p_extra_guests_cost = 0`.
+- Se creó el script SQL `schema_venue_tramos_sin_adicionales.sql` con la versión pura de la RPC `create_public_event_quote`.
+- Se validó la ausencia de errores con `npx tsc --noEmit` (código 0) y compilación limpia con `npm run build` (código 0, 31/31 rutas).
+- Se verificó visualmente en el navegador (`http://localhost:3000/recinto-completo#cotizador`), confirmando una experiencia limpia, transparente y sin mención de adicionales.
+[2026-11-21 21:52:00] Actividad de Antigravity (Actualización de Texto de Adicionales en Cotizador de Recinto):
+- A solicitud del usuario para reflejar las políticas acordadas, se actualizó el texto informativo en las tarjetas de planes de `src/components/ui/VenueQuoteForm.tsx`.
+- Se reemplazó "Sin cobro adicional" por "Adicionales: Coordinar con administración" en todas las tarjetas de tramos.
+- Se verificó la consistencia tipográfica con `npx tsc --noEmit` (código 0).
+- Se ejecutó `npm run build` certificando compilación exitosa sin errores de TypeScript ni Next.js (código 0, 31/31 rutas).
+- Se inspeccionó visualmente con el subagente de navegador en `http://localhost:3000/recinto-completo#cotizador`, validando que las 6 tarjetas de planes reflejan nítidamente la nueva leyenda.
+[2026-11-21 22:12:00] Actividad de Antigravity (Actualización de Placeholder de Comentarios en Cotizador):
+- Se actualizó el texto de ejemplo (placeholder) del campo "Comentarios o requerimientos adicionales (Opcional)" en `src/components/ui/VenueQuoteForm.tsx`.
+- Se configuró la sugerencia explícita: "¿Tienen personas adicionales por coordinar con administración?, ¿traerán carritos de comida, animación o alguna consulta sobre el quincho?".
+- Se incrementó a `rows={3}` para asegurar que todo el texto de ejemplo y las observaciones del cliente se lean de manera cómoda y sin recortes.
+- Se verificó la consistencia con `npx tsc --noEmit` (código 0).
+- Se ejecutó `npm run build` certificando compilación exitosa (código 0, 31/31 rutas).
+- Se inspeccionó visualmente con el subagente de navegador en `http://localhost:3000/recinto-completo#cotizador`, validando su visualización óptima.
+[2026-11-21 22:14:00] Actividad de Antigravity (Cierre y Despliegue de Versión 2.4.0 a Producción):
+- El usuario validó y solicitó la subida de los ajustes a producción.
+- Se actualizaron los documentos del sistema: `CHANGELOG.md`, `README.md` y `GEMINI.md` formalizando la versión [2.4.0].
+- Se redactó y guardó el reporte de hito en la Wiki de LLM: `2026-11-21-tarifas-fijas-tramos-recinto-y-coordinacion-adicionales.md`.
+- Se sincronizaron las copias vivas de la documentación técnica hacia `C:\Users\Petazo\Desktop\Wiki_LLM\fuentes\proyectos\rancho-carmelitas\`.
+- Se procede a preparar el commit y push a la rama `master` en Git y GitHub para activar el despliegue automático en Vercel.

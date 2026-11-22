@@ -19,6 +19,10 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Tarifas Fijas por Tramo de Recinto y Coordinación de Adicionales (v2.4.0):**
+    *   **Supresión de Adicionales para Recinto Completo (8h):** Eliminación definitiva del concepto de personas adicionales en el arriendo exclusivo de recinto, manteniendo 100% inalterada la política de adicionales en cabañas.
+    *   **Editor Simplificado de Tramos (`/admin/configuraciones`):** Tabla interactiva y limpia de 4 columnas principales (`Nombre del Plan`, `Desde pers.`, `Hasta pers.` y `Tarifa Fija del Tramo $`), con auto-encadenamiento sin gaps (`rechainTiers`).
+    *   **Cotizador Web Directo y Transparente:** Tarjetas de planes con la indicación `Adicionales: Coordinar con administración`, desglose financiero plano sin multiplicaciones extras, y placeholder enriquecido en el campo de comentarios de contacto para especificar asistentes por coordinar.
 *   **Cotizador Dinámico de Recinto y Rediseño Visual Hero Full-Width (v2.3.0):**
     *   **Inyección SSR Inmediata (`/recinto-completo`):** Server Component que precarga en el primer renderizado las tarifas de `venue_pricing_tiers`, costo de inflables, porcentaje de abono y aforo máximo desde la tabla `settings`, erradicando parpadeos de carga y fallbacks estáticos.
     *   **Selector de Planes a Ancho Completo (Full-Width Hero UI):** Arquitectura visual renovada en `VenueQuoteForm.tsx` con Paso 1 a 12 columnas (~900px), tarjetas espaciosas de ~280px libres que eliminan cualquier truncamiento de texto, botones de selección reactivos `✓ Plan Seleccionado` / `Elegir este Plan` y tipografía clara para tarifas base y aforos.

@@ -11,8 +11,8 @@ export interface VenuePricingTier {
   min_guests: number;
   max_guests: number;
   base_price: number;
-  included_guests: number;
-  extra_guest_fee: number;
+  included_guests?: number;
+  extra_guest_fee?: number;
 }
 
 export interface VenueQuoteFormProps {
@@ -24,9 +24,9 @@ export interface VenueQuoteFormProps {
 }
 
 const DEFAULT_VENUE_TIERS: VenuePricingTier[] = [
-  { id: 'tier-1', name: 'Paseo Estándar (hasta 15 personas)', min_guests: 1, max_guests: 15, base_price: 180000, included_guests: 15, extra_guest_fee: 3500 },
-  { id: 'tier-2', name: 'Paseo Mediano (16 a 29 personas)', min_guests: 16, max_guests: 29, base_price: 180000, included_guests: 15, extra_guest_fee: 3500 },
-  { id: 'tier-3', name: 'Paseo Grande (30 a 70 personas)', min_guests: 30, max_guests: 70, base_price: 250000, included_guests: 30, extra_guest_fee: 3500 }
+  { id: 'tier-1', name: 'Paseo Estándar (hasta 20 personas)', min_guests: 1, max_guests: 20, base_price: 190000, included_guests: 20, extra_guest_fee: 0 },
+  { id: 'tier-2', name: 'Paseo Mediano (21 a 40 personas)', min_guests: 21, max_guests: 40, base_price: 250000, included_guests: 40, extra_guest_fee: 0 },
+  { id: 'tier-3', name: 'Paseo Grande (41 a 70 personas)', min_guests: 41, max_guests: 70, base_price: 350000, included_guests: 70, extra_guest_fee: 0 }
 ];
 
 const formatMoney = (amount: number | undefined | null) => {
@@ -239,21 +239,16 @@ export function VenueQuoteForm({
     return sortedTiers[sortedTiers.length - 1];
   }, [sortedTiers, payingGuests]);
 
-  const basePrice = currentTier ? currentTier.base_price : 180000;
-  const includedGuests = currentTier ? currentTier.included_guests : 15;
-  const extraFeePerGuest = currentTier ? currentTier.extra_guest_fee : 3500;
-  const extraGuestsCount = Math.max(0, payingGuests - includedGuests);
-  const extraGuestsCost = extraGuestsCount * extraFeePerGuest;
-
+  const basePrice = currentTier ? currentTier.base_price : 190000;
   const activeBouncyCastleFee = hasBouncyCastle ? bouncyCastleFee : 0;
-  const totalAmount = basePrice + extraGuestsCost + activeBouncyCastleFee;
+  const totalAmount = basePrice + activeBouncyCastleFee;
   const depositRequired = Math.round(totalAmount * (depositPercentage / 100));
   const remainingAtDoor = totalAmount - depositRequired;
 
   // Selección rápida de tramo al hacer clic en tarjeta
   const handleSelectTier = (tier: VenuePricingTier) => {
     if (payingGuests < tier.min_guests || payingGuests > tier.max_guests) {
-      setAdults(tier.included_guests);
+      setAdults(tier.min_guests);
       setChildren(0);
     }
   };
@@ -421,7 +416,7 @@ export function VenueQuoteForm({
         p_has_bouncy_castle: hasBouncyCastle,
         p_extra_services_notes: extraNotes.trim() || null,
         p_base_price: basePrice,
-        p_extra_guests_cost: extraGuestsCost,
+        p_extra_guests_cost: 0,
         p_bouncy_castle_fee: activeBouncyCastleFee,
         p_total_amount: totalAmount,
         p_deposit_required: depositRequired
@@ -632,23 +627,23 @@ export function VenueQuoteForm({
                       {formatMoney(tier.base_price)}
                     </span>
                     <span className="text-xs font-semibold text-gray-500">
-                      Tarifa Base
+                      Tarifa Fija (8 hrs)
                     </span>
                   </div>
 
                   <p className="text-xs text-gray-700 bg-gray-50 rounded-lg p-2 border border-gray-100 mt-2">
-                    Incluye hasta <strong>{tier.included_guests} personas</strong> en el valor base.
+                    Cubre de <strong>{tier.min_guests} a {tier.max_guests} personas</strong> con uso exclusivo de instalaciones.
                   </p>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Capacidad del tramo:</span>
+                    <span className="text-gray-500">Rango de aforo:</span>
                     <span className="font-bold text-gray-800">{tier.min_guests} a {tier.max_guests} pers.</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Persona adicional:</span>
-                    <span className="font-extrabold text-emerald-700">+{formatMoney(tier.extra_guest_fee)} c/u</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500">Adicionales:</span>
+                    <span className="font-semibold text-emerald-700">Coordinar con administración</span>
                   </div>
 
                   <div className="pt-2">
@@ -884,18 +879,9 @@ export function VenueQuoteForm({
             </div>
 
             <div className="flex justify-between text-xs text-gray-600">
-              <span>Precio Base (cubre hasta {includedGuests} personas):</span>
+              <span>Tarifa del Plan ({currentTier.min_guests} a {currentTier.max_guests} pers.):</span>
               <span className="font-semibold">{formatMoney(basePrice)}</span>
             </div>
-
-            {extraGuestsCount > 0 && (
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>
-                  {extraGuestsCount} persona{extraGuestsCount > 1 ? 's' : ''} adicional{extraGuestsCount > 1 ? 'es' : ''} ({formatMoney(extraFeePerGuest)} c/u):
-                </span>
-                <span className="font-semibold">{formatMoney(extraGuestsCost)}</span>
-              </div>
-            )}
 
             {hasBouncyCastle && (
               <div className="flex justify-between text-xs text-gray-600">
@@ -1027,10 +1013,10 @@ export function VenueQuoteForm({
             Comentarios o requerimientos adicionales (Opcional)
           </label>
           <textarea
-            rows={2}
+            rows={3}
             value={extraNotes}
             onChange={(e) => setExtraNotes(e.target.value)}
-            placeholder="¿Traerán carritos de comida, animación o requieren alguna consulta sobre el quincho?"
+            placeholder="¿Tienen personas adicionales por coordinar con administración?, ¿traerán carritos de comida, animación o alguna consulta sobre el quincho?"
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#11d442]"
           />
         </div>

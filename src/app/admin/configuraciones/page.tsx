@@ -16,8 +16,9 @@ export interface VenuePricingTier {
   min_guests: number;
   max_guests: number;
   base_price: number;
-  included_guests: number;
-  extra_guest_fee: number;
+  // Campos opcionales para retrocompatibilidad
+  included_guests?: number;
+  extra_guest_fee?: number;
 }
 
 const SETTING_KEYS = [
@@ -31,8 +32,9 @@ const SETTING_KEYS = [
 ];
 
 const DEFAULT_VENUE_TIERS: VenuePricingTier[] = [
-  { id: 'tier-1', name: 'Paseo Estándar / Mediano (hasta 29 personas)', min_guests: 1, max_guests: 29, base_price: 180000, included_guests: 15, extra_guest_fee: 3500 },
-  { id: 'tier-2', name: 'Paseo Grande (30 a 70 personas)', min_guests: 30, max_guests: 70, base_price: 250000, included_guests: 30, extra_guest_fee: 3500 }
+  { id: 'tier-1', name: 'Paseo Estándar (hasta 20 personas)', min_guests: 1, max_guests: 20, base_price: 190000, included_guests: 20, extra_guest_fee: 0 },
+  { id: 'tier-2', name: 'Paseo Mediano (21 a 40 personas)', min_guests: 21, max_guests: 40, base_price: 250000, included_guests: 40, extra_guest_fee: 0 },
+  { id: 'tier-3', name: 'Paseo Grande (41 a 70 personas)', min_guests: 41, max_guests: 70, base_price: 350000, included_guests: 70, extra_guest_fee: 0 }
 ];
 
 // Auto-encadenamiento para garantizar continuidad matemática perfecta (sin vacíos ni solapamientos)
@@ -40,15 +42,14 @@ export const rechainTiers = (tiers: VenuePricingTier[]): VenuePricingTier[] => {
   let nextMin = 1;
   return tiers.map((tier, idx) => {
     const minG = idx === 0 ? 1 : nextMin;
-    const inc = Math.max(1, Number(tier.included_guests) || 1);
-    const extra = Math.max(0, Number(tier.max_guests) - Number(tier.included_guests) || 0);
-    const maxG = Math.max(minG, inc + extra);
+    const maxG = Math.max(minG, Number(tier.max_guests) || minG);
     nextMin = maxG + 1;
     return {
       ...tier,
       min_guests: minG,
       max_guests: maxG,
-      included_guests: inc,
+      included_guests: maxG,
+      extra_guest_fee: 0,
     };
   });
 };
@@ -128,20 +129,12 @@ export default function AdminConfiguracionesPage() {
         return `El tramo #${i + 1} debe tener un nombre asignado.`;
       }
 
-      if (current.included_guests < 1) {
-        return `El tramo "${current.name}" debe incluir al menos 1 persona base.`;
-      }
-
       if (current.base_price < 0 || isNaN(current.base_price)) {
-        return `El precio base del tramo "${current.name}" debe ser un monto válido mayor o igual a $0.`;
-      }
-
-      if (current.extra_guest_fee < 0 || isNaN(current.extra_guest_fee)) {
-        return `La tarifa adicional del tramo "${current.name}" debe ser mayor o igual a $0.`;
+        return `El precio del tramo "${current.name}" debe ser un monto válido mayor o igual a $0.`;
       }
 
       if (current.max_guests < current.min_guests) {
-        return `En el tramo "${current.name}", el alcance total (${current.max_guests}) no puede ser menor al inicio (${current.min_guests}).`;
+        return `En el tramo "${current.name}", el tope de asistentes (${current.max_guests}) no puede ser menor al inicio (${current.min_guests}).`;
       }
 
       if (i > 0) {
@@ -165,7 +158,7 @@ export default function AdminConfiguracionesPage() {
     if (sorted.length > 0) {
       const highestTier = sorted[sorted.length - 1];
       if (cap < highestTier.max_guests) {
-        return `Incoherencia de Aforo: El Aforo Máximo del Recinto (${cap} pers.) no puede ser menor que el alcance de tus tramos (${highestTier.max_guests} pers.). Sube el aforo o reduce los adicionales del tramo "${highestTier.name}".`;
+        return `Incoherencia de Aforo: El Aforo Máximo del Recinto (${cap} pers.) no puede ser menor que el alcance del último tramo (${highestTier.max_guests} pers.). Sube el aforo o reduce el tope del tramo "${highestTier.name}".`;
       }
     }
 
@@ -200,20 +193,20 @@ export default function AdminConfiguracionesPage() {
     }
   };
 
-  // Agregar nuevo tramo de precio contiguo
+  // Agregar nuevo tramo de precio contiguo (tarifa fija por tramo sin adicionales)
   const handleAddTier = () => {
     const lastTier = pricingTiers[pricingTiers.length - 1];
     const nextMin = lastTier ? lastTier.max_guests + 1 : 1;
-    const defaultExtra = 30;
+    const defaultRange = 20;
 
     const newTier: VenuePricingTier = {
       id: `tier-${Date.now()}`,
       name: `Paseo Especial (desde ${nextMin} personas)`,
       min_guests: nextMin,
-      max_guests: nextMin + defaultExtra,
+      max_guests: nextMin + defaultRange - 1,
       base_price: (lastTier?.base_price || 250000) + 50000,
-      included_guests: nextMin,
-      extra_guest_fee: lastTier?.extra_guest_fee || 3500,
+      included_guests: nextMin + defaultRange - 1,
+      extra_guest_fee: 0,
     };
 
     const updated = rechainTiers([...pricingTiers, newTier]);
@@ -232,17 +225,17 @@ export default function AdminConfiguracionesPage() {
     setValidationError(validateTiers(updated));
   };
 
-  // Actualizar personas base incluidas
-  const handleUpdateIncludedGuests = (index: number, newIncluded: number) => {
+  // Actualizar tope de personas del tramo (recalcula automáticamente el inicio del siguiente)
+  const handleUpdateMaxGuests = (index: number, newMax: number) => {
     setPricingTiers(prev => {
       const updated = prev.map((t, idx) => {
         if (idx !== index) return t;
-        const inc = Math.max(1, isNaN(newIncluded) ? 1 : newIncluded);
-        const currentExtra = Math.max(0, t.max_guests - t.included_guests);
+        const validMax = Math.max(t.min_guests, isNaN(newMax) ? t.min_guests : newMax);
         return {
           ...t,
-          included_guests: inc,
-          max_guests: inc + currentExtra
+          max_guests: validMax,
+          included_guests: validMax,
+          extra_guest_fee: 0,
         };
       });
       const recomputed = rechainTiers(updated);
@@ -251,24 +244,7 @@ export default function AdminConfiguracionesPage() {
     });
   };
 
-  // Actualizar máximo de adicionales permitidos
-  const handleUpdateMaxExtra = (index: number, newMaxExtra: number) => {
-    setPricingTiers(prev => {
-      const updated = prev.map((t, idx) => {
-        if (idx !== index) return t;
-        const extra = Math.max(0, isNaN(newMaxExtra) ? 0 : newMaxExtra);
-        return {
-          ...t,
-          max_guests: t.included_guests + extra
-        };
-      });
-      const recomputed = rechainTiers(updated);
-      setValidationError(validateTiers(recomputed));
-      return recomputed;
-    });
-  };
-
-  // Actualizar campo genérico (nombre, precio base, valor adicional)
+  // Actualizar campo genérico (nombre, precio del tramo)
   const handleUpdateTierField = (index: number, field: keyof VenuePricingTier, value: any) => {
     setPricingTiers(prev => {
       const updated = [...prev];
@@ -332,7 +308,7 @@ export default function AdminConfiguracionesPage() {
   };
 
   const handleResetToDefaultTiers = () => {
-    if (confirm('¿Restablecer los tramos a la configuración oficial simplificada (Tramo 1: 1 a 29 pers. con 15 base / Tramo 2: 30 a 70 pers. con 30 base)?')) {
+    if (confirm('¿Restablecer los tramos a la configuración oficial recomendada de tarifas fijas (Tramo 1: 1 a 20 pers. $190.000 / Tramo 2: 21 a 40 pers. $250.000 / Tramo 3: 41 a 70 pers. $350.000)?')) {
       setPricingTiers(DEFAULT_VENUE_TIERS);
       setBouncyCastleFee(5000);
       setDepositPercentage(50);
@@ -366,7 +342,7 @@ export default function AdminConfiguracionesPage() {
               🎉 Tarifas y Tramos de Arriendo de Recinto Completo (8 Horas)
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Configura los rangos de precios por cantidad de personas, costos de adicionales, aforo máximo y porcentaje de abono.
+              Configura los rangos de aforo y precios fijos por tramo (sin cobro por persona adicional), aforo máximo y porcentaje de abono.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -500,14 +476,14 @@ export default function AdminConfiguracionesPage() {
           </div>
         )}
 
-        {/* Tabla Interactiva de Tramos de Precios y Adicionales */}
+        {/* Tabla Interactiva de Tramos de Precios (Tarifas Fijas sin Adicionales) */}
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Tramos de Precio y Adicionales Activos ({pricingTiers.length})
+              Tramos y Tarifas Fijas de Recinto ({pricingTiers.length})
             </h4>
             <span className="text-[11px] text-gray-400">
-              * El aforo total de cada tramo se auto-calcula (Personas Base + Máx. Adicionales) sin vacíos tarifarios.
+              * Cada tramo define una tarifa fija para un rango de asistentes (sin cobro por persona adicional).
             </span>
           </div>
 
@@ -515,116 +491,88 @@ export default function AdminConfiguracionesPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 font-bold uppercase text-[10px]">
-                  <th className="p-3">Nombre del Tramo</th>
-                  <th className="p-3 w-28 text-center" title="Cantidad de personas cubiertas dentro del precio base">
-                    Personas Base
+                  <th className="p-3">Nombre del Plan / Tramo</th>
+                  <th className="p-3 w-28 text-center" title="Persona mínima que cubre este tramo">
+                    Desde (pers.)
                   </th>
-                  <th className="p-3 w-32">Precio Base ($)</th>
-                  <th className="p-3 w-28 text-center" title="Máximo de personas extras permitidas sobre la base">
-                    Máx. Adicionales
+                  <th className="p-3 w-32 text-center" title="Aforo máximo cubierto por esta tarifa">
+                    Hasta (pers.)
                   </th>
-                  <th className="p-3 w-32">Valor Adicional ($/pers.)</th>
-                  <th className="p-3 w-36 text-center">Aforo del Tramo</th>
+                  <th className="p-3 w-36">Tarifa Fija del Tramo ($)</th>
+                  <th className="p-3 w-36 text-center">Cobertura</th>
                   <th className="p-3 w-16 text-center">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {pricingTiers.map((tier, idx) => {
-                  const maxExtra = Math.max(0, tier.max_guests - tier.included_guests);
-                  return (
-                    <tr key={tier.id || idx} className="hover:bg-gray-50/60 transition-colors">
-                      {/* Nombre */}
-                      <td className="p-2.5">
-                        <input
-                          type="text"
-                          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] font-semibold text-gray-800"
-                          value={tier.name}
-                          onChange={e => handleUpdateTierField(idx, 'name', e.target.value)}
-                          placeholder="Ej. Paseo Estándar"
-                        />
-                      </td>
+                {pricingTiers.map((tier, idx) => (
+                  <tr key={tier.id || idx} className="hover:bg-gray-50/60 transition-colors">
+                    {/* Nombre */}
+                    <td className="p-2.5">
+                      <input
+                        type="text"
+                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] font-semibold text-gray-800"
+                        value={tier.name}
+                        onChange={e => handleUpdateTierField(idx, 'name', e.target.value)}
+                        placeholder="Ej. Paseo Estándar"
+                      />
+                    </td>
 
-                      {/* Personas Base */}
-                      <td className="p-2.5">
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] text-center font-bold text-gray-900"
-                          value={tier.included_guests}
-                          onChange={e => handleUpdateIncludedGuests(idx, Number(e.target.value))}
-                          title="Cantidad de asistentes cubiertos por el precio base"
-                        />
-                      </td>
+                    {/* Desde (Automático) */}
+                    <td className="p-2.5 text-center">
+                      <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-lg font-bold text-xs">
+                        {tier.min_guests} pers.
+                      </span>
+                    </td>
 
-                      {/* Precio Base */}
-                      <td className="p-2.5">
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-400 font-bold">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="5000"
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] font-bold text-gray-900"
-                            value={tier.base_price}
-                            onChange={e => handleUpdateTierField(idx, 'base_price', Number(e.target.value))}
-                          />
-                        </div>
-                      </td>
+                    {/* Hasta (Editable) */}
+                    <td className="p-2.5">
+                      <input
+                        type="number"
+                        min={tier.min_guests}
+                        className="w-full px-2 py-1.5 border border-emerald-200 bg-emerald-50/30 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] text-center font-bold text-emerald-900"
+                        value={tier.max_guests}
+                        onChange={e => handleUpdateMaxGuests(idx, Number(e.target.value))}
+                        title="Hasta cuántas personas cubre este precio"
+                      />
+                    </td>
 
-                      {/* Máx. Adicionales */}
-                      <td className="p-2.5">
+                    {/* Precio Fijo del Tramo */}
+                    <td className="p-2.5">
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-400 font-bold">$</span>
                         <input
                           type="number"
                           min="0"
-                          className="w-full px-2 py-1.5 border border-emerald-200 bg-emerald-50/30 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] text-center font-bold text-emerald-900"
-                          value={maxExtra}
-                          onChange={e => handleUpdateMaxExtra(idx, Number(e.target.value))}
-                          title="Máximo de personas extras permitidas en este tramo"
+                          step="5000"
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] font-bold text-gray-900"
+                          value={tier.base_price}
+                          onChange={e => handleUpdateTierField(idx, 'base_price', Number(e.target.value))}
+                          placeholder="Monto total del tramo"
                         />
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Valor Adicional por Persona */}
-                      <td className="p-2.5">
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-400 font-bold">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="500"
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#11d442] font-medium text-gray-700"
-                            value={tier.extra_guest_fee}
-                            onChange={e => handleUpdateTierField(idx, 'extra_guest_fee', Number(e.target.value))}
-                          />
-                        </div>
-                      </td>
+                    {/* Cobertura del Tramo */}
+                    <td className="p-2.5 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+                        {tier.min_guests} a {tier.max_guests} pers.
+                      </span>
+                    </td>
 
-                      {/* Aforo / Alcance del Tramo (Auto-calculado) */}
-                      <td className="p-2.5 text-center">
-                        <div className="inline-flex flex-col items-center">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
-                            {tier.min_guests} a {tier.max_guests} pers.
-                          </span>
-                          <span className="text-[10px] text-gray-400 mt-0.5">
-                            (Máx. {tier.max_guests} pers.)
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Botón Eliminar */}
-                      <td className="p-2.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTier(idx)}
-                          disabled={pricingTiers.length <= 1}
-                          className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-20 inline-flex items-center justify-center font-bold text-sm"
-                          title="Eliminar este tramo"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    {/* Botón Eliminar */}
+                    <td className="p-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTier(idx)}
+                        disabled={pricingTiers.length <= 1}
+                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-20 inline-flex items-center justify-center font-bold text-sm cursor-pointer"
+                        title="Eliminar este tramo"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

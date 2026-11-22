@@ -1,5 +1,19 @@
 # Changelog - Rancho Carmelitas
 
+## [2.4.0] - 2026-11-21
+
+### Añadido / Optimizado (Tarifas Fijas por Tramo de Recinto, Supresión de Adicionales y Coordinación con Administración v2.4.0)
+
+- **Alineación Comercial de Recinto Completo (8 Horas):**
+  - **Supresión de Cobro por Adicional en Recinto:** Eliminación definitiva del concepto de persona adicional exclusivamente para el Arriendo de Recinto Completo, manteniendo 100% inalterada la política de huéspedes adicionales en las cabañas.
+  - **Editor Simplificado de Tramos en `/admin/configuraciones`:** Remoción de los campos obsoletos de personas base, máximos adicionales y recargos unitarios. La interfaz ahora opera bajo una tabla minimalista de tramos puros: `Nombre del Plan / Tramo`, `Desde (pers.)` (auto-calculado), `Hasta (pers.)` (editable) y `Tarifa Fija del Tramo ($)`.
+  - **Auto-Encadenamiento Robusto (`rechainTiers`):** Al editar el tope de personas de cualquier tramo, el siguiente tramo se actualiza de forma automática a `Hasta + 1`, fijando `extra_guest_fee = 0` para mantener total compatibilidad matemática y financiera.
+  - **Cotizador en Línea (`VenueQuoteForm.tsx`):**
+    - Las tarjetas de planes en el Paso 1 señalan explícitamente: `Adicionales: Coordinar con administración`.
+    - El desglose financiero en vivo calcula directamente `Tarifa Fija del Plan + Inflable (opcional)`, suprimiendo de raíz cualquier línea o recargo por persona extra.
+    - El campo *"Comentarios o requerimientos adicionales (Opcional)"* actualizó su placeholder de ejemplo a: `¿Tienen personas adicionales por coordinar con administración?, ¿traerán carritos de comida, animación o alguna consulta sobre el quincho?` con ampliación a `rows={3}` para máxima legibilidad.
+  - **Script SQL Resiliente:** Creación de `schema_venue_tramos_sin_adicionales.sql` para actualizar la RPC autoritativa `create_public_event_quote` con montos fijos por tramo.
+
 ## [2.3.0] - 2026-11-21
 
 ### Añadido / Optimizado (Cotizador Dinámico de Recinto, Rediseño Visual Hero Full-Width y Control Granular de Asistentes v2.3.0)
