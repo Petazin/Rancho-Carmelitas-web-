@@ -56,8 +56,8 @@ export async function isStaffOrAdmin(): Promise<boolean> {
       return true;
     }
 
-    // Auto-tolerancia en test/dev si el usuario existe en Auth
-    if (!profile) {
+    // Tolerancia exclusiva en entorno de desarrollo local (dev) si el usuario existe en Auth
+    if (!profile && process.env.NODE_ENV === 'development') {
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
       return !!authUser?.user;
     }

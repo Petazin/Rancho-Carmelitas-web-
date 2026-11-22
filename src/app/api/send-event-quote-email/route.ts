@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sendEventEmails, EventEmailAction } from '@/lib/send-event-emails';
+import { isStaffOrAdmin } from '@/lib/server-auth';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +14,31 @@ export async function POST(req: Request) {
         { error: 'Parámetros obligatorios faltantes (action, quoteId)' },
         { status: 400 }
       );
+    }
+
+    if (!['created', 'approved', 'confirmed'].includes(action)) {
+      return NextResponse.json(
+        { error: 'Acción de correo no válida' },
+        { status: 400 }
+      );
+    }
+
+    if (!UUID_REGEX.test(quoteId)) {
+      return NextResponse.json(
+        { error: 'Formato de identificador de cotización inválido' },
+        { status: 400 }
+      );
+    }
+
+    // Blindaje de seguridad: las acciones operativas/administrativas requieren sesión autorizada (admin/staff)
+    if (action === 'approved' || action === 'confirmed') {
+      const authorized = await isStaffOrAdmin();
+      if (!authorized) {
+        return NextResponse.json(
+          { error: 'No autorizado para despachar correos administrativos de cotizaciones' },
+          { status: 401 }
+        );
+      }
     }
 
     const origin = req.headers.get('origin') || undefined;

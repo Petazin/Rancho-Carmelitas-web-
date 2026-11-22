@@ -19,6 +19,11 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Seguridad y Blindaje EGM (v2.4.1):**
+    *   **Supresión de Escalada de Privilegios a Administrador:** Eliminación del auto-upsert incondicional a rol administrador en `/api/admin/users`, requiriendo perfil administrativo previamente validado.
+    *   **Protección de Despacho de Correos de Recinto:** Control de acceso en `/api/send-event-quote-email` exigiendo `isStaffOrAdmin()` para aprobaciones y confirmaciones, validación estricta de formato UUID y lista blanca de acciones.
+    *   **Sincronización Segura de Mercado Pago:** Blindaje de `/api/mercadopago/sync` con verificación de sesión y soporte integrado para pagos de recinto (`EVENT__`).
+    *   **Homologación de Dominios:** Estandarización de retornos de pagos a `https://ranchocarmelitas.com` y eliminación de puertos de desarrollo en desuso.
 *   **Tarifas Fijas por Tramo de Recinto y Coordinación de Adicionales (v2.4.0):**
     *   **Supresión de Adicionales para Recinto Completo (8h):** Eliminación definitiva del concepto de personas adicionales en el arriendo exclusivo de recinto, manteniendo 100% inalterada la política de adicionales en cabañas.
     *   **Editor Simplificado de Tramos (`/admin/configuraciones`):** Tabla interactiva y limpia de 4 columnas principales (`Nombre del Plan`, `Desde pers.`, `Hasta pers.` y `Tarifa Fija del Tramo $`), con auto-encadenamiento sin gaps (`rechainTiers`).

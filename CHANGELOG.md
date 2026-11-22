@@ -1,5 +1,23 @@
 # Changelog - Rancho Carmelitas
 
+## [2.4.1] - 2026-11-21
+
+### Seguridad y Blindaje EGM (Fase 1: Protección de Endpoints, RLS y Homologación de Pasarelas v2.4.1)
+
+- **Neutralización de Escalada de Privilegios a Administrador:**
+  - Supresión definitiva del auto-upsert incondicional a `role: 'admin'` en `/api/admin/users`. Únicamente perfiles existentes y verificados con rol administrador pueden invocar acciones de gestión de usuarios en el PMS.
+  - Endurecimiento de `isStaffOrAdmin()` en `src/lib/server-auth.ts`: la tolerancia para cuentas sin perfil queda restringida exclusivamente al entorno local (`NODE_ENV === 'development'`), bloqueando cualquier acceso de este tipo en producción.
+- **Blindaje de Endpoint de Correos de Recinto (`/api/send-event-quote-email`):**
+  - Implementación de control de acceso RBAC exigiendo `isStaffOrAdmin()` para las acciones `approved` y `confirmed` (rechazo `401 Unauthorized` ante llamadas no autenticadas).
+  - Validación defensiva de formato UUID estricto sobre `quoteId` y lista blanca de acciones permitidas (`created`, `approved`, `confirmed`), respondiendo `400 Bad Request` ante parámetros maliciosos.
+- **Saneamiento y Robustez en Sincronización de Mercado Pago (`/api/mercadopago/sync`):**
+  - Blindaje con `isStaffOrAdmin()` para evitar ejecuciones externas desautorizadas.
+  - Soporte nativo para pagos de arriendo de recinto (`EVENT__quoteId__amount`), acreditando el depósito en `event_quotes` y disparando la notificación formal por correo sin interferir con la tabla `bookings`.
+- **Homologación de Dominios y URLs Base de Retorno:**
+  - Estandarización de dominios hacia `process.env.NEXT_PUBLIC_SITE_URL || 'https://ranchocarmelitas.com'` en `create-preference` y `event-preference`, eliminando fallbacks obsoletos con puertos locales en desuso (`3005`).
+- **Actualización de Versión Oficial en `package.json`:**
+  - Sincronización de versión a `2.4.1` cerrando la brecha histórica con la documentación.
+
 ## [2.4.0] - 2026-11-21
 
 ### Añadido / Optimizado (Tarifas Fijas por Tramo de Recinto, Supresión de Adicionales y Coordinación con Administración v2.4.0)

@@ -53,23 +53,6 @@ async function checkAdmin() {
       return true;
     }
 
-    // Auto-recuperación / Fallback en entorno de pruebas: si el usuario existe en Supabase Auth
-    // pero aún no tiene perfil creado en public.profiles, crearlo automáticamente con rol admin
-    if (!profile) {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(currentUserId);
-      if (authUser?.user) {
-        await supabaseAdmin.from('profiles').upsert({
-          id: currentUserId,
-          full_name: authUser.user.user_metadata?.full_name || authUser.user.email?.split('@')[0] || 'Administrador',
-          email: authUser.user.email,
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        return true;
-      }
-    }
-
     return false;
   } catch (err) {
     console.error('[checkAdmin] Error verificando rol de administrador:', err);

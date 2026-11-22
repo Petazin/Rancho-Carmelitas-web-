@@ -31,10 +31,15 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.0 (Tarifas Fijas por Tramo de Recinto, Supresión de Adicionales y Coordinación con Administración)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.4.1 (Seguridad & Blindaje EGM: Protección de Endpoints, RLS y Homologación de Pasarelas)**.
 
 El sistema ahora soporta:
 
+- **Seguridad & Blindaje EGM (v2.4.1):**
+  - **Supresión de Escalada de Privilegios:** Eliminación de la creación automática de usuarios administradores en `/api/admin/users`.
+  - **Protección de Despacho de Correos:** Control de acceso en `/api/send-event-quote-email` con `isStaffOrAdmin()`, validación estricta de UUIDs y lista blanca de acciones.
+  - **Blindaje de Sincronización Mercado Pago:** Control de acceso con `isStaffOrAdmin()` y soporte integrado para pagos de recinto (`EVENT__`).
+  - **Homologación de Dominios:** Retornos de pasarelas estandarizados a `ranchocarmelitas.com` o variable de entorno autoritativa.
 - **Tarifas Fijas por Tramo de Recinto y Coordinación de Adicionales (v2.4.0):**
   - Supresión del concepto de cobro de adicionales por persona exclusivamente para el Arriendo de Recinto Completo (8h), manteniendo 100% inalterada la política de adicionales en cabañas.
   - Editor minimalista en `/admin/configuraciones` con tabla de tramos puros (`Nombre`, `Desde`, `Hasta`, `Tarifa Fija $`) y auto-encadenamiento sin gaps (`rechainTiers`).

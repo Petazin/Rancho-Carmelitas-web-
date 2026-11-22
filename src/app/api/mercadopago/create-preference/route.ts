@@ -23,7 +23,8 @@ export async function POST(req: Request) {
     }
 
     // Determinar la URL base dinámica para los retornos
-    const baseUrl = origin || (process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.cl' : 'http://localhost:3005');
+    const defaultProdUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ranchocarmelitas.com';
+    const baseUrl = origin || (process.env.NODE_ENV === 'production' ? defaultProdUrl : 'http://localhost:3000');
 
     // Construir URLs de retorno según sea abono o saldo
     const successUrl = type === 'saldo'
@@ -39,9 +40,9 @@ export async function POST(req: Request) {
       : `${baseUrl}/checkout/success?booking_id=${bookingId}&status=pending&method=mercadopago`;
 
     // Webhook notification URL (debe ser una URL pública accesible por Mercado Pago)
-    const notificationUrl = process.env.NODE_ENV === 'production'
-      ? 'https://ranchocarmelitas.cl/api/mercadopago/webhook'
-      : undefined;
+    const notificationUrl = process.env.MERCADOPAGO_WEBHOOK_URL || (process.env.NODE_ENV === 'production'
+      ? `${defaultProdUrl}/api/mercadopago/webhook`
+      : undefined);
 
     const isHttps = baseUrl.startsWith('https://');
 

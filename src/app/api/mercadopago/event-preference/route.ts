@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     }
 
     const depositAmount = Number(quote.deposit_required) || Math.round(Number(quote.total_amount) * 0.5);
-    const baseUrl = origin || (process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.cl' : 'http://localhost:3000');
+    const defaultProdUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ranchocarmelitas.com';
+    const baseUrl = origin || (process.env.NODE_ENV === 'production' ? defaultProdUrl : 'http://localhost:3000');
     const isHttps = baseUrl.startsWith('https://');
 
     const successUrl = `${baseUrl}/recinto-completo/pago?id=${quoteId}&payment_status=approved`;

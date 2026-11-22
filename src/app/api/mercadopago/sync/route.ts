@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { mpPayment } from '@/lib/mercadopago';
+import { isStaffOrAdmin } from '@/lib/server-auth';
+import { sendEventEmails } from '@/lib/send-event-emails';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +11,12 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
+    // Blindaje de seguridad: Solo administradores o personal autorizado pueden sincronizar pagos
+    const authorized = await isStaffOrAdmin();
+    if (!authorized) {
+      return NextResponse.json({ error: 'No autorizado para ejecutar sincronización de pagos' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const { bookingId: specificBookingId } = body;
 
@@ -28,6 +36,44 @@ export async function POST(req: Request) {
     for (const payment of results) {
       if (payment.status !== 'approved' || !payment.external_reference) continue;
 
+      const refStr = `MP-${payment.id}`;
+      const paymentMethodName = payment.payment_method_id ? `Pago Online (${payment.payment_method_id.toUpperCase()})` : 'Pago Online';
+
+      // CASO ESPECIAL: Pago de Arriendo de Recinto Completo ("EVENT__quoteId__amount")
+      if (payment.external_reference.startsWith('EVENT__')) {
+        const [, quoteId, expectedAmount] = payment.external_reference.split('__');
+        if (!quoteId) continue;
+        if (specificBookingId && quoteId !== specificBookingId) continue;
+
+        // Verificar si la cotización ya está confirmada
+        const { data: currentQuote } = await supabaseAdmin
+          .from('event_quotes')
+          .select('id, status, deposit_paid')
+          .eq('id', quoteId)
+          .maybeSingle();
+
+        if (currentQuote && currentQuote.status !== 'Confirmada') {
+          const amountToRegister = Number(payment.transaction_amount) || Number(expectedAmount) || 0;
+          const { error: eventErr } = await supabaseAdmin
+            .from('event_quotes')
+            .update({
+              deposit_paid: amountToRegister,
+              status: 'Confirmada',
+              payment_method: paymentMethodName,
+              payment_reference: refStr
+            })
+            .eq('id', quoteId);
+
+          if (!eventErr) {
+            syncedCount++;
+            syncedPayments.push({ quoteId, paymentId: payment.id, amount: amountToRegister, type: 'event' });
+            sendEventEmails({ action: 'confirmed', quoteId }).catch(e => console.warn('[MercadoPago Sync] Error despachando correo de evento:', e));
+          }
+        }
+        continue;
+      }
+
+      // CASO ESTÁNDAR: Reserva de Cabaña ("bookingId__paymentType__expectedAmount")
       const [bookingId, paymentType, expectedAmount] = payment.external_reference.split('__');
 
       if (!bookingId) continue;
@@ -35,9 +81,7 @@ export async function POST(req: Request) {
       // Si se solicitó sincronizar una reserva específica y no coincide, saltar
       if (specificBookingId && bookingId !== specificBookingId) continue;
 
-      const refStr = `MP-${payment.id}`;
       const amountToRegister = Number(payment.transaction_amount) || Number(expectedAmount) || 0;
-      const paymentMethodName = payment.payment_method_id ? `Pago Online (${payment.payment_method_id.toUpperCase()})` : 'Pago Online';
 
       // 2. Verificar si este pago ya fue registrado en booking_payments (Idempotencia)
       const { data: existingPay } = await supabaseAdmin
@@ -77,7 +121,7 @@ export async function POST(req: Request) {
       }
 
       syncedCount++;
-      syncedPayments.push({ bookingId, paymentId: payment.id, amount: amountToRegister });
+      syncedPayments.push({ bookingId, paymentId: payment.id, amount: amountToRegister, type: 'cabin' });
 
       // 4. Recalcular el total abonado acumulado
       const { data: allPayments } = await supabaseAdmin
@@ -111,7 +155,7 @@ export async function POST(req: Request) {
       // 5. Enviar correo de confirmación de pago al huésped si recién se acreditó y la reserva sigue vigente
       if (updatedBooking && updatedBooking.guest_email && currentBooking.status?.toLowerCase() !== 'cancelada') {
         try {
-          const originUrl = process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.cl' : 'http://localhost:3005';
+          const originUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || (process.env.NODE_ENV === 'production' ? 'https://ranchocarmelitas.com' : 'http://localhost:3000');
           await fetch(`${originUrl}/api/send-payment-confirmation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
