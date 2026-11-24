@@ -19,6 +19,10 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Operaciones Integrales, Pagos Separados y Reserva Manual de Recinto (v2.6.0):**
+    *   **Reserva Manual Unificada (`/admin/reservas`):** Ingreso directo de eventos de Recinto Completo (8h) con calendario de ocupación visual previo, validaciones no bloqueantes de horario y abonos flexibles (`$0`, parcial o total).
+    *   **Historial de Pagos Separado (`event_payments`):** Registro independiente de cada cuota/abono (Mercado Pago, Efectivo, Transferencia, POS) con sincronización automática de saldo pendiente.
+    *   **Cobro de Saldo, Edición, Check-in y Finalización:** Botón de cobro de saldo disponible en eventos confirmados, modal de edición integral (`✏️ Editar`), `🔑 Check-in` con validación de saldo y `🏁 Finalizar` con checklist de entrega conforme.
 *   **Humanización y Lenguaje Natural en Auditoría (v2.5.1):**
     *   **Traducción Amigable de Tramos y Variables de Recinto:** Parseo dinámico de tramos tarifarios de recinto completo en `/admin/auditoria`, eliminando el volcado de código JSON crudo y expresando las variaciones en rangos de personas y moneda local ($CLP).
     *   **Auditoría de Cotizaciones (`event_quotes`):** Trazabilidad en lenguaje natural y filtro dedicado en la bitácora para solicitudes y aprobaciones de eventos diurnos.

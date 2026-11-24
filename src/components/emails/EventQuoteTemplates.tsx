@@ -616,7 +616,11 @@ export const EventQuoteConfirmedClientTemplate: React.FC<QuoteConfirmedProps> = 
         <div style={styles.body}>
           <p style={styles.greeting}>¡Felicidades, {organizerName}!</p>
           <p style={styles.paragraph}>
-            Hemos acreditado con éxito tu abono. El arriendo exclusivo de <strong>Rancho Carmelitas</strong> para tu grupo (<strong>{groupName || organizerName}</strong>) está oficialmente <strong>CONFIRMADO Y BLOQUEADO</strong>.
+            {depositPaid > 0 ? (
+              <>Hemos registrado con éxito tu abono de <strong>{formatMoney(depositPaid)}</strong>. El arriendo exclusivo de <strong>{companyName}</strong> para tu grupo (<strong>{groupName || organizerName}</strong>) se encuentra oficialmente <strong>CONFIRMADO Y RESERVADO</strong>.</>
+            ) : (
+              <>Tu reserva para el arriendo exclusivo de <strong>{companyName}</strong> para tu grupo (<strong>{groupName || organizerName}</strong>) se encuentra oficialmente <strong>CONFIRMADA Y RESERVADA</strong>.</>
+            )}
           </p>
 
           <div style={styles.card}>
@@ -636,12 +640,14 @@ export const EventQuoteConfirmedClientTemplate: React.FC<QuoteConfirmedProps> = 
                   <td style={styles.tableValue}>{totalGuests} personas</td>
                 </tr>
                 <tr>
-                  <td style={styles.tableLabel}>Abono Acreditado (50%):</td>
-                  <td style={{ ...styles.tableValue, color: '#16a34a' }}>{formatMoney(depositPaid)} ({paymentMethod})</td>
+                  <td style={styles.tableLabel}>{depositPaid > 0 ? 'Abono Acreditado:' : 'Abono Registrado:'}</td>
+                  <td style={{ ...styles.tableValue, color: depositPaid > 0 ? '#16a34a' : '#64748b' }}>
+                    {formatMoney(depositPaid)} {depositPaid > 0 ? `(${paymentMethod})` : '(Pendiente)'}
+                  </td>
                 </tr>
                 <tr>
-                  <td style={styles.tableLabel}>Saldo al Ingresar (50%):</td>
-                  <td style={{ ...styles.tableValue, color: '#0f172a' }}>{formatMoney(remaining)}</td>
+                  <td style={styles.tableLabel}>Saldo al Ingresar:</td>
+                  <td style={{ ...styles.tableValue, color: '#0f172a', fontWeight: 'bold' }}>{formatMoney(remaining)}</td>
                 </tr>
                 {paymentReference && (
                   <tr>

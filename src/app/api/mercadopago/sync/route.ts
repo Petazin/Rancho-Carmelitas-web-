@@ -45,29 +45,52 @@ export async function POST(req: Request) {
         if (!quoteId) continue;
         if (specificBookingId && quoteId !== specificBookingId) continue;
 
-        // Verificar si la cotización ya está confirmada
+        // Idempotencia: verificar si ya existe este pago en event_payments
+        const { data: existingEventPay } = await supabaseAdmin
+          .from('event_payments')
+          .select('id')
+          .eq('reference', refStr)
+          .maybeSingle();
+
+        if (existingEventPay) continue;
+
+        // Verificar la cotización actual
         const { data: currentQuote } = await supabaseAdmin
           .from('event_quotes')
           .select('id, status, deposit_paid')
           .eq('id', quoteId)
           .maybeSingle();
 
-        if (currentQuote && currentQuote.status !== 'Confirmada') {
+        if (currentQuote) {
           const amountToRegister = Number(payment.transaction_amount) || Number(expectedAmount) || 0;
-          const { error: eventErr } = await supabaseAdmin
-            .from('event_quotes')
-            .update({
-              deposit_paid: amountToRegister,
-              status: 'Confirmada',
-              payment_method: paymentMethodName,
-              payment_reference: refStr
-            })
-            .eq('id', quoteId);
 
-          if (!eventErr) {
-            syncedCount++;
-            syncedPayments.push({ quoteId, paymentId: payment.id, amount: amountToRegister, type: 'event' });
-            sendEventEmails({ action: 'confirmed', quoteId }).catch(e => console.warn('[MercadoPago Sync] Error despachando correo de evento:', e));
+          // Insertar en event_payments (el trigger sincronizará deposit_paid en event_quotes)
+          await supabaseAdmin
+            .from('event_payments')
+            .insert([{
+              event_quote_id: quoteId,
+              amount: amountToRegister,
+              payment_method: paymentMethodName,
+              reference: refStr,
+              notes: 'Sincronizado automáticamente vía Mercado Pago',
+              recorded_by: 'Sistema (Mercado Pago)'
+            }]);
+
+          if (currentQuote.status !== 'Confirmada') {
+            const { error: eventErr } = await supabaseAdmin
+              .from('event_quotes')
+              .update({
+                status: 'Confirmada',
+                payment_method: paymentMethodName,
+                payment_reference: refStr
+              })
+              .eq('id', quoteId);
+
+            if (!eventErr) {
+              syncedCount++;
+              syncedPayments.push({ quoteId, paymentId: payment.id, amount: amountToRegister, type: 'event' });
+              sendEventEmails({ action: 'confirmed', quoteId }).catch(e => console.warn('[MercadoPago Sync] Error despachando correo de evento:', e));
+            }
           }
         }
         continue;

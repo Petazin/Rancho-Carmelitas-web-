@@ -90,3 +90,40 @@ El organizador del evento cuenta con una página exclusiva para su grupo:
 * Puede ingresar su folio de cotización en cualquier momento para ver el estado de su solicitud.
 * Si la cotización fue aprobada, la pantalla despliega el botón oficial de **Mercado Pago** para abonar con tarjeta de débito, crédito o Webpay con acreditación instantánea.
 * Una vez acreditado el abono, la página muta a una ficha de confirmación con el sello oficial del Rancho, las políticas del quincho y las indicaciones de llegada para el chofer del bus escolar o los vehículos del grupo.
+
+
+---
+
+## 6. Ingreso Manual de Reservas de Recinto desde el PMS
+
+Desde `/admin/reservas` haciendo clic en **"+ Nueva Reserva Manual"** y eligiendo la pestaña **`🎪 Recinto Completo (Evento 8h)`**:
+
+* **Calendario Visual de Disponibilidad:** Antes de elegir el día, el calendario mensual marca automáticamente los días ocupados por cabañas o eventos previos en color rojo tachado (`⛔ Ocupado`).
+* **Horarios Estándar y Avisos:** Puedes elegir rápidamente entre `10:00 a 18:00`, `11:00 a 19:00` o `12:00 a 20:00 (Límite)`. Si ingresas otro horario o superas las 20:00 hrs, el sistema mostrará una advertencia visual informativa (no bloqueante).
+* **Estados Iniciales Flexibles:**
+  * **🟢 Confirmada:** Bloquea todas las cabañas automáticamente para esa fecha. Puedes registrar un abono inicial de `$0` (Sin Abono), `50%`, `100%` o un monto personalizado.
+  * **🟡 Aprobada (Enviar link de pago al cliente):** Envía automáticamente al correo del organizador el botón oficial de pago del 50% vía Mercado Pago o transferencia bancaria.
+  * **⚪ Cotización Pendiente:** Guarda la solicitud en revisión interna sin bloquear fechas ni notificar al cliente todavía.
+
+---
+
+## 7. Historial de Pagos Separado y Cobro de Saldo
+
+Cada pago realizado para un evento (ya sea en línea por Mercado Pago, al crear la reserva manual o posteriormente en puerta) se guarda como un **registro independiente** en el historial de la tarjeta:
+
+* **Visualización Cronológica:** Bajo los detalles del evento verás el listado **`🧾 Historial de Pagos Registrados`** con el número de cuota (`#1`, `#2`...), monto, medio de pago, referencia, nota y fecha/hora.
+* **Cobro de Saldo en Eventos Confirmados:** Mientras el evento tenga saldo pendiente (`Total Arriendo - Total Pagado > $0`), el botón **`💵 Cobrar Saldo ($X)`** permanecerá activo aunque el evento ya esté confirmado. Esto permite cobrar el 50% restante al llegar el grupo (o antes/después) en Efectivo, Transferencia o POS sin sobreescribir el primer abono.
+* **Corrección de Pagos:** Si registraste un monto por error, puedes anular la cuota específica haciendo clic en el ícono `🗑️` de esa fila; el saldo se recalculará automáticamente.
+
+---
+
+## 8. Edición Integral, Check-in y Finalización del Evento
+
+En la pestaña de **Eventos (`/admin/reservas?tab=eventos`)**, el administrador dispone del ciclo operativo completo:
+
+1. **Edición Integral (`✏️ Editar`):** Permite modificar la fecha del evento (sincronizando automáticamente el bloqueo en calendario si está confirmado), horario, datos del organizador, cantidad de asistentes (con botón **`⚡ Recalcular Monto con Tramos`**), inflables, estado y notas.
+2. **Check-in / Inicio de Uso (`🔑 Check-in`):** Se activa cuando el evento está `Confirmada` y pendiente de ingreso (`⏳ Pendiente de Ingreso`).
+   * Verifica que el saldo esté en **`$0 (100% Pagado)`** antes de entregar las instalaciones.
+   * Si existe saldo pendiente, ofrece acceso directo para cobrarlo o permite autorizar el ingreso excepcionalmente dejando un motivo registrado.
+   * Al confirmarse, el evento pasa a **`🔑 En Uso (Check-in OK)`**.
+3. **Finalizar / Entrega Conforme (`🏁 Finalizar`):** Al término de la jornada (máx. 20:00 hrs), el administrador verifica el checklist de estado del quincho, piscina, áreas verdes, baños y cabaña de apoyo (si hubo), pudiendo dejar observaciones de entrega. El evento queda marcado como **`🏁 Finalizado (Entregado)`**.

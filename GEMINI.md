@@ -31,10 +31,15 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.5.1 (Humanización y Lenguaje Natural en Auditoría)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.6.0 (Operaciones Integrales, Pagos Separados y Reserva Manual de Recinto Completo)**.
 
 El sistema ahora soporta:
 
+- **Operaciones Integrales y Reserva Manual de Recinto Completo (v2.6.0):**
+  - **Modal Unificado en PMS (`/admin/reservas`):** Alternador directo entre `Cabaña Individual` y `Recinto Completo (Evento 8h)`, con calendario mensual interactivo de ocupación previa, atajos rápidos de 8 horas y avisos visuales no bloqueantes.
+  - **Abonos Flexibles y Correos Claros:** Registro de abonos reales (`$0`, `50%`, `100%` o personalizado) sin forzar el 50% por defecto, reactividad en estado `Aprobada` (despacho automático de enlace de pago) y plantillas de correo humanizadas para cliente y administración.
+  - **Historial de Pagos Separado (`event_payments`):** Tabla dedicada en PostgreSQL con trigger sincronizador hacia `event_quotes.deposit_paid`, integración idempotente con Mercado Pago y cobro de saldo pendiente antes, durante o después del evento (incluso en estado `Confirmada`).
+  - **Ciclo Operativo Check-in y Finalizado:** Botones de `🔑 Check-in` (validando 100% pagado o autorización excepcional) y `🏁 Finalizar` (checklist de entrega conforme del recinto), además de edición integral (`✏️ Editar`) y fix de trigger PostgreSQL (`BEFORE UPDATE`) en cancelaciones.
 - **Humanización y Lenguaje Natural en Auditoría (v2.5.1):**
   - **Eliminación de Volcado JSON:** Parseo inteligente de `venue_pricing_tiers` para generar resúmenes amigables en español de los tramos tarifarios del Arriendo de Recinto Completo (cantidad de tramos, asistentes mín/máx y rango de precios en CLP).
   - **Unidades de Negocio:** Formateo explícito para aforo máximo (`150 personas`), inflables (`$5.000 CLP`) y porcentaje de abono (`50%`).

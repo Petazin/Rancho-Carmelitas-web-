@@ -42,14 +42,44 @@ export async function POST(req: Request) {
       if (external_reference.startsWith('EVENT__')) {
         const [, quoteId, expectedAmount] = external_reference.split('__');
         if (quoteId) {
+          const refStr = `MP-${paymentId}`;
+          // Idempotencia: verificar si ya existe este pago en event_payments
+          const { data: existingEventPay } = await supabaseAdmin
+            .from('event_payments')
+            .select('id')
+            .eq('reference', refStr)
+            .maybeSingle();
+
+          if (existingEventPay) {
+            console.log(`[MercadoPago Webhook] Pago de evento ${refStr} ya estaba registrado. Idempotencia asegurada.`);
+            return NextResponse.json({ message: 'Pago de evento ya procesado anteriormente.' }, { status: 200 });
+          }
+
           const amountToRegister = Number(transaction_amount) || Number(expectedAmount) || 0;
+          const methodLabel = `Mercado Pago (${payment_method_id || 'ONLINE'})`;
+
+          // Insertar registro separado en event_payments
+          const { error: insertEventPayError } = await supabaseAdmin
+            .from('event_payments')
+            .insert([{
+              event_quote_id: quoteId,
+              amount: amountToRegister,
+              payment_method: methodLabel,
+              reference: refStr,
+              notes: 'Abono acreditado automáticamente vía Mercado Pago',
+              recorded_by: 'Sistema (Mercado Pago)'
+            }]);
+
+          if (insertEventPayError) {
+            console.error('[MercadoPago Webhook] Error al insertar en event_payments:', insertEventPayError);
+          }
+
           const { error: eventUpdateError } = await supabaseAdmin
             .from('event_quotes')
             .update({
-              deposit_paid: amountToRegister,
               status: 'Confirmada',
-              payment_method: `Mercado Pago (${payment_method_id || 'ONLINE'})`,
-              payment_reference: `MP-${paymentId}`
+              payment_method: methodLabel,
+              payment_reference: refStr
             })
             .eq('id', quoteId);
 

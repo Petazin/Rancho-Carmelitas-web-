@@ -204,6 +204,12 @@ export async function sendEventEmails({ action, quoteId, origin }: SendEventEmai
   // ACCIÓN 3: Abono Acreditado y Confirmado (Recinto Bloqueado)
   // =========================================================================
   if (action === 'confirmed') {
+    const depositPaid = Number(quote.deposit_paid ?? 0);
+    const totalAmount = Number(quote.total_amount ?? 0);
+    const remaining = Math.max(0, totalAmount - depositPaid);
+    const groupDisplayName = quote.group_name || quote.organizer_name;
+    const paymentMethodLabel = depositPaid > 0 ? (quote.payment_method || 'Abono Registrado') : 'Sin abono inicial';
+
     // A) Enviar al Cliente
     if (quote.organizer_email) {
       try {
@@ -219,9 +225,9 @@ export async function sendEventEmails({ action, quoteId, origin }: SendEventEmai
               startTime={quote.start_time}
               endTime={quote.end_time}
               totalGuests={totalGuests}
-              totalAmount={quote.total_amount}
-              depositPaid={quote.deposit_paid || quote.deposit_required}
-              paymentMethod={quote.payment_method || 'Abono 50%'}
+              totalAmount={totalAmount}
+              depositPaid={depositPaid}
+              paymentMethod={paymentMethodLabel}
               paymentReference={quote.payment_reference}
               quoteId={quote.id}
               companyName={companyName}
@@ -240,18 +246,31 @@ export async function sendEventEmails({ action, quoteId, origin }: SendEventEmai
       const adminRes = await resend.emails.send({
         from: emailSender,
         to: [adminNotifyEmail],
-        subject: `RECINTO CONFIRMADO Y BLOQUEADO: ${quote.group_name || quote.organizer_name} (${quote.event_date})`,
+        subject: `Nueva Reserva de Recinto Confirmada: ${groupDisplayName} (${quote.event_date})`,
         html: `
-          <div style="font-family: sans-serif; padding: 20px;">
-            <h2 style="color: #065f46;">¡Recinto Completo Oficialmente Confirmado!</h2>
-            <p>Se ha acreditado el abono para el evento de <strong>${quote.group_name || quote.organizer_name}</strong>.</p>
-            <ul>
-              <li><strong>Fecha:</strong> ${quote.event_date} (8 Horas)</li>
-              <li><strong>Responsable:</strong> ${quote.organizer_name} (${quote.organizer_phone})</li>
-              <li><strong>Abono Acreditado:</strong> $${(quote.deposit_paid || quote.deposit_required).toLocaleString()} (${quote.payment_method || 'Online/Transferencia'})</li>
-              <li><strong>Saldo al Ingresar:</strong> $${Math.max(0, quote.total_amount - (quote.deposit_paid || quote.deposit_required)).toLocaleString()}</li>
-            </ul>
-            <p><a href="${adminUrl}&id=${quote.id}" style="color: #10b981; font-weight: bold;">Ver detalles en el PMS</a></p>
+          <div style="font-family: sans-serif; padding: 24px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <h2 style="color: #065f46; margin-top: 0; font-size: 20px;">¡Nueva Reserva de Recinto Completo Confirmada!</h2>
+            <p style="font-size: 14px; color: #475569; line-height: 1.5;">
+              ${depositPaid > 0 
+                ? `Se ha registrado y confirmado la reserva de uso exclusivo del recinto para el grupo <strong>${groupDisplayName}</strong> con abono acreditado.`
+                : `Se ha registrado y confirmado la reserva de uso exclusivo del recinto para el grupo <strong>${groupDisplayName}</strong> (sin abono inicial registrado / pendiente de liquidar).`
+              }
+            </p>
+            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+              <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; line-height: 1.8;">
+                <li><strong>📅 Fecha del Evento:</strong> ${quote.event_date} (${quote.start_time?.slice(0, 5) || '10:00'} a ${quote.end_time?.slice(0, 5) || '18:00'} hrs)</li>
+                <li><strong>👤 Responsable:</strong> ${quote.organizer_name} (${quote.organizer_phone || 'Sin teléfono'})</li>
+                <li><strong>👥 Asistentes:</strong> ${totalGuests} personas</li>
+                <li><strong>💰 Total Evento:</strong> $${totalAmount.toLocaleString('es-CL')}</li>
+                <li><strong>💳 Abono Registrado:</strong> $${depositPaid.toLocaleString('es-CL')} (${paymentMethodLabel})</li>
+                <li><strong>💵 Saldo Pendiente:</strong> $${remaining.toLocaleString('es-CL')}</li>
+                ${quote.payment_reference ? `<li><strong>🔖 Referencia:</strong> ${quote.payment_reference}</li>` : ''}
+              </ul>
+            </div>
+            <p style="font-size: 12px; color: #10b981; font-weight: 600; margin-bottom: 20px;">
+              ✓ Todas las cabañas del complejo han quedado bloqueadas en el calendario para esta fecha.
+            </p>
+            <p><a href="${adminUrl}&id=${quote.id}" style="background-color: #10b981; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px; display: inline-block;">Ver detalles en el PMS</a></p>
           </div>
         `
       });

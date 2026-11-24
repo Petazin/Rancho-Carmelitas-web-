@@ -1,5 +1,26 @@
 # Changelog - Rancho Carmelitas
 
+## [2.6.0] - 2026-11-24
+
+### Operaciones Integrales, Historial de Pagos Separado y Reserva Manual de Recinto Completo (v2.6.0)
+
+- **Modal Unificado de Reservas Manuales en PMS (`src/app/admin/reservas/page.tsx`):**
+  - Alternador superior Stitch UI entre **Cabaña Individual** y **Recinto Completo (Evento 8h)**.
+  - **Calendario Interactivo de Disponibilidad (`renderVenueCalendarAdmin`):** Muestra días ocupados tachados en rojo (`⛔ Ocupado`) antes de seleccionar fecha, sincronizando la selección con el formulario.
+  - **Horarios Estándar y Avisos Visuales:** Botones de acceso rápido (`10:00 a 18:00`, `11:00 a 19:00`, `12:00 a 20:00`) y alertas visuales no bloqueantes si la duración difiere de 8 horas o supera las 20:00 hrs.
+  - **Abonos Flexibles y Reactividad por Estado:** Soporte real para abonos de `$0`, `50%`, `100%` o montos personalizados sin forzar el 50% por defecto (`Number(val ?? 0)`). Al elegir estado **Aprobada (Enviar link de pago al cliente)**, el bloque de pagos se adapta y despacha el correo oficial `'approved'` con el enlace de Mercado Pago.
+- **Historial de Pagos Separado (`event_payments`) y Cobro de Saldo:**
+  - Creación de la tabla `event_payments` en PostgreSQL ([schema_venue_operations_and_payments.sql](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/database/history/schema_venue_operations_and_payments.sql)) con trigger `trg_sync_event_payments_total` para mantener sincronizado `event_quotes.deposit_paid`, migración automática de abonos históricos y auditoría nativa.
+  - Integración idempotente en `/api/mercadopago/webhook` y `/api/mercadopago/sync` para registrar pagos online de eventos en `event_payments`.
+  - Habilitación del botón **`💵 Cobrar Saldo ($X)`** en `AdminEventQuotes.tsx` incluso para eventos en estado `Confirmada` mientras exista saldo pendiente, conservando cada cuota como registro independiente.
+- **Ciclo Operativo Check-in, Finalizado y Edición Integral (`AdminEventQuotes.tsx`):**
+  - **Botón `✏️ Editar`:** Modal completo para modificar fecha, horario, organizador, asistentes, recálculo automático de tramos, montos, estado y notas, sincronizando bloqueos en `cabin_closures`.
+  - **Botón `🔑 Check-in (Iniciar Uso)`:** Registra el ingreso del grupo validando que el saldo esté en `$0` (con opción de autorización excepcional documentada).
+  - **Botón `🏁 Finalizar (Entrega)`:** Cierre de jornada con checklist de recepción de instalaciones y observaciones de entrega (`operational_status = 'Finalizado'`).
+- **Correcciones Críticas de Correos y Triggers PostgreSQL:**
+  - Humanización de asuntos y plantillas en [send-event-emails.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/lib/send-event-emails.tsx) y [EventQuoteTemplates.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/emails/EventQuoteTemplates.tsx) reflejando fielmente abonos `$0` y saldos reales.
+  - Corrección del trigger `trg_sync_event_quote_closure` a `BEFORE UPDATE` ([fix_trigger_event_quotes.sql](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/database/history/fix_trigger_event_quotes.sql)) resolviendo el error de concurrencia MVCC al cancelar eventos confirmados.
+
 ## [2.5.1] - 2026-11-22
 
 ### Humanización y Lenguaje Natural en Auditoría (v2.5.1)

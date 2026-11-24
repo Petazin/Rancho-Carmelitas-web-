@@ -282,9 +282,47 @@ function ReservasContent() {
   });
   const [isCreating, setIsCreating] = useState(false);
   const [allowOverCapacity, setAllowOverCapacity] = useState(false);
+
+  // Estados para Modal Unificado (Cabaña vs Recinto Completo)
+  const [createBookingType, setCreateBookingType] = useState<'cabin' | 'venue'>('cabin');
+  const [venuePricingTiers, setVenuePricingTiers] = useState<any[]>([
+    { id: 'tier-1', name: 'Paseo Estándar (hasta 20 personas)', min_guests: 1, max_guests: 20, base_price: 190000, included_guests: 20, extra_guest_fee: 0 },
+    { id: 'tier-2', name: 'Paseo Mediano (21 a 40 personas)', min_guests: 21, max_guests: 40, base_price: 250000, included_guests: 40, extra_guest_fee: 0 },
+    { id: 'tier-3', name: 'Paseo Grande (41 a 70 personas)', min_guests: 41, max_guests: 70, base_price: 350000, included_guests: 70, extra_guest_fee: 0 }
+  ]);
+  const [venueBouncyCastleFee, setVenueBouncyCastleFee] = useState<number>(5000);
+  const [venueDepositPercentage, setVenueDepositPercentage] = useState<number>(50);
+  const [venueMaxCapacity, setVenueMaxCapacity] = useState<number>(70);
+  const [occupiedVenueDates, setOccupiedVenueDates] = useState<string[]>([]);
+  const [isCreatingVenue, setIsCreatingVenue] = useState(false);
+  const [venueForm, setVenueForm] = useState({
+    event_date: '',
+    start_time: '10:00',
+    end_time: '18:00',
+    group_type: 'paseo_curso',
+    group_name: '',
+    organizer_name: '',
+    organizer_email: '',
+    organizer_phone: '',
+    organizer_rut: '',
+    adults_count: 15,
+    children_count: 0,
+    under_3_years_count: 0,
+    has_bouncy_castle: false,
+    admin_notes: '',
+    status: 'Confirmada',
+    deposit_paid: '',
+    payment_method: 'Transferencia',
+    payment_reference: '',
+    includes_support_cabin: false,
+    support_cabin_id: '',
+    support_cabin_extra_fee: '0'
+  });
+
   const [existingBookingsForSelectedCabin, setExistingBookingsForSelectedCabin] = useState<any[]>([]);
   const [loadingCabinOcupancy, setLoadingCabinOcupancy] = useState(false);
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [currentVenueCalendarDate, setCurrentVenueCalendarDate] = useState(new Date());
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
   const [cancelForm, setCancelForm] = useState({
@@ -629,6 +667,150 @@ function ReservasContent() {
     );
   };
 
+  const getVenueScheduleWarning = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) return null;
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return null;
+
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+    const diffMins = endMins - startMins;
+
+    if (diffMins <= 0) {
+      return {
+        type: 'error',
+        message: '⚠️ La hora de salida debe ser posterior a la hora de ingreso.'
+      };
+    }
+
+    const durationHours = diffMins / 60;
+    const warnings: string[] = [];
+
+    if (endMins > 20 * 60) {
+      warnings.push('La salida supera el límite estándar (máx 20:00 hrs)');
+    }
+
+    if (durationHours !== 8) {
+      warnings.push(`Duración: ${durationHours % 1 === 0 ? durationHours : durationHours.toFixed(1)} hrs (estándar son 8 hrs)`);
+    }
+
+    if (warnings.length > 0) {
+      return {
+        type: 'warning',
+        message: `ℹ️ ${warnings.join(' • ')}`
+      };
+    }
+
+    return {
+      type: 'success',
+      message: '✓ Horario estándar de 8 horas cumplido (hasta las 20:00 hrs)'
+    };
+  };
+
+  const renderVenueCalendarAdmin = () => {
+    const year = currentVenueCalendarDate.getFullYear();
+    const month = currentVenueCalendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const days = [];
+    
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-venue-${i}`} className="p-2"></div>);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isPast = dateStr < todayStr;
+      const isOccupied = occupiedVenueDates.includes(dateStr);
+      const isSelected = venueForm.event_date === dateStr;
+
+      let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all relative ";
+
+      if (isSelected) {
+        cellClasses += "bg-purple-600 text-white shadow-md z-10 font-bold ring-2 ring-purple-300 cursor-pointer";
+      } else if (isOccupied) {
+        cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed border border-red-100";
+      } else if (isPast) {
+        cellClasses += "text-gray-400 hover:bg-gray-100 cursor-pointer";
+      } else {
+        cellClasses += "text-gray-800 hover:bg-purple-100 hover:text-purple-700 cursor-pointer font-semibold";
+      }
+
+      days.push(
+        <div key={`venue-day-${d}`} className="relative py-1 px-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (isOccupied) {
+                alert(`⚠️ La fecha ${dateStr} ya se encuentra ocupada por reservas de cabañas o evento de recinto.`);
+                return;
+              }
+              setVenueForm(prev => ({ ...prev, event_date: dateStr }));
+            }}
+            className={cellClasses}
+            aria-label={dateStr}
+            title={
+              isOccupied
+                ? `⛔ Fecha Ocupada: Existen reservas o evento previo en esta fecha.`
+                : isSelected
+                ? `✓ Fecha Seleccionada: ${dateStr}`
+                : `Disponible para arriendo de recinto: ${dateStr}`
+            }
+          >
+            {d}
+            {isOccupied && (
+              <span className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />
+            )}
+            {isSelected && (
+              <span className="absolute bottom-1 w-1.5 h-1.5 bg-white rounded-full" />
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4 w-full">
+        <div className="flex items-center justify-between mb-4">
+          <button 
+            type="button"
+            onClick={() => setCurrentVenueCalendarDate(new Date(year, month - 1, 1))}
+            className="p-1.5 hover:bg-purple-50 rounded-lg text-gray-500 hover:text-purple-700 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div className="font-bold text-gray-900 capitalize text-sm flex items-center gap-2">
+            <span>🎪</span>
+            <span>{currentVenueCalendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</span>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setCurrentVenueCalendarDate(new Date(year, month + 1, 1))}
+            className="p-1.5 hover:bg-purple-50 rounded-lg text-gray-500 hover:text-purple-700 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        <div className="grid grid-cols-7 mb-2 text-center">
+          {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'].map(d => (
+            <div key={`header-venue-${d}`} className="text-xs font-bold text-gray-400">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-y-1">
+          {days}
+        </div>
+        <div className="flex flex-wrap gap-4 mt-4 text-[10px] font-bold uppercase text-gray-500 justify-center border-t pt-3 border-gray-100">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span> Día Seleccionado</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-100 border border-emerald-300"></span> Día Disponible</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300"></span> ⛔ Ocupado (Bloqueado)</span>
+        </div>
+      </div>
+    );
+  };
+
 
   const isDateInSelectedRangeEditAdmin = (dateStr: string) => {
     const checkIn = editForm.check_in;
@@ -922,7 +1104,53 @@ function ReservasContent() {
     fetchCabins();
     fetchPlataformas();
     fetchDefaultCommission();
+    fetchVenueSettings();
+    fetchOccupiedVenueDates();
   }, []);
+
+  async function fetchVenueSettings() {
+    try {
+      const { data } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['venue_pricing_tiers', 'venue_bouncy_castle_fee', 'venue_deposit_percentage', 'venue_max_capacity']);
+
+      if (data) {
+        data.forEach((item: any) => {
+          if (item.key === 'venue_pricing_tiers') {
+            try {
+              const parsed = JSON.parse(item.value);
+              if (Array.isArray(parsed) && parsed.length > 0) setVenuePricingTiers(parsed);
+            } catch (e) {
+              console.warn('Error al parsear venue_pricing_tiers:', e);
+            }
+          } else if (item.key === 'venue_bouncy_castle_fee') {
+            const val = Number(item.value);
+            if (!isNaN(val)) setVenueBouncyCastleFee(val);
+          } else if (item.key === 'venue_deposit_percentage') {
+            const val = Number(item.value);
+            if (!isNaN(val)) setVenueDepositPercentage(val);
+          } else if (item.key === 'venue_max_capacity') {
+            const val = Number(item.value);
+            if (!isNaN(val)) setVenueMaxCapacity(val);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Error cargando settings de recinto:', e);
+    }
+  }
+
+  async function fetchOccupiedVenueDates() {
+    try {
+      const { data, error } = await supabase.rpc('get_occupied_venue_dates');
+      if (!error && data) {
+        setOccupiedVenueDates(data.map((item: { occupied_date: string }) => item.occupied_date));
+      }
+    } catch (e) {
+      console.warn('Error cargando fechas ocupadas de recinto:', e);
+    }
+  }
 
   async function fetchDefaultCommission() {
     const { data } = await supabase
@@ -1935,6 +2163,188 @@ function ReservasContent() {
     }
   };
 
+  const calculateVenueQuoteDetails = () => {
+    const adults = Number(venueForm.adults_count) || 0;
+    const children = Number(venueForm.children_count) || 0;
+    const under3 = Number(venueForm.under_3_years_count) || 0;
+    const payingGuests = Math.max(1, adults + children);
+    const totalGuests = payingGuests + under3;
+
+    const tiers = venuePricingTiers.length > 0 ? venuePricingTiers : [
+      { id: 'tier-1', name: 'Paseo Estándar (hasta 20 personas)', min_guests: 1, max_guests: 20, base_price: 190000, included_guests: 20, extra_guest_fee: 0 },
+      { id: 'tier-2', name: 'Paseo Mediano (21 a 40 personas)', min_guests: 21, max_guests: 40, base_price: 250000, included_guests: 40, extra_guest_fee: 0 },
+      { id: 'tier-3', name: 'Paseo Grande (41 a 70 personas)', min_guests: 41, max_guests: 70, base_price: 350000, included_guests: 70, extra_guest_fee: 0 }
+    ];
+
+    let matchedTier = tiers.find(t => payingGuests >= t.min_guests && payingGuests <= t.max_guests);
+    if (!matchedTier && tiers.length > 0) {
+      matchedTier = tiers[tiers.length - 1];
+    }
+
+    const basePrice = matchedTier ? Number(matchedTier.base_price) || 190000 : 190000;
+    const tierName = matchedTier ? matchedTier.name : 'Tarifa Estándar';
+    const bouncyFee = venueForm.has_bouncy_castle ? venueBouncyCastleFee : 0;
+    const supportCabinFee = venueForm.includes_support_cabin ? (Number(venueForm.support_cabin_extra_fee) || 0) : 0;
+    const totalAmount = basePrice + bouncyFee + supportCabinFee;
+    const depositRequired = Math.round(totalAmount * (venueDepositPercentage / 100));
+
+    return {
+      payingGuests,
+      totalGuests,
+      matchedTier,
+      tierName,
+      basePrice,
+      bouncyFee,
+      supportCabinFee,
+      totalAmount,
+      depositRequired,
+      isOverCapacity: totalGuests > venueMaxCapacity
+    };
+  };
+
+  const handleCreateVenueBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!venueForm.event_date) {
+      alert('Por favor selecciona la fecha del evento.');
+      return;
+    }
+    if (!venueForm.organizer_name.trim()) {
+      alert('Por favor ingresa el nombre del responsable u organizador.');
+      return;
+    }
+    if (occupiedVenueDates.includes(venueForm.event_date)) {
+      if (!confirm('⚠️ ATENCIÓN: La fecha seleccionada ya figura como OCUPADA en el sistema (por reservas de cabañas o eventos).\n\n¿Deseas continuar y registrar este evento de todas formas bajo tu autorización administrativa?')) {
+        return;
+      }
+    }
+
+    setIsCreatingVenue(true);
+    try {
+      const details = calculateVenueQuoteDetails();
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminEmail = user?.email || 'Administración';
+
+      const isConfirmed = venueForm.status === 'Confirmada';
+      const depositPaidNum = (venueForm.deposit_paid !== '' && !isNaN(Number(venueForm.deposit_paid)))
+        ? Math.max(0, Number(venueForm.deposit_paid))
+        : 0;
+
+      const payload = {
+        event_date: venueForm.event_date,
+        start_time: venueForm.start_time || '10:00:00',
+        end_time: venueForm.end_time || '18:00:00',
+        organizer_name: venueForm.organizer_name.trim(),
+        organizer_email: venueForm.organizer_email.trim() || 'contacto@ranchocarmelitas.com',
+        organizer_phone: venueForm.organizer_phone.trim() || 'N/A',
+        organizer_rut: venueForm.organizer_rut.trim() || null,
+        group_type: venueForm.group_type,
+        group_name: venueForm.group_name.trim() || venueForm.organizer_name.trim(),
+        total_guests: details.totalGuests,
+        adults_count: Number(venueForm.adults_count) || 1,
+        children_count: Number(venueForm.children_count) || 0,
+        under_3_years_count: Number(venueForm.under_3_years_count) || 0,
+        has_bouncy_castle: venueForm.has_bouncy_castle,
+        bouncy_castle_fee: details.bouncyFee,
+        extra_services_notes: venueForm.admin_notes.trim() || null,
+        base_price: details.basePrice,
+        extra_guests_cost: 0,
+        total_amount: details.totalAmount,
+        deposit_required: details.depositRequired,
+        deposit_paid: depositPaidNum,
+        status: venueForm.status,
+        payment_method: depositPaidNum > 0 ? venueForm.payment_method : 'Pendiente de pago',
+        payment_reference: venueForm.payment_reference.trim() || (isConfirmed ? (depositPaidNum > 0 ? 'Reserva manual directa en PMS' : 'Reserva manual directa sin abono inicial') : null),
+        admin_notes: venueForm.admin_notes.trim() || null,
+        approved_by: venueForm.status !== 'Cotizacion_Pendiente' ? adminEmail : null,
+        approved_at: venueForm.status !== 'Cotizacion_Pendiente' ? new Date().toISOString() : null,
+        includes_support_cabin: venueForm.includes_support_cabin,
+        support_cabin_id: venueForm.includes_support_cabin ? (venueForm.support_cabin_id || null) : null,
+        support_cabin_extra_fee: details.supportCabinFee
+      };
+
+      const { data: newQuote, error: insertError } = await supabase
+        .from('event_quotes')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Registrar abono inicial en historial separado event_payments si hay monto > 0
+      if (newQuote && payload.deposit_paid > 0) {
+        await supabase.from('event_payments').insert([{
+          event_quote_id: newQuote.id,
+          amount: payload.deposit_paid,
+          payment_method: payload.payment_method || 'Transferencia',
+          reference: payload.payment_reference || 'Reserva manual directa en PMS',
+          notes: 'Abono inicial registrado al crear reserva manual',
+          recorded_by: 'Administración'
+        }]);
+      }
+
+      // Si se crea como Confirmada, asegurar cierre total en cabin_closures
+      if (isConfirmed && newQuote) {
+        const { data: existingClosure } = await supabase
+          .from('cabin_closures')
+          .select('id')
+          .is('cabin_id', null)
+          .eq('start_date', venueForm.event_date)
+          .eq('end_date', venueForm.event_date)
+          .maybeSingle();
+
+        if (!existingClosure) {
+          const { data: createdClosure, error: closureErr } = await supabase
+            .from('cabin_closures')
+            .insert({
+              cabin_id: null,
+              start_date: venueForm.event_date,
+              end_date: venueForm.event_date,
+              reason: `Evento Exclusivo Recinto: ${payload.group_name}`
+            })
+            .select('id')
+            .single();
+
+          if (!closureErr && createdClosure) {
+            await supabase
+              .from('event_quotes')
+              .update({ associated_closure_id: createdClosure.id })
+              .eq('id', newQuote.id);
+          }
+        }
+      }
+
+      // Notificación de email si el correo es real
+      if (payload.organizer_email && !payload.organizer_email.includes('contacto@ranchocarmelitas.com')) {
+        const mailAction = isConfirmed ? 'confirmed' : (venueForm.status === 'Aprobada' ? 'approved' : 'created');
+        fetch('/api/send-event-quote-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: mailAction,
+            quoteId: newQuote.id
+          })
+        }).catch(e => console.warn('[handleCreateVenueBooking] Error enviando correo:', e));
+      }
+
+      alert(
+        isConfirmed
+          ? '🎉 ¡Reserva de Recinto Completo creada y confirmada exitosamente! Todas las cabañas han quedado bloqueadas automáticamente para esa fecha.'
+          : venueForm.status === 'Aprobada'
+          ? '📧 ¡Cotización de Recinto Aprobada exitosamente! Se ha enviado el correo oficial con el enlace de pago al organizador para que abone el 50%.'
+          : '✓ Cotización de Recinto Completo guardada en revisión exitosamente.'
+      );
+
+      setCreateModalOpen(false);
+      await fetchBookings();
+      await fetchOccupiedVenueDates();
+      setActiveTab('eventos');
+    } catch (err: any) {
+      alert('Error al registrar reserva de recinto: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setIsCreatingVenue(false);
+    }
+  };
+
   const getOverbookingConflict = (booking: Booking) => {
     if (booking.status === 'Cancelada') return null;
 
@@ -2106,6 +2516,7 @@ function ReservasContent() {
           <button
             onClick={() => {
               const defaultCabin = availableCabins[0];
+              setCreateBookingType('cabin');
               setCreateForm({
                 guest_name: '',
                 guest_email: '',
@@ -2134,10 +2545,33 @@ function ReservasContent() {
                 guest_preferences: '',
                 guest_birthdate: ''
               });
+              setVenueForm({
+                event_date: '',
+                start_time: '10:00',
+                end_time: '18:00',
+                group_type: 'paseo_curso',
+                group_name: '',
+                organizer_name: '',
+                organizer_email: '',
+                organizer_phone: '',
+                organizer_rut: '',
+                adults_count: 15,
+                children_count: 0,
+                under_3_years_count: 0,
+                has_bouncy_castle: false,
+                admin_notes: '',
+                status: 'Confirmada',
+                deposit_paid: '',
+                payment_method: 'Transferencia',
+                payment_reference: '',
+                includes_support_cabin: false,
+                support_cabin_id: '',
+                support_cabin_extra_fee: '0'
+              });
               setAllowOverCapacity(false);
               setCreateModalOpen(true);
             }}
-            className="bg-[#11d442] hover:bg-[#0fb337] text-white px-5 py-3 rounded-[12px] font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+            className="bg-[#11d442] hover:bg-[#0fb337] text-white px-5 py-3 rounded-[12px] font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -3561,11 +3995,48 @@ function ReservasContent() {
               </svg>
             </button>
 
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Crear Nueva Reserva Manual</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Registra una reserva recibida de forma externa o directa. Configura la plataforma y las comisiones para la liquidación.
-            </p>
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                {createBookingType === 'cabin' ? (
+                  <span>🏡 Crear Nueva Reserva Manual (Cabaña)</span>
+                ) : (
+                  <span>🎪 Nueva Reserva de Recinto Completo (Evento 8h)</span>
+                )}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {createBookingType === 'cabin'
+                  ? 'Registra una estadía recibida de forma externa o directa para una cabaña individual.'
+                  : 'Registra un evento diurno exclusivo (quincho, piscina y áreas verdes). El sistema bloqueará automáticamente todas las cabañas en el complejo.'}
+              </p>
+            </div>
 
+            {/* Alternador de Tipo de Reserva: Cabaña Individual vs Recinto Completo */}
+            <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-6">
+              <button
+                type="button"
+                onClick={() => setCreateBookingType('cabin')}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  createBookingType === 'cabin'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <span>🏡 Cabaña Individual</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateBookingType('venue')}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  createBookingType === 'venue'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <span>🎪 Recinto Completo (Evento 8h)</span>
+              </button>
+            </div>
+
+            {createBookingType === 'cabin' ? (
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
@@ -4193,6 +4664,570 @@ function ReservasContent() {
                 </button>
               </div>
             </form>
+            ) : (
+              <form onSubmit={handleCreateVenueBooking} className="space-y-5 animate-in fade-in">
+                {/* Banner Informativo */}
+                <div className="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-xs text-purple-900 space-y-1">
+                  <div className="font-extrabold flex items-center gap-2">
+                    <span className="text-base">🎪</span>
+                    <span>Uso Exclusivo de Instalaciones por 8 Horas Continuas</span>
+                  </div>
+                  <p className="text-purple-700 leading-relaxed text-[11px]">
+                    Incluye Quincho techado equipado (parrilla, fogón, refrigeradores), Piscina familiar exclusiva, áreas verdes, baños exteriores y estacionamiento privado. Al confirmarse, el sistema bloquea automáticamente todas las cabañas en el calendario del complejo para garantizar la exclusividad del grupo.
+                  </p>
+                </div>
+
+                {/* Bloque 1: Fecha y Horario */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                    <span>📅 Fecha y Horario del Evento (8 Horas)</span>
+                    <span className="text-[11px] font-medium text-purple-700 lowercase">Haz clic en un día disponible</span>
+                  </h4>
+
+                  {/* Calendario Interactivo de Disponibilidad de Recinto */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Calendario de Ocupación y Disponibilidad del Recinto *
+                    </label>
+                    {renderVenueCalendarAdmin()}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Fecha Seleccionada *</label>
+                      <input
+                        type="text"
+                        readOnly
+                        required
+                        placeholder="Haz clic en el calendario"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-900 shadow-inner cursor-default"
+                        value={venueForm.event_date}
+                      />
+                      {venueForm.event_date ? (
+                        occupiedVenueDates.includes(venueForm.event_date) ? (
+                          <span className="text-[11px] text-red-600 font-bold block mt-1">
+                            ⛔ Fecha ocupada por reservas o eventos
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-emerald-600 font-bold block mt-1">
+                            ✓ Fecha libre para uso exclusivo
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-[10px] text-gray-400 block mt-1">
+                          Por favor selecciona un día en el calendario de arriba
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Hora Ingreso</label>
+                      <input
+                        type="time"
+                        required
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-800"
+                        value={venueForm.start_time}
+                        onChange={e => setVenueForm({ ...venueForm, start_time: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Hora Salida</label>
+                      <input
+                        type="time"
+                        required
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-800"
+                        value={venueForm.end_time}
+                        onChange={e => setVenueForm({ ...venueForm, end_time: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Atajos Rápidos de Horario y Aviso Visual */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-200/60">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="text-[11px] text-gray-500 font-medium">Horarios Estándar (8h):</span>
+                      <button
+                        type="button"
+                        onClick={() => setVenueForm({ ...venueForm, start_time: '10:00', end_time: '18:00' })}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                          venueForm.start_time === '10:00' && venueForm.end_time === '18:00'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white hover:bg-purple-50 text-purple-700 border-purple-200'
+                        }`}
+                      >
+                        10:00 a 18:00
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVenueForm({ ...venueForm, start_time: '11:00', end_time: '19:00' })}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                          venueForm.start_time === '11:00' && venueForm.end_time === '19:00'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white hover:bg-purple-50 text-purple-700 border-purple-200'
+                        }`}
+                      >
+                        11:00 a 19:00
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVenueForm({ ...venueForm, start_time: '12:00', end_time: '20:00' })}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                          venueForm.start_time === '12:00' && venueForm.end_time === '20:00'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white hover:bg-purple-50 text-purple-700 border-purple-200'
+                        }`}
+                      >
+                        12:00 a 20:00 (Límite)
+                      </button>
+                    </div>
+
+                    {(() => {
+                      const scheduleWarning = getVenueScheduleWarning(venueForm.start_time, venueForm.end_time);
+                      if (!scheduleWarning) return null;
+                      return (
+                        <span className={`text-[11px] font-semibold ${
+                          scheduleWarning.type === 'error'
+                            ? 'text-red-600 font-bold'
+                            : scheduleWarning.type === 'warning'
+                            ? 'text-amber-700'
+                            : 'text-emerald-700 font-bold'
+                        }`}>
+                          {scheduleWarning.message}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Bloque 2: Datos del Grupo y Responsable */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>👥 Datos del Grupo y Responsable</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Tipo de Grupo *</label>
+                      <select
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-800"
+                        value={venueForm.group_type}
+                        onChange={e => setVenueForm({ ...venueForm, group_type: e.target.value })}
+                      >
+                        <option value="paseo_curso">🎒 Paseo de Curso / Escolar</option>
+                        <option value="adulto_mayor">👴 Club de Adulto Mayor</option>
+                        <option value="familiar">🎉 Encuentro Familiar Masivo</option>
+                        <option value="empresa">🏢 Empresa / Institución</option>
+                        <option value="otro">🌟 Otro Evento Privado</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Nombre del Grupo / Colegio</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Colegio San José - 4to B"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                        value={venueForm.group_name}
+                        onChange={e => setVenueForm({ ...venueForm, group_name: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Nombre del Responsable *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej: Marcela Soto"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                        value={venueForm.organizer_name}
+                        onChange={e => setVenueForm({ ...venueForm, organizer_name: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Teléfono (WhatsApp)</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: +56 9 1234 5678"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                        value={venueForm.organizer_phone}
+                        onChange={e => setVenueForm({ ...venueForm, organizer_phone: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Correo Electrónico</label>
+                      <input
+                        type="email"
+                        placeholder="marcela@correo.com"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                        value={venueForm.organizer_email}
+                        onChange={e => setVenueForm({ ...venueForm, organizer_email: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">RUT / Identificación</label>
+                      <input
+                        type="text"
+                        placeholder="12.345.678-9"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm"
+                        value={venueForm.organizer_rut}
+                        onChange={e => setVenueForm({ ...venueForm, organizer_rut: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bloque 3: Asistentes y Servicios Extras */}
+                {(() => {
+                  const details = calculateVenueQuoteDetails();
+                  return (
+                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200/60 pb-2">
+                        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>👥 Conteo de Asistentes</span>
+                        </h4>
+                        <span className="text-[11px] bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full font-extrabold border border-purple-200">
+                          Total: {details.totalGuests} personas ({details.payingGuests} pagantes)
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Adultos *</label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-900"
+                            value={venueForm.adults_count}
+                            onChange={e => setVenueForm({ ...venueForm, adults_count: Math.max(1, Number(e.target.value)) })}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Niños (3 a 17 años)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-900"
+                            value={venueForm.children_count}
+                            onChange={e => setVenueForm({ ...venueForm, children_count: Math.max(0, Number(e.target.value)) })}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Menores de 3 años ($0)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-900"
+                            value={venueForm.under_3_years_count}
+                            onChange={e => setVenueForm({ ...venueForm, under_3_years_count: Math.max(0, Number(e.target.value)) })}
+                          />
+                          <span className="text-[10px] text-gray-400 block mt-1">Exentos de cobro oficial</span>
+                        </div>
+                      </div>
+
+                      {details.isOverCapacity && (
+                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-800 font-medium">
+                          ⚠️ <strong>Aforo Máximo Superado:</strong> El grupo suma {details.totalGuests} personas, superando el límite estándar del recinto ({venueMaxCapacity} pers). Como administrador, puedes registrarlo bajo coordinación especial.
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-gray-200/60 space-y-3">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={venueForm.has_bouncy_castle}
+                            onChange={e => setVenueForm({ ...venueForm, has_bouncy_castle: e.target.checked })}
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                          />
+                          <span>🎪 Traen Juego Inflable Propio (+{formatMoney(venueBouncyCastleFee)} de recargo por consumo de motor)</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={venueForm.includes_support_cabin}
+                            onChange={e => setVenueForm({ ...venueForm, includes_support_cabin: e.target.checked })}
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                          />
+                          <span>🏠 Asignar Cabaña de Apoyo (Para descanso, muda o lactancia)</span>
+                        </label>
+
+                        {venueForm.includes_support_cabin && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-purple-50/60 rounded-xl border border-purple-200">
+                            <div>
+                              <label className="block text-[11px] font-bold text-purple-900 mb-1">Cabaña Asignada</label>
+                              <select
+                                value={venueForm.support_cabin_id}
+                                onChange={e => setVenueForm({ ...venueForm, support_cabin_id: e.target.value })}
+                                className="w-full p-2 border border-purple-200 rounded-lg text-xs bg-white font-medium text-gray-800"
+                              >
+                                <option value="">-- Seleccionar Cabaña --</option>
+                                {availableCabins.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-purple-900 mb-1">Recargo Extra ($ CLP)</label>
+                              <input
+                                type="number"
+                                placeholder="0"
+                                value={venueForm.support_cabin_extra_fee}
+                                onChange={e => setVenueForm({ ...venueForm, support_cabin_extra_fee: e.target.value })}
+                                className="w-full p-2 border border-purple-200 rounded-lg text-xs bg-white font-medium text-gray-800"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Bloque 4: Desglose Financiero en Vivo */}
+                {(() => {
+                  const details = calculateVenueQuoteDetails();
+                  return (
+                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50/40 p-4 rounded-2xl border border-purple-200 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-200/60 pb-2">
+                        <h4 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>💰 Desglose Oficial de Tarifa de Recinto</span>
+                        </h4>
+                        <span className="text-[11px] font-extrabold text-purple-800 bg-purple-100 px-2.5 py-0.5 rounded-full border border-purple-200">
+                          {details.tierName}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-white p-3 rounded-xl border border-purple-150 shadow-xs">
+                        <div>
+                          <span className="text-gray-400 block text-[10px]">Tarifa Fija Tramo:</span>
+                          <span className="font-bold text-gray-900 text-sm">{formatMoney(details.basePrice)}</span>
+                        </div>
+                        {details.bouncyFee > 0 && (
+                          <div>
+                            <span className="text-gray-400 block text-[10px]">Inflable Propio:</span>
+                            <span className="font-semibold text-purple-800">+{formatMoney(details.bouncyFee)}</span>
+                          </div>
+                        )}
+                        {details.supportCabinFee > 0 && (
+                          <div>
+                            <span className="text-gray-400 block text-[10px]">Cabaña Apoyo:</span>
+                            <span className="font-semibold text-purple-800">+{formatMoney(details.supportCabinFee)}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-gray-400 block text-[10px]">Total Recinto:</span>
+                          <span className="font-black text-gray-950 text-base">{formatMoney(details.totalAmount)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 block text-[10px]">Abono 50% Mínimo:</span>
+                          <span className="font-bold text-[#11d442] text-sm">{formatMoney(details.depositRequired)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Bloque 5: Estado Operativo y Registro de Abono */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>💳 Estado Operativo y Registro de Abono</span>
+                  </h4>
+
+                  {(() => {
+                    const details = calculateVenueQuoteDetails();
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                        {/* Columna Izquierda: Estado Inicial */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Estado Inicial del Evento *</label>
+                          <select
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+                            value={venueForm.status}
+                            onChange={e => {
+                              const nextStatus = e.target.value;
+                              setVenueForm(prev => ({
+                                ...prev,
+                                status: nextStatus,
+                                deposit_paid: nextStatus === 'Aprobada' ? '0' : prev.deposit_paid,
+                                payment_method: nextStatus === 'Aprobada' ? 'Mercado Pago (Link)' : prev.payment_method
+                              }));
+                            }}
+                          >
+                            <option value="Confirmada">🟢 Confirmada (Con bloqueo total de cabañas)</option>
+                            <option value="Aprobada">🟡 Aprobada (Enviar link de pago al cliente)</option>
+                            <option value="Cotizacion_Pendiente">⚪ Cotización Pendiente (En revisión)</option>
+                          </select>
+                          
+                          {/* Helper reactivo con altura consistente */}
+                          <div className="mt-2 text-[11px] leading-tight min-h-[34px]">
+                            {venueForm.status === 'Confirmada' ? (
+                              <span className="text-purple-700 font-semibold flex items-start gap-1">
+                                <span>✓</span>
+                                <span>Bloquea automáticamente todas las cabañas para garantizar exclusividad y envía correo de confirmación.</span>
+                              </span>
+                            ) : venueForm.status === 'Aprobada' ? (
+                              <span className="text-blue-700 font-semibold flex items-start gap-1">
+                                <span>📧</span>
+                                <span>Se enviará un correo con el botón de pago oficial del 50%. Al pagar, el recinto se bloqueará automáticamente.</span>
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 font-medium flex items-start gap-1">
+                                <span>📋</span>
+                                <span>Se guarda como cotización interna para revisión de delegación sin bloquear ni notificar aún.</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Columna Derecha: Monto Abonado */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                            {venueForm.status === 'Aprobada' ? 'Abono Requerido vía Link' : 'Monto Abonado Inicial ($ CLP)'}
+                          </label>
+
+                          {venueForm.status === 'Aprobada' ? (
+                            <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-blue-800 font-semibold">Abono 50% por cobrar:</span>
+                                <span className="text-blue-900 font-black text-sm">
+                                  {formatMoney(details.depositRequired)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-600">
+                                Abono registrado actualmente: <strong>$0</strong> (el organizador pagará vía Mercado Pago o Transferencia).
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                placeholder="0 (o vacío si no hay abono aún)"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-900 focus:ring-2 focus:ring-purple-400 focus:outline-none"
+                                value={venueForm.deposit_paid}
+                                onChange={e => setVenueForm({ ...venueForm, deposit_paid: e.target.value })}
+                              />
+
+                              {/* Atajos Rápidos de Abono organizados y alineados abajo del input */}
+                              <div className="flex items-center gap-1.5 mt-2 flex-wrap min-h-[34px]">
+                                <span className="text-[10px] text-gray-400 font-bold">Atajos:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setVenueForm({ ...venueForm, deposit_paid: '0' })}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                                    venueForm.deposit_paid === '0'
+                                      ? 'bg-gray-700 text-white border-gray-700'
+                                      : 'bg-white hover:bg-gray-100 text-gray-600 border-gray-200'
+                                  }`}
+                                >
+                                  $0 (Sin Abono)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setVenueForm({ ...venueForm, deposit_paid: String(details.depositRequired) })}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                                    venueForm.deposit_paid === String(details.depositRequired)
+                                      ? 'bg-purple-600 text-white border-purple-600'
+                                      : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                                  }`}
+                                >
+                                  50% ({formatMoney(details.depositRequired)})
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setVenueForm({ ...venueForm, deposit_paid: String(details.totalAmount) })}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                                    venueForm.deposit_paid === String(details.totalAmount)
+                                      ? 'bg-purple-600 text-white border-purple-600'
+                                      : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                                  }`}
+                                >
+                                  100% Total
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Fila 2: Método de Pago y Nº Comprobante */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Método de Pago</label>
+                          <select
+                            disabled={venueForm.status === 'Aprobada'}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-xs font-semibold disabled:bg-gray-100 disabled:text-gray-500"
+                            value={venueForm.payment_method}
+                            onChange={e => setVenueForm({ ...venueForm, payment_method: e.target.value })}
+                          >
+                            <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                            <option value="Efectivo">💵 Pago en Efectivo (Caja)</option>
+                            <option value="POS Mercado Pago">📱 POS Mercado Pago / Tarjeta</option>
+                            <option value="Mercado Pago (Link)">💳 Link de Pago Web (Mercado Pago)</option>
+                            <option value="Otro">Otro Medio</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">Nº de Comprobante / Referencia</label>
+                          <input
+                            type="text"
+                            disabled={venueForm.status === 'Aprobada'}
+                            placeholder={venueForm.status === 'Aprobada' ? 'Se registrará automáticamente tras el pago' : 'Ej: Transf. Banco Estado #123456'}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                            value={venueForm.payment_reference}
+                            onChange={e => setVenueForm({ ...venueForm, payment_reference: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Bloque 6: Observaciones Administrativas */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Notas Administrativas u Observaciones</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Ej: Reserva acordada por teléfono. Llegan en bus de 40 personas..."
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-xs"
+                    value={venueForm.admin_notes}
+                    onChange={e => setVenueForm({ ...venueForm, admin_notes: e.target.value })}
+                  />
+                </div>
+
+                {/* Botones de Guardado y Cierre */}
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={isCreatingVenue}
+                    className={`flex-1 font-bold py-3 px-4 rounded-xl transition-all text-sm shadow-md active:scale-95 cursor-pointer ${
+                      venueForm.status === 'Confirmada'
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'bg-[#11d442] hover:bg-[#0fb337] text-white'
+                    }`}
+                  >
+                    {isCreatingVenue
+                      ? 'Guardando Evento...'
+                      : venueForm.status === 'Confirmada'
+                      ? '✓ Crear y Confirmar Recinto Completo (Bloqueo Total)'
+                      : '✓ Guardar Solicitud de Recinto'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateModalOpen(false)}
+                    disabled={isCreatingVenue}
+                    className="px-6 py-3 font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 text-sm transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
