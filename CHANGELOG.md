@@ -1,5 +1,24 @@
 # Changelog - Rancho Carmelitas
 
+## [2.6.1] - 2026-11-24
+
+### Reglas de Reserva, Anticipación y Privacidad en Calendario Público (v2.6.1)
+
+- **Nuevos Parámetros Globales en Administración (`src/app/admin/configuraciones/page.tsx`):**
+  - Agregada la sección **"📅 Reglas de Reserva y Anticipación"** en Configuraciones Globales, almacenada en la tabla `settings`:
+    - `min_booking_nights` (Mínimo de noches de arriendo en cabañas, por defecto `1`).
+    - `min_advance_booking_days` (Días mínimos de anticipación para reservar cabañas y recinto completo, por defecto `0`).
+- **Motor Centralizado de Validación ([booking-rules.ts](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/lib/booking-rules.ts)):**
+  - Cálculo de fechas en horario local sin desfase UTC y validación unificada de mínimo de noches y días de anticipación.
+- **Validación en Flujo Público de Cabañas, Checkout y Recinto Completo:**
+  - En [BookingForm.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/ui/BookingForm.tsx): bloqueo de fechas sin anticipación suficiente, badge informativo de reglas y bloqueo del botón de reserva si no se cumple el mínimo de noches.
+  - En [checkout/[id]/page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/checkout/%5Bid%5D/page.tsx) y [CheckoutForm.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/ui/CheckoutForm.tsx): doble validación en servidor y al enviar el formulario para evitar manipulación de URL.
+  - En [recinto-completo/page.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/app/recinto-completo/page.tsx) y [VenueQuoteForm.tsx](file:///c:/Users/Petazo/Desktop/Pagina%20rancho%20Carmelitas/rancho-carmelitas-web/src/components/ui/VenueQuoteForm.tsx): bloqueo de fechas en calendario y validación al enviar cotización según `min_advance_booking_days`.
+- **Aviso No Bloqueante en Reservas Manuales Admin (`src/app/admin/reservas/page.tsx`):**
+  - Al crear una reserva manual que no cumpla con el mínimo de noches o días de anticipación, se muestra un aviso informativo amarillo permitiendo al administrador continuar si así lo autoriza.
+- **Privacidad en Calendario Público:**
+  - Eliminada la exposición del campo interno `reason` de `cabin_closures` en tooltips y mensajes de error públicos de `BookingForm.tsx` y `CheckoutForm.tsx`, mostrando únicamente `"No disponible"`.
+
 ## [2.6.0] - 2026-11-24
 
 ### Operaciones Integrales, Historial de Pagos Separado y Reserva Manual de Recinto Completo (v2.6.0)

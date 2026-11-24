@@ -6,6 +6,12 @@ import { compressImage } from '@/lib/image-compress';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AdminEventQuotes } from '@/components/admin/AdminEventQuotes';
+import {
+  DEFAULT_MIN_ADVANCE_DAYS,
+  DEFAULT_MIN_BOOKING_NIGHTS,
+  parseBookingRulesFromSettings,
+  validateCabinBookingRules,
+} from '@/lib/booking-rules';
 
 interface Booking {
   id: string;
@@ -249,6 +255,8 @@ function ReservasContent() {
     guest_birthdate: ''
   });
   const [availableCabins, setAvailableCabins] = useState<any[]>([]);
+  const [minBookingNights, setMinBookingNights] = useState<number>(DEFAULT_MIN_BOOKING_NIGHTS);
+  const [minAdvanceBookingDays, setMinAdvanceBookingDays] = useState<number>(DEFAULT_MIN_ADVANCE_DAYS);
 
   // Estados para Modal de Creación Manual
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -1155,12 +1163,17 @@ function ReservasContent() {
   async function fetchDefaultCommission() {
     const { data } = await supabase
       .from('settings')
-      .select('value')
-      .eq('key', 'default_admin_commission')
-      .maybeSingle();
-    
-    if (data?.value) {
-      setDefaultCommission(data.value);
+      .select('key, value')
+      .in('key', ['default_admin_commission', 'min_booking_nights', 'min_advance_booking_days']);
+
+    if (data) {
+      const commRow = data.find((r: { key: string; value: string }) => r.key === 'default_admin_commission');
+      if (commRow?.value) {
+        setDefaultCommission(commRow.value);
+      }
+      const parsedRules = parseBookingRulesFromSettings(data);
+      setMinBookingNights(parsedRules.minBookingNights);
+      setMinAdvanceBookingDays(parsedRules.minAdvanceBookingDays);
     }
   }
 
@@ -4203,6 +4216,27 @@ function ReservasContent() {
                       value={createForm.check_out}
                     />
                   </div>
+
+                  {/* Aviso informativo de Reglas de Reserva (No bloqueante para Admin) */}
+                  {(() => {
+                    if (!createForm.check_in) return null;
+                    const rulesCheck = validateCabinBookingRules({
+                      checkIn: createForm.check_in,
+                      checkOut: createForm.check_out || null,
+                      minBookingNights,
+                      minAdvanceBookingDays,
+                    });
+                    if (rulesCheck.valid) return null;
+                    return (
+                      <div className="sm:col-span-2 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
+                        <span className="text-base leading-none">⚠️</span>
+                        <div>
+                          <p className="font-bold text-amber-950">Aviso de Política de Reserva (Modo Administrador)</p>
+                          <p className="mt-0.5">{rulesCheck.errorMessage} Puedes continuar y guardar esta reserva manual si así lo autorizas.</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Banner de Excepción Conversada de Recinto */}
                   {(() => {

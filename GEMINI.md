@@ -31,10 +31,15 @@ Este archivo consolida las decisiones arquitectónicas, convenciones de código 
 - **Flujo de Trabajo:**
   - Desarrollar las vistas en local.
   - Probar conectividad con Supabase.
-  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.6.0 (Operaciones Integrales, Pagos Separados y Reserva Manual de Recinto Completo)**.
+  - Las ejecuciones de prueba las solicita el usuario al agente. Se han completado todas las fases desde la v0.1 hasta la **Versión 2.6.1 (Reglas de Reserva, Anticipación y Privacidad en Calendario Público)**.
 
 El sistema ahora soporta:
 
+- **Reglas de Reserva, Anticipación y Privacidad Pública (v2.6.1):**
+  - **Configuración Global (`/admin/configuraciones`):** Parámetros `min_booking_nights` (default `1`) y `min_advance_booking_days` (default `0`) en `settings`, centralizados en `src/lib/booking-rules.ts`.
+  - **Validación en Cabañas, Checkout y Recinto Completo:** Bloqueo visual de fechas en calendario y validación en checkout/envío contra manipulación de URL.
+  - **Modo Administrador Flexible:** Aviso informativo no bloqueante en `/admin/reservas` al crear reservas manuales fuera de regla.
+  - **Privacidad Pública:** Ocultamiento de motivos internos (`cabin_closures.reason`) en tooltips y mensajes públicos de disponibilidad.
 - **Operaciones Integrales y Reserva Manual de Recinto Completo (v2.6.0):**
   - **Modal Unificado en PMS (`/admin/reservas`):** Alternador directo entre `Cabaña Individual` y `Recinto Completo (Evento 8h)`, con calendario mensual interactivo de ocupación previa, atajos rápidos de 8 horas y avisos visuales no bloqueantes.
   - **Abonos Flexibles y Correos Claros:** Registro de abonos reales (`$0`, `50%`, `100%` o personalizado) sin forzar el 50% por defecto, reactividad en estado `Aprobada` (despacho automático de enlace de pago) y plantillas de correo humanizadas para cliente y administración.

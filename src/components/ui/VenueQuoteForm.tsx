@@ -4,6 +4,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+import {
+  DEFAULT_MIN_ADVANCE_DAYS,
+  formatLocalDateStr,
+  getMinAllowedDateStr,
+} from '@/lib/booking-rules';
 
 export interface VenuePricingTier {
   id: string;
@@ -21,6 +26,7 @@ export interface VenueQuoteFormProps {
   initialDepositPercentage?: number;
   initialMaxCapacity?: number;
   initialWhatsapp?: string;
+  initialMinAdvanceBookingDays?: number;
 }
 
 const DEFAULT_VENUE_TIERS: VenuePricingTier[] = [
@@ -62,6 +68,7 @@ export function VenueQuoteForm({
   initialDepositPercentage,
   initialMaxCapacity,
   initialWhatsapp,
+  initialMinAdvanceBookingDays,
 }: VenueQuoteFormProps = {}) {
   // Parámetros dinámicos desde settings (inicializados desde props SSR para carga 100% inmediata)
   const [pricingTiers, setPricingTiers] = useState<VenuePricingTier[]>(
@@ -78,6 +85,9 @@ export function VenueQuoteForm({
   );
   const [adminWhatsapp, setAdminWhatsapp] = useState<string>(
     initialWhatsapp || '56994168853'
+  );
+  const [minAdvanceBookingDays, setMinAdvanceBookingDays] = useState<number>(
+    initialMinAdvanceBookingDays !== undefined ? initialMinAdvanceBookingDays : DEFAULT_MIN_ADVANCE_DAYS
   );
 
   // Selección de fecha y horario
@@ -163,7 +173,8 @@ export function VenueQuoteForm({
             'venue_bouncy_castle_fee',
             'venue_deposit_percentage',
             'venue_max_capacity',
-            'whatsapp_number'
+            'whatsapp_number',
+            'min_advance_booking_days'
           ]);
 
         if (!error && data) {
@@ -201,6 +212,11 @@ export function VenueQuoteForm({
           if (map['whatsapp_number']) {
             const clean = map['whatsapp_number'].replace(/[^0-9]/g, '');
             if (clean) setAdminWhatsapp(clean);
+          }
+
+          if (map['min_advance_booking_days']) {
+            const val = parseInt(map['min_advance_booking_days'], 10);
+            if (!isNaN(val) && val >= 0) setMinAdvanceBookingDays(val);
           }
         }
       } catch (err) {
@@ -259,7 +275,8 @@ export function VenueQuoteForm({
     const month = currentCalendarDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); // 0: Domingo
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatLocalDateStr(new Date());
+    const minAllowedDateStr = getMinAllowedDateStr(minAdvanceBookingDays);
 
     const monthNames = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -274,13 +291,14 @@ export function VenueQuoteForm({
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isPast = dateStr < todayStr;
+      const isTooSoon = !isPast && dateStr < minAllowedDateStr;
       const isOccupied = occupiedDates.includes(dateStr);
       const isSelected = selectedDate === dateStr;
-      const isSelectable = !isPast && !isOccupied;
+      const isSelectable = !isPast && !isTooSoon && !isOccupied;
 
       let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all cursor-pointer relative ";
 
-      if (isPast) {
+      if (isPast || isTooSoon) {
         cellClasses += "text-gray-300 cursor-not-allowed";
       } else if (isOccupied) {
         cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed border border-dashed border-red-200";
@@ -297,7 +315,13 @@ export function VenueQuoteForm({
             onClick={() => isSelectable && setSelectedDate(dateStr)}
             disabled={!isSelectable}
             className={cellClasses}
-            title={isOccupied ? "Fecha no disponible (con reservas o eventos)" : undefined}
+            title={
+              isOccupied
+                ? "Fecha no disponible (con reservas o eventos)"
+                : isTooSoon
+                ? `Requiere al menos ${minAdvanceBookingDays} ${minAdvanceBookingDays === 1 ? 'día' : 'días'} de anticipación`
+                : undefined
+            }
           >
             {d}
           </button>
@@ -370,6 +394,16 @@ export function VenueQuoteForm({
 
     if (!selectedDate) {
       setErrorMessage('Por favor selecciona una fecha disponible en el calendario para tu evento.');
+      return;
+    }
+
+    const minAllowedDateStr = getMinAllowedDateStr(minAdvanceBookingDays);
+    if (selectedDate < minAllowedDateStr) {
+      setErrorMessage(
+        `Las reservas de recinto requieren al menos ${minAdvanceBookingDays} ${
+          minAdvanceBookingDays === 1 ? 'día' : 'días'
+        } de anticipación.`
+      );
       return;
     }
 

@@ -77,6 +77,7 @@ export default async function RecintoCompletoPage() {
   let venueDepositPercentage = 50;
   let venueMaxCapacity = 70;
   let venueWhatsapp = '56994168853';
+  let venueMinAdvanceDays = 0;
 
   try {
     const { data: dbSettings } = await supabase
@@ -87,7 +88,8 @@ export default async function RecintoCompletoPage() {
         'venue_bouncy_castle_fee',
         'venue_deposit_percentage',
         'venue_max_capacity',
-        'whatsapp_number'
+        'whatsapp_number',
+        'min_advance_booking_days'
       ]);
 
     if (dbSettings) {
@@ -125,6 +127,11 @@ export default async function RecintoCompletoPage() {
       if (map['whatsapp_number']) {
         const clean = map['whatsapp_number'].replace(/[^0-9]/g, '');
         if (clean) venueWhatsapp = clean;
+      }
+
+      if (map['min_advance_booking_days']) {
+        const val = parseInt(map['min_advance_booking_days'], 10);
+        if (!isNaN(val) && val >= 0) venueMinAdvanceDays = val;
       }
     }
 
@@ -335,6 +342,7 @@ export default async function RecintoCompletoPage() {
             initialDepositPercentage={venueDepositPercentage}
             initialMaxCapacity={venueMaxCapacity}
             initialWhatsapp={venueWhatsapp}
+            initialMinAdvanceBookingDays={venueMinAdvanceDays}
           />
         </div>
       </section>

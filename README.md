@@ -19,6 +19,9 @@ El proyecto cuenta con un sistema documental vivo y fidedigno del código fuente
 
 ## Características Principales
 
+*   **Reglas de Reserva, Anticipación y Privacidad Pública (v2.6.1):**
+    *   **Parámetros Configurables (`/admin/configuraciones`):** Control global de mínimo de noches de arriendo en cabañas (`min_booking_nights`) y días mínimos de anticipación para cabañas y recinto completo (`min_advance_booking_days`).
+    *   **Validación Integral y Privacidad:** Bloqueo de fechas y estadías inválidas en el calendario público y checkout, avisos no bloqueantes en reservas manuales del PMS, y ocultamiento de motivos internos de cierre en la vista pública.
 *   **Operaciones Integrales, Pagos Separados y Reserva Manual de Recinto (v2.6.0):**
     *   **Reserva Manual Unificada (`/admin/reservas`):** Ingreso directo de eventos de Recinto Completo (8h) con calendario de ocupación visual previo, validaciones no bloqueantes de horario y abonos flexibles (`$0`, parcial o total).
     *   **Historial de Pagos Separado (`event_payments`):** Registro independiente de cada cuota/abono (Mercado Pago, Efectivo, Transferencia, POS) con sincronización automática de saldo pendiente.

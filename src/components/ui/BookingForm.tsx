@@ -4,6 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
+import {
+  DEFAULT_MIN_ADVANCE_DAYS,
+  DEFAULT_MIN_BOOKING_NIGHTS,
+  formatLocalDateStr,
+  parseBookingRulesFromSettings,
+  validateCabinBookingRules,
+} from '@/lib/booking-rules';
 
 const formatMoney = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null) return '$0';
@@ -28,31 +35,43 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   const [isOpenAdults, setIsOpenAdults] = useState(false);
   const [isOpenChildren, setIsOpenChildren] = useState(false);
 
-  // Estados para disponibilidad
+  // Estados para disponibilidad y reglas de reserva
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
   const [existingClosures, setExistingClosures] = useState<any[]>([]);
+  const [minBookingNights, setMinBookingNights] = useState<number>(DEFAULT_MIN_BOOKING_NIGHTS);
+  const [minAdvanceBookingDays, setMinAdvanceBookingDays] = useState<number>(DEFAULT_MIN_ADVANCE_DAYS);
   const [isChecking, setIsChecking] = useState(true);
 
   // Estado del calendario interactivo
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Obtener reservas y cierres existentes para la cabaña al montar
+  // Obtener reservas, cierres y reglas de reserva al montar
   useEffect(() => {
     async function fetchData() {
       setIsChecking(true);
-      
-      // Cargar reservas mediante función RPC segura (sin exponer datos personales de clientes)
-      const { data: bookingsData } = await supabase
-        .rpc('get_occupied_dates', { p_cabin_id: cabinId });
-      
-      // Cargar cierres (individuales y totales)
-      const { data: closuresData } = await supabase
-        .from('cabin_closures')
-        .select('cabin_id, start_date, end_date, reason')
-        .or(`cabin_id.eq.${cabinId},cabin_id.is.null`);
-      
+
+      const [{ data: bookingsData }, { data: closuresData }, { data: settingsData }] = await Promise.all([
+        // Cargar reservas mediante función RPC segura (sin exponer datos personales de clientes)
+        supabase.rpc('get_occupied_dates', { p_cabin_id: cabinId }),
+        // Cargar cierres (individuales y totales) sin exponer motivo interno en la vista pública
+        supabase
+          .from('cabin_closures')
+          .select('cabin_id, start_date, end_date')
+          .or(`cabin_id.eq.${cabinId},cabin_id.is.null`),
+        // Cargar reglas globales de reserva
+        supabase
+          .from('settings')
+          .select('key, value')
+          .in('key', ['min_booking_nights', 'min_advance_booking_days']),
+      ]);
+
       setExistingBookings(bookingsData || []);
       setExistingClosures(closuresData || []);
+
+      const parsedRules = parseBookingRulesFromSettings(settingsData);
+      setMinBookingNights(parsedRules.minBookingNights);
+      setMinAdvanceBookingDays(parsedRules.minAdvanceBookingDays);
+
       setIsChecking(false);
     }
     fetchData();
@@ -90,6 +109,12 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
   };
 
   const isAvailable = checkOverlap();
+  const rulesValidation = validateCabinBookingRules({
+    checkIn,
+    checkOut,
+    minBookingNights,
+    minAdvanceBookingDays,
+  });
 
 
   const isDateBooked = (dateStr: string) => {
@@ -172,7 +197,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatLocalDateStr(new Date());
+    const minAllowedDateStr = rulesValidation.minAllowedDateStr;
     
     const days = [];
     
@@ -184,6 +210,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
         const isPast = dateStr < todayStr;
+        const isTooSoon = !isPast && dateStr < minAllowedDateStr;
         const booked = isDateBooked(dateStr);
         const closed = isDateClosed(dateStr);
         const closureReason = closed ? getClosureReason(dateStr) : '';
@@ -193,7 +220,7 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
 
         let cellClasses = "h-10 w-full flex items-center justify-center text-sm font-medium rounded-full transition-all cursor-pointer relative ";
         
-        if (isPast) {
+        if (isPast || isTooSoon) {
             cellClasses += "text-gray-300 cursor-not-allowed";
         } else if (booked) {
             cellClasses += "bg-red-50 text-red-400 line-through cursor-not-allowed";
@@ -217,8 +244,8 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             rangeBgClasses = "absolute top-0 bottom-0 left-0 right-0 bg-[#11d442]/10 -z-10";
         }
 
-        // Check if full booked/closed range (prevents selecting)
-        const isSelectable = !isPast && !booked && !closed;
+        // Check if full booked/closed/tooSoon range (prevents selecting)
+        const isSelectable = !isPast && !isTooSoon && !booked && !closed;
 
         days.push(
             <div key={d} className="relative py-1 px-0.5">
@@ -229,7 +256,13 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
                   disabled={!isSelectable}
                   className={cellClasses}
                   aria-label={dateStr}
-                  title={closed ? `Cerrado por: ${closureReason}` : undefined}
+                  title={
+                    closed
+                      ? 'No disponible'
+                      : isTooSoon
+                      ? `Requiere al menos ${minAdvanceBookingDays} ${minAdvanceBookingDays === 1 ? 'día' : 'días'} de anticipación`
+                      : undefined
+                  }
                 >
                   {d}
                 </button>
@@ -317,7 +350,16 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
       </div>
 
       <div className="mb-2">
-        <h3 className="font-bold text-gray-900 mb-2">Selecciona tus fechas</h3>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h3 className="font-bold text-gray-900">Selecciona tus fechas</h3>
+          {(minBookingNights > 1 || minAdvanceBookingDays > 0) && (
+            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+              {minBookingNights > 1 ? `Mín. ${minBookingNights} noches` : ''}
+              {minBookingNights > 1 && minAdvanceBookingDays > 0 ? ' · ' : ''}
+              {minAdvanceBookingDays > 0 ? `${minAdvanceBookingDays}d anticipación` : ''}
+            </span>
+          )}
+        </div>
         {renderCalendar()}
       </div>
 
@@ -453,24 +495,29 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
         <Button size="lg" fullWidth disabled>Verificando disponibilidad...</Button>
       ) : (!checkIn || !checkOut) ? (
         <Button size="lg" fullWidth disabled className="bg-gray-300">Selecciona tus fechas primero</Button>
-      ) : isAvailable ? (
+      ) : !isAvailable ? (
+        <Button size="lg" fullWidth className="bg-red-500 hover:bg-red-600 text-white cursor-not-allowed" disabled>
+          Fechas No Disponibles
+        </Button>
+      ) : !rulesValidation.valid ? (
+        <Button size="lg" fullWidth className="bg-amber-500 hover:bg-amber-600 text-white cursor-not-allowed" disabled>
+          {!rulesValidation.meetsMinNights
+            ? `Mínimo ${minBookingNights} noches requeridas`
+            : 'Fecha fuera de anticipación permitida'}
+        </Button>
+      ) : (
         <Link href={checkoutUrl} className="block w-full">
           <Button size="lg" fullWidth>
             Confirmar y Reservar
           </Button>
         </Link>
-      ) : (
-        <Button size="lg" fullWidth className="bg-red-500 hover:bg-red-600 text-white cursor-not-allowed" disabled>
-          Fechas No Disponibles
-        </Button>
       )}
       
       <p className="text-center text-sm mt-4">
         {(!checkIn || !checkOut) ? (
           <span className="text-gray-400">Haz clic en el calendario arriba para elegir tu rango de estancia</span>
-        ) : isAvailable ? (
-          <span className="text-gray-400">No se hará ningún cargo aún</span>
-        ) : (checkIn && checkOut && existingClosures.some(c => {
+        ) : !isAvailable ? (
+          (checkIn && checkOut && existingClosures.some(c => {
             const closureIn = new Date(c.start_date);
             const closureOut = new Date(c.end_date);
             const selectedIn = new Date(checkIn);
@@ -478,18 +525,15 @@ export function BookingForm({ cabin, cabinId }: BookingFormProps) {
             return selectedIn <= closureOut && selectedOut >= closureIn;
           })) ? (
           <span className="text-red-500 font-semibold animate-pulse">
-            ⚠️ Cierre Temporal: Esta cabaña no está disponible en las fechas seleccionadas por: "{
-              existingClosures.find(c => {
-                const closureIn = new Date(c.start_date);
-                const closureOut = new Date(c.end_date);
-                const selectedIn = new Date(checkIn);
-                const selectedOut = new Date(checkOut);
-                return selectedIn <= closureOut && selectedOut >= closureIn;
-              })?.reason || 'Mantención'
-            }".
+            ⚠️ Esta cabaña no está disponible en las fechas seleccionadas.
           </span>
         ) : (
           <span className="text-red-500 font-medium">⚠️ Alguna de las fechas en tu rango ya fue reservada.</span>
+        )
+        ) : !rulesValidation.valid ? (
+          <span className="text-amber-700 font-semibold">⚠️ {rulesValidation.errorMessage}</span>
+        ) : (
+          <span className="text-gray-400">No se hará ningún cargo aún</span>
         )}
       </p>
     </div>

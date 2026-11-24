@@ -818,3 +818,20 @@
 [2026-11-22 17:20:15] Actividad de Antigravity:
 - Se ejecutó `git push origin master` subiendo con éxito el commit `19e8900` a GitHub.
 - Árbol de trabajo 100% limpio.
+[2026-11-24 02:19:30] Actividad de Antigravity:
+- Se creó el módulo centralizado `src/lib/booking-rules.ts` para parseo y validación de reglas globales de reserva (`min_booking_nights` = 1, `min_advance_booking_days` = 0).
+- Se agregó la sección "Reglas de Reserva y Anticipación" en `src/app/admin/configuraciones/page.tsx` para administrar ambos parámetros en la tabla `settings`.
+- Se integró el bloqueo por mínimo de noches y días de anticipación en `src/components/ui/BookingForm.tsx`, `src/app/checkout/[id]/page.tsx` y `src/components/ui/CheckoutForm.tsx`.
+- Se integró el bloqueo por días de anticipación en el calendario y envío de `src/components/ui/VenueQuoteForm.tsx` y `src/app/recinto-completo/page.tsx`.
+- Se agregó el aviso informativo no bloqueante en el modal de creación manual de reservas en `src/app/admin/reservas/page.tsx`.
+- Comandos de exploración utilizados: `Get-ChildItem`, `Select-String`, `Get-Content`.
+[2026-11-24 02:47:45] Actividad de Antigravity:
+- Se ejecutó `npx tsc --noEmit` (código de salida 0, sin errores de tipos).
+- Se ejecutó `npm run build` (código de salida 0, compilación exitosa de 32 rutas).
+- Se inició el servidor de desarrollo con `npm run dev`.
+[2026-11-24 03:29:45] Actividad de Antigravity:
+- Se eliminó la exposición del campo `reason` de `cabin_closures` en los tooltips y mensajes públicos de `src/components/ui/BookingForm.tsx` y `src/components/ui/CheckoutForm.tsx`, mostrando únicamente "No disponible".
+[2026-11-24 03:32:40] Actividad de Antigravity:
+- Se actualizó la versión a [2.6.1] en `package.json`, `CHANGELOG.md`, `GEMINI.md` y `README.md`.
+- Se generó el reporte de hito `2026-11-24-reglas-reserva-anticipacion-privacidad-v2-6-1.md` en `Wiki_LLM/fuentes/proyectos/rancho-carmelitas/`.
+- Se validó la compilación final de producción con `npx tsc --noEmit` y `npm run build` (código de salida 0, 32 rutas).

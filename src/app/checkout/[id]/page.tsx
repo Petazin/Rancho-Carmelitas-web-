@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { CheckoutForm } from "@/components/ui/CheckoutForm";
 import { supabase } from "@/lib/supabase";
+import { parseBookingRulesFromSettings, validateCabinBookingRules } from "@/lib/booking-rules";
+
+export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage({ 
   params,
@@ -49,6 +52,37 @@ export default async function CheckoutPage({
   const checkOut = resolvedSearchParams.checkOut as string || new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const adults = parseInt(resolvedSearchParams.adults as string) || 1;
   const children = parseInt(resolvedSearchParams.children as string) || 0;
+
+  // Validar reglas globales de reserva (mínimo de noches y días de anticipación)
+  const { data: settingsRows } = await supabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['min_booking_nights', 'min_advance_booking_days']);
+
+  const bookingRules = parseBookingRulesFromSettings(settingsRows);
+  const rulesValidation = validateCabinBookingRules({
+    checkIn,
+    checkOut,
+    minBookingNights: bookingRules.minBookingNights,
+    minAdvanceBookingDays: bookingRules.minAdvanceBookingDays,
+  });
+
+  if (!rulesValidation.valid) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-surface px-4 text-center">
+        <div className="max-w-md bg-white p-8 rounded-3xl border border-amber-200 shadow-sm space-y-4">
+          <div className="text-4xl">📅</div>
+          <h1 className="text-2xl font-bold text-gray-900">Fechas no válidas para reserva</h1>
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 font-medium">
+            {rulesValidation.errorMessage}
+          </p>
+          <Link href={`/cabins/${id}`} className="inline-block w-full">
+            <Button fullWidth>Volver a elegir fechas</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Cálculos de reserva
   const inDate = new Date(checkIn);

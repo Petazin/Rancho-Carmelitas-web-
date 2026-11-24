@@ -69,6 +69,12 @@ export default function AdminConfiguracionesPage() {
   const [venueMessage, setVenueMessage] = useState({ text: '', type: '' });
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Estados para Reglas de Reserva y Anticipación
+  const [minBookingNights, setMinBookingNights] = useState<number>(1);
+  const [minAdvanceBookingDays, setMinAdvanceBookingDays] = useState<number>(0);
+  const [savingBookingRules, setSavingBookingRules] = useState(false);
+  const [bookingRulesMessage, setBookingRulesMessage] = useState({ text: '', type: '' });
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -109,6 +115,16 @@ export default function AdminConfiguracionesPage() {
       if (map['venue_max_capacity']) {
         const val = Number(map['venue_max_capacity']);
         if (!isNaN(val)) setMaxCapacity(val);
+      }
+
+      if (map['min_booking_nights']) {
+        const val = parseInt(map['min_booking_nights'], 10);
+        if (!isNaN(val) && val >= 1) setMinBookingNights(val);
+      }
+
+      if (map['min_advance_booking_days']) {
+        const val = parseInt(map['min_advance_booking_days'], 10);
+        if (!isNaN(val) && val >= 0) setMinAdvanceBookingDays(val);
       }
     }
     setLoading(false);
@@ -304,6 +320,52 @@ export default function AdminConfiguracionesPage() {
     } else {
       setVenueMessage({ text: '✓ Tarifas, tramos y parámetros de recinto guardados exitosamente.', type: 'success' });
       setTimeout(() => setVenueMessage({ text: '', type: '' }), 4000);
+    }
+  };
+
+  const handleSaveBookingRules = async () => {
+    const nights = Math.floor(Number(minBookingNights));
+    const advanceDays = Math.floor(Number(minAdvanceBookingDays));
+
+    if (isNaN(nights) || nights < 1) {
+      setBookingRulesMessage({ text: 'El mínimo de noches de arriendo debe ser al menos 1.', type: 'error' });
+      return;
+    }
+
+    if (isNaN(advanceDays) || advanceDays < 0) {
+      setBookingRulesMessage({ text: 'La cantidad de días de anticipación debe ser 0 o mayor.', type: 'error' });
+      return;
+    }
+
+    setSavingBookingRules(true);
+    setBookingRulesMessage({ text: '', type: '' });
+
+    const upserts = [
+      {
+        key: 'min_booking_nights',
+        value: String(nights),
+        description: 'Cantidad mínima de noches requeridas para arrendar una cabaña en reservas públicas'
+      },
+      {
+        key: 'min_advance_booking_days',
+        value: String(advanceDays),
+        description: 'Cantidad mínima de días de anticipación requeridos para reservar cabañas o recinto completo'
+      }
+    ];
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(upserts, { onConflict: 'key' });
+
+    setSavingBookingRules(false);
+
+    if (error) {
+      setBookingRulesMessage({ text: 'Error al guardar reglas de reserva: ' + error.message, type: 'error' });
+    } else {
+      setMinBookingNights(nights);
+      setMinAdvanceBookingDays(advanceDays);
+      setBookingRulesMessage({ text: '✓ Reglas de reserva y anticipación guardadas exitosamente.', type: 'success' });
+      setTimeout(() => setBookingRulesMessage({ text: '', type: '' }), 3500);
     }
   };
 
@@ -606,6 +668,83 @@ export default function AdminConfiguracionesPage() {
             className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2 text-sm disabled:opacity-50"
           >
             {savingVenue ? 'Guardando Tarifas...' : '✓ Guardar Tarifas de Recinto'}
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SECCIÓN 1.5: REGLAS DE RESERVA Y ANTICIPACIÓN (CABAÑAS Y RECINTO)        */}
+      {/* ========================================================================= */}
+      <div className="bg-white p-6 md:p-8 rounded-[24px] border border-gray-100 shadow-sm space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            📅 Reglas de Reserva y Anticipación
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Define la estadía mínima para arriendo de cabañas y los días de anticipación exigidos para reservas públicas (cabañas y recinto completo).
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Mínimo de Noches de Arriendo (Cabañas)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="30"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] bg-gray-50 focus:bg-white transition-colors text-sm font-bold text-gray-900"
+                value={minBookingNights}
+                onChange={(e) => setMinBookingNights(Number(e.target.value))}
+              />
+              <span className="text-xs font-bold text-gray-500 whitespace-nowrap">noche(s)</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Si el cliente selecciona menos noches que este parámetro, no podrá realizar el arriendo. (Por defecto: 1)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Días de Anticipación de Reserva (Todo el Sitio)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="365"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#11d442] bg-gray-50 focus:bg-white transition-colors text-sm font-bold text-gray-900"
+                value={minAdvanceBookingDays}
+                onChange={(e) => setMinAdvanceBookingDays(Number(e.target.value))}
+              />
+              <span className="text-xs font-bold text-gray-500 whitespace-nowrap">día(s)</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Días mínimos previos requeridos antes del ingreso o evento. Con 0 se permite reservar para el mismo día. (Por defecto: 0)
+            </p>
+          </div>
+        </div>
+
+        {bookingRulesMessage.text && (
+          <div className={`p-3.5 rounded-xl text-xs font-bold ${
+            bookingRulesMessage.type === 'error'
+              ? 'bg-red-50 text-red-600 border border-red-100'
+              : 'bg-green-50 text-green-700 border border-green-100'
+          }`}>
+            {bookingRulesMessage.text}
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2 border-t border-gray-50">
+          <button
+            type="button"
+            onClick={handleSaveBookingRules}
+            disabled={savingBookingRules}
+            className="bg-[#11d442] hover:bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {savingBookingRules ? 'Guardando Reglas...' : '✓ Guardar Reglas de Reserva'}
           </button>
         </div>
       </div>

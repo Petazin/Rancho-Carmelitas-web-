@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { RulesModal } from '@/components/ui/RulesModal';
+import { parseBookingRulesFromSettings, validateCabinBookingRules } from '@/lib/booking-rules';
 
 const formatMoney = (amount: number | undefined | null) => {
   if (amount === undefined || amount === null) return '$0';
@@ -137,6 +138,27 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
         return;
       }
 
+      // 1.5 VALIDACIÓN DE REGLAS GLOBALES DE RESERVA (Mínimo de noches y anticipación)
+      const { data: settingsRows } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['min_booking_nights', 'min_advance_booking_days']);
+
+      const bookingRules = parseBookingRulesFromSettings(settingsRows);
+      const rulesCheck = validateCabinBookingRules({
+        checkIn,
+        checkOut,
+        minBookingNights: bookingRules.minBookingNights,
+        minAdvanceBookingDays: bookingRules.minAdvanceBookingDays,
+      });
+
+      if (!rulesCheck.valid) {
+        setConflictError(rulesCheck.errorMessage || 'Las fechas seleccionadas no cumplen con las políticas de reserva vigentes.');
+        setIsLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       // 2. VALIDACIÓN EXTRA (Backend Check) - Para evitar colisiones de último segundo mediante RPC segura
       const { data: hasOverlap, error: colError } = await supabase
         .rpc('check_dates_overlap', {
@@ -157,7 +179,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       // 3. VALIDACIÓN DE CIERRES TEMPORALES (Backend Check)
       const { data: cierres, error: cierresError } = await supabase
         .from('cabin_closures')
-        .select('reason')
+        .select('id')
         .or(`cabin_id.eq.${cabin.id},cabin_id.is.null`)
         .lte('start_date', checkOut)
         .gte('end_date', checkIn);
@@ -165,7 +187,7 @@ export function CheckoutForm({ cabin, checkoutData }: CheckoutFormProps) {
       if (cierresError) throw cierresError;
 
       if (cierres && cierres.length > 0) {
-        setConflictError(`Lo sentimos, la cabaña se encuentra cerrada temporalmente en el periodo seleccionado por: "${cierres[0].reason}". Por favor vuelve atrás y elige otras fechas.`);
+        setConflictError('Lo sentimos, la cabaña no está disponible en el periodo seleccionado. Por favor vuelve atrás y elige otras fechas.');
         setIsLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
